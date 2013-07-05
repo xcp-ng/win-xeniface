@@ -1,10 +1,10 @@
 /* Copyright (c) Citrix Systems Inc.
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, 
  * with or without modification, are permitted provided 
  * that the following conditions are met:
- *
+ * 
  * *   Redistributions of source code must retain the above 
  *     copyright notice, this list of conditions and the 
  *     following disclaimer.
@@ -12,7 +12,7 @@
  *     copyright notice, this list of conditions and the 
  *     following disclaimer in the documentation and/or other 
  *     materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
  * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
  * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
@@ -29,14 +29,46 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _IOCTLS_H_
-#define _IOCTLS_H_
+#ifndef _XENIFACE_THREAD_H
+#define _XENIFACE_THREAD_H
 
-NTSTATUS
-XenIFaceIoctl(
-    __in  PXENIFACE_FDO         Fdo,
-    __in  PIRP              Irp
+#include <ntddk.h>
+
+typedef struct _XENIFACE_THREAD XENIFACE_THREAD, *PXENIFACE_THREAD;
+
+typedef NTSTATUS (*XENIFACE_THREAD_FUNCTION)(PXENIFACE_THREAD, PVOID);
+
+extern NTSTATUS
+ThreadCreate(
+    IN  XENIFACE_THREAD_FUNCTION  Function,
+    IN  PVOID                   Context,
+    OUT PXENIFACE_THREAD          *Thread
     );
 
-#endif // _IOCTLS_H_
+extern PKEVENT
+ThreadGetEvent(
+    IN  PXENIFACE_THREAD  Self
+    );
+
+extern BOOLEAN
+ThreadIsAlerted(
+    IN  PXENIFACE_THREAD  Self
+    );
+
+extern VOID
+ThreadWake(
+    IN  PXENIFACE_THREAD  Thread
+    );
+
+extern VOID
+ThreadAlert(
+    IN  PXENIFACE_THREAD  Thread
+    );
+
+extern VOID
+ThreadJoin(
+    IN  PXENIFACE_THREAD  Thread
+    );
+
+#endif  // _XENIFACE_THREAD_H
 

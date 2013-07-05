@@ -30,9 +30,10 @@
  */
 
 
-#include "xeniface.h"
+#include "driver.h"
 #include "ioctls.h"
 #include "..\..\include\xeniface_ioctls.h"
+#include "log.h"
 
 static FORCEINLINE BOOLEAN
 __IsValidStr(
@@ -83,7 +84,7 @@ __DisplayMultiSz(
 
 static DECLSPEC_NOINLINE NTSTATUS
 IoctlRead(
-    __in  PFDO_DATA         Fdo,
+    __in  PXENIFACE_FDO         Fdo,
     __in  PCHAR             Buffer,
     __in  ULONG             InLen,
     __in  ULONG             OutLen,
@@ -143,7 +144,7 @@ fail1:
 
 static DECLSPEC_NOINLINE NTSTATUS
 IoctlWrite(
-    __in  PFDO_DATA         Fdo,
+    __in  PXENIFACE_FDO         Fdo,
     __in  PCHAR             Buffer,
     __in  ULONG             InLen,
     __in  ULONG             OutLen
@@ -187,7 +188,7 @@ fail1:
 
 static DECLSPEC_NOINLINE NTSTATUS
 IoctlDirectory(
-    __in  PFDO_DATA         Fdo,
+    __in  PXENIFACE_FDO         Fdo,
     __in  PCHAR             Buffer,
     __in  ULONG             InLen,
     __in  ULONG             OutLen,
@@ -252,7 +253,7 @@ fail1:
 
 static DECLSPEC_NOINLINE NTSTATUS
 IoctlRemove(
-    __in  PFDO_DATA         Fdo,
+    __in  PXENIFACE_FDO         Fdo,
     __in  PCHAR             Buffer,
     __in  ULONG             InLen,
     __in  ULONG             OutLen
@@ -286,7 +287,7 @@ fail1:
 
 NTSTATUS
 XenIFaceIoctl(
-    __in  PFDO_DATA         Fdo,
+    __in  PXENIFACE_FDO         Fdo,
     __in  PIRP              Irp
     )
 {
@@ -326,6 +327,11 @@ XenIFaceIoctl(
     }
 
 done:
+
+	Irp->IoStatus.Status = status;
+
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
     return status;
 }
 

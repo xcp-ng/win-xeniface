@@ -129,7 +129,6 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -183,18 +182,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
-    <FilesToPackage Include="$(OutDir)$(TargetName).pdb" />  
+    <FilesToPackage Include="$(OutDir)$(TargetName).pdb" />
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="../../src/xeniface/ioctls.c" />
-    <ClCompile Include="../../src/xeniface/power.c" />
     <ClCompile Include="../../src/xeniface/wmi.c" />
-    <ClCompile Include="../../src/xeniface/xeniface.c" />
+    <ClCompile Include="..\..\src\xeniface\driver.c" />
+    <ClCompile Include="..\..\src\xeniface\fdo.c" />
+    <ClCompile Include="..\..\src\xeniface\thread.c" />
   </ItemGroup>
   <ItemGroup>
     <Mofcomp Include="../../src/xeniface/wmi.mof">
-        <CreateBinaryMofFile>$(IntDir)/wmi.bmf</CreateBinaryMofFile>
+      <CreateBinaryMofFile>$(IntDir)/wmi.bmf</CreateBinaryMofFile>
     </Mofcomp>
   </ItemGroup>
   <ItemGroup>
@@ -211,8 +211,20 @@
   <ItemGroup>
     <None Include="..\package\package.vcxproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\util.h" />
+    <ClInclude Include="..\..\src\xeniface\assert.h" />
+    <ClInclude Include="..\..\src\xeniface\driver.h" />
+    <ClInclude Include="..\..\src\xeniface\fdo.h" />
+    <ClInclude Include="..\..\src\xeniface\ioctls.h" />
+    <ClInclude Include="..\..\src\xeniface\log.h" />
+    <ClInclude Include="..\..\src\xeniface\mutex.h" />
+    <ClInclude Include="..\..\src\xeniface\names.h" />
+    <ClInclude Include="..\..\src\xeniface\thread.h" />
+    <ClInclude Include="..\..\src\xeniface\types.h" />
+    <ClInclude Include="..\..\src\xeniface\wmi.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>

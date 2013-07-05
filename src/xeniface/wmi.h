@@ -34,24 +34,32 @@
 #define _XEVTCHN_WMI_H
 
 #include <ntddk.h>
-#include "xeniface.h"
+#include "driver.h"
 #include "wmi_generated.h"
 
 NTSTATUS
 WmiProcessMinorFunction(
-    IN PDEVICE_OBJECT Pdo,
+    IN PXENIFACE_FDO Fdo,
     IN PIRP Irp
 );
 
 NTSTATUS
 WmiInit(
-    PFDO_DATA FdoData
+    PXENIFACE_FDO FdoData
 ); 
 
 
 NTSTATUS
 WmiFinalise(       
-    PFDO_DATA FdoData
+    PXENIFACE_FDO FdoData
 ); 
 
+NTSTATUS XenIfaceSystemControl(
+    __in PXENIFACE_FDO		fdoData,
+    __inout PIRP Irp
+    );
+
+void FireSuspendEvent(
+	IN OUT PXENIFACE_FDO fdoData
+	);
 #endif

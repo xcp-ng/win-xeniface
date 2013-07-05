@@ -32,7 +32,6 @@
 
 #include <ntddk.h>
 #include <initguid.h>
-#include <wdmguid.h>
 #include <wmistr.h>
 #include <wmilib.h>
 #include <stdio.h>
@@ -41,14 +40,16 @@
 #define NTSTRSAFE_LIB
 #include<ntstrsafe.h>
 #include "wmi.h"
-#include "xeniface.h"
+#include "driver.h"
 #include "..\..\include\store_interface.h"
 #include "..\..\include\suspend_interface.h"
+#include "log.h"
+#include "xeniface_ioctls.h"
 
 __drv_raisesIRQL(APC_LEVEL)
 __drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock) 
 void LockSessions(
-        FDO_DATA* fdoData)
+        XENIFACE_FDO* fdoData)
 {
     ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
     ExAcquireFastMutex(&fdoData->SessionLock);
@@ -57,7 +58,7 @@ void LockSessions(
 __drv_requiresIRQL(APC_LEVEL)
 __drv_restoresIRQLGlobal(OldIrql, fdoData->SessionLock)
 void UnlockSessions(
-        FDO_DATA* fdoData)
+        XENIFACE_FDO* fdoData)
 {
     ASSERT(KeGetCurrentIrql() == APC_LEVEL);
     ExReleaseFastMutex(&fdoData->SessionLock);
@@ -606,7 +607,7 @@ GetCountedUnicodeStringSize(UNICODE_STRING *string) {
 }
 
 size_t
-GetInstanceNameSize(FDO_DATA* FdoData, const char *string) {
+GetInstanceNameSize(XENIFACE_FDO* FdoData, const char *string) {
     ANSI_STRING ansi;
     RtlInitAnsiString(&ansi, string);
     return sizeof(USHORT) +
@@ -618,7 +619,7 @@ GetInstanceNameSize(FDO_DATA* FdoData, const char *string) {
 
 
 NTSTATUS
-GetInstanceName(UNICODE_STRING *dest, FDO_DATA* FdoData, const char *string) {
+GetInstanceName(UNICODE_STRING *dest, XENIFACE_FDO* FdoData, const char *string) {
     ANSI_STRING ansi;
     UNICODE_STRING unicode;
     NTSTATUS status;
@@ -651,7 +652,7 @@ GetInstanceName(UNICODE_STRING *dest, FDO_DATA* FdoData, const char *string) {
 }
 
 NTSTATUS
-WriteInstanceName(FDO_DATA* FdoData, const char *string, UCHAR *location)
+WriteInstanceName(XENIFACE_FDO* FdoData, const char *string, UCHAR *location)
 {
     UNICODE_STRING destination;
     NTSTATUS status;
@@ -686,7 +687,7 @@ typedef struct _XenStoreSession {
 typedef struct _XenStoreWatch {
     LIST_ENTRY listentry;
     UNICODE_STRING path;
-    FDO_DATA *fdoData;
+    XENIFACE_FDO *fdoData;
 
     ULONG   suspendcount;
     BOOLEAN finished;
@@ -703,7 +704,7 @@ void UnicodeShallowCopy(UNICODE_STRING *dest, UNICODE_STRING *src) {
 
 
 XenStoreSession*
-FindSessionLocked(FDO_DATA *fdoData, 
+FindSessionLocked(XENIFACE_FDO *fdoData, 
                                 LONG id) {
     XenStoreSession *session;
      
@@ -751,12 +752,12 @@ SessionFindWatchLocked(XenStoreSession *session,
 
 } 
 
-void FireSuspendEvent(PFDO_DATA fdoData) {
+void FireSuspendEvent(PXENIFACE_FDO fdoData) {
 	XenIfaceDebugPrint(ERROR,"Ready to unsuspend Event\n");
 	KeSetEvent(&fdoData->registryWriteEvent, IO_NO_INCREMENT, FALSE);
     if (fdoData->WmiReady) {
         XenIfaceDebugPrint(TRACE,"Fire Suspend Event\n");
-        WmiFireEvent(fdoData->Self,
+        WmiFireEvent(fdoData->Dx->DeviceObject,
                 (LPGUID)&CitrixXenStoreUnsuspendedEvent_GUID,
                 0,
                 0,
@@ -785,7 +786,7 @@ void FireWatch(XenStoreWatch* watch) {
 
     if (eventdata !=NULL) {
         XenIfaceDebugPrint(TRACE,"Fire Watch Event\n");
-        WmiFireEvent(watch->fdoData->Self, 
+        WmiFireEvent(watch->fdoData->Dx->DeviceObject, 
                         (LPGUID)&CitrixXenStoreWatchEvent_GUID,
                         0,
                         RequiredSize, 
@@ -796,7 +797,7 @@ void FireWatch(XenStoreWatch* watch) {
 
 KSTART_ROUTINE WatchCallbackThread;
 NTSTATUS
-StartWatch(FDO_DATA *fdoData, XenStoreWatch *watch)
+StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
 {
     char *tmppath; 
     ANSI_STRING ansipath;
@@ -915,7 +916,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
 
 NTSTATUS
 SessionAddWatchLocked(XenStoreSession *session, 
-                        FDO_DATA* fdoData, 
+                        XENIFACE_FDO* fdoData, 
                         UNICODE_STRING *path,
                         XenStoreWatch **watch) {
 
@@ -1012,7 +1013,7 @@ void SessionRemoveWatchesLocked(XenStoreSession *session) {
 
 
 XenStoreSession*
-FindSessionByInstanceLocked(FDO_DATA *fdoData,
+FindSessionByInstanceLocked(XENIFACE_FDO *fdoData,
                             UNICODE_STRING *instance) {
     XenStoreSession *session;
      
@@ -1034,7 +1035,7 @@ __success(return!=NULL)
 __drv_raisesIRQL(APC_LEVEL)
 __drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock)
 XenStoreSession *
-FindSessionByInstanceAndLock(FDO_DATA *fdoData,
+FindSessionByInstanceAndLock(XENIFACE_FDO *fdoData,
                                 UNICODE_STRING *instance) {
     XenStoreSession *session;
     LockSessions(fdoData);
@@ -1074,7 +1075,7 @@ PSTR Xmasprintf(const char *fmt, ...) {
 }
 
 NTSTATUS 
-CreateNewSession(FDO_DATA *fdoData, 
+CreateNewSession(XENIFACE_FDO *fdoData, 
                     UNICODE_STRING *stringid, 
                     ULONG *sessionid) {
     XenStoreSession *session;
@@ -1163,7 +1164,7 @@ CreateNewSession(FDO_DATA *fdoData,
 }
 
 void 
-RemoveSessionLocked(FDO_DATA *fdoData, 
+RemoveSessionLocked(XENIFACE_FDO *fdoData, 
                     XenStoreSession *session) {
      
     XenIfaceDebugPrint(TRACE,"RemoveSessionLocked\n");
@@ -1183,7 +1184,7 @@ RemoveSessionLocked(FDO_DATA *fdoData,
 }
 
 void
-RemoveSession(FDO_DATA *fdoData, 
+RemoveSession(XENIFACE_FDO *fdoData, 
                     XenStoreSession *session) {
     XenIfaceDebugPrint(TRACE,"RemoveSession\n");
     LockSessions(fdoData);
@@ -1191,13 +1192,16 @@ RemoveSession(FDO_DATA *fdoData,
     UnlockSessions(fdoData);
 }
 
-void SessionsRemoveAll(FDO_DATA *fdoData) {
-
+void SessionsRemoveAll(XENIFACE_FDO *fdoData) {
+	XenIfaceDebugPrint(TRACE,"lock");
     LockSessions(fdoData);
+	XenIfaceDebugPrint(TRACE,"in lock");
     while (fdoData->SessionHead.Flink != &fdoData->SessionHead) {
         RemoveSessionLocked(fdoData, (XenStoreSession *)fdoData->SessionHead.Flink);
     }
+	XenIfaceDebugPrint(TRACE,"unlock");
     UnlockSessions(fdoData);
+	XenIfaceDebugPrint(TRACE,"unlocked");
 }
 
 
@@ -1226,7 +1230,7 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
     ExReleaseFastMutex(&session->WatchMapLock);
 }
 
-void SuspendSessionLocked(FDO_DATA *fdoData, 
+void SuspendSessionLocked(XENIFACE_FDO *fdoData, 
                          XenStoreSession *session) {
     SessionUnwatchWatchesLocked(session);
     if (session->transaction != NULL) {
@@ -1238,7 +1242,7 @@ void SuspendSessionLocked(FDO_DATA *fdoData,
 }
 
 
-void SessionsSuspendAll(FDO_DATA *fdoData) {
+void SessionsSuspendAll(XENIFACE_FDO *fdoData) {
     XenStoreSession *session;
     LockSessions(fdoData);
     XenIfaceDebugPrint(TRACE,"Suspend all sessions\n");
@@ -1277,12 +1281,12 @@ void SessionRenewWatchesLocked(XenStoreSession *session) {
     ExReleaseFastMutex(&session->WatchMapLock);
 }
 
-void ResumeSessionLocked(FDO_DATA *fdoData, 
+void ResumeSessionLocked(XENIFACE_FDO *fdoData, 
                          XenStoreSession *session) {
     SessionRenewWatchesLocked(session);
 }
 
-void SessionsResumeAll(FDO_DATA *fdoData) {
+void SessionsResumeAll(XENIFACE_FDO *fdoData) {
     XenStoreSession *session;
 
     LockSessions(fdoData);
@@ -1298,7 +1302,7 @@ void SessionsResumeAll(FDO_DATA *fdoData) {
 
 NTSTATUS
 WmiInit(
-        PFDO_DATA FdoData
+        PXENIFACE_FDO FdoData
     ) 
 {
     NTSTATUS status = STATUS_SUCCESS;
@@ -1308,20 +1312,20 @@ WmiInit(
     
 
 
-    IoWMISuggestInstanceName(FdoData->UnderlyingPDO, NULL, FALSE, 
+	IoWMISuggestInstanceName(FdoData->PhysicalDeviceObject, NULL, FALSE, 
                                 &FdoData->SuggestedInstanceName);
     InitializeListHead(&FdoData->SessionHead);
     FdoData->Sessions = 0;
     ExInitializeFastMutex(&FdoData->SessionLock);
     
-    status = IoWMIRegistrationControl(FdoData->Self, WMIREG_ACTION_REGISTER);
+    status = IoWMIRegistrationControl(FdoData->Dx->DeviceObject, WMIREG_ACTION_REGISTER);
     FdoData->WmiReady = 1;
     return status;
 }
 
 NTSTATUS
 WmiFinalise(       
-    PFDO_DATA FdoData
+    PXENIFACE_FDO FdoData
     ) 
 {
     NTSTATUS status = STATUS_SUCCESS;
@@ -1330,7 +1334,10 @@ WmiFinalise(
         XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
         SessionsRemoveAll(FdoData);
 
-        status =IoWMIRegistrationControl(FdoData->Self, WMIREG_ACTION_DEREGISTER);
+        status =IoWMIRegistrationControl(FdoData->Dx->DeviceObject, WMIREG_ACTION_DEREGISTER);
+		RtlFreeUnicodeString(&FdoData->SuggestedInstanceName);
+		RtlZeroBytes(&FdoData->SuggestedInstanceName, sizeof(UNICODE_STRING));
+
         FdoData->WmiReady = 0;
     }
     return status;
@@ -1338,11 +1345,11 @@ WmiFinalise(
 
 NTSTATUS
 WmiChangeSingleInstance(
-    PDEVICE_OBJECT DeviceObject,
+    PXENIFACE_FDO Fdo,
     PIO_STACK_LOCATION stack
    )
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
@@ -1350,11 +1357,11 @@ WmiChangeSingleInstance(
 
 NTSTATUS
 WmiChangeSingleItem(
-    IN PDEVICE_OBJECT DeviceObject,
+    IN PXENIFACE_FDO Fdo,
     IN PIO_STACK_LOCATION stack
    )
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
@@ -1362,11 +1369,11 @@ WmiChangeSingleItem(
 
 NTSTATUS
 WmiDisableCollection(
-    IN PDEVICE_OBJECT DeviceObject,
+    IN PXENIFACE_FDO Fdo,
     IN PIO_STACK_LOCATION stack
    )
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
@@ -1374,11 +1381,11 @@ WmiDisableCollection(
 
 NTSTATUS
 WmiDisableEvents(
-    IN PDEVICE_OBJECT DeviceObject,
+    IN PXENIFACE_FDO Fdo,
     IN PIO_STACK_LOCATION stack
    )
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
@@ -1386,11 +1393,11 @@ WmiDisableEvents(
 
 NTSTATUS
 WmiEnableCollection(
-    IN PDEVICE_OBJECT DeviceObject,
+    IN PXENIFACE_FDO Fdo,
     IN PIO_STACK_LOCATION stack
    )
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
@@ -1398,11 +1405,11 @@ WmiEnableCollection(
 
 NTSTATUS
 WmiEnableEvents(
-    IN PDEVICE_OBJECT DeviceObject,
+    IN PXENIFACE_FDO Fdo,
     IN PIO_STACK_LOCATION stack
    )
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
@@ -1434,7 +1441,7 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
@@ -1487,7 +1494,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
@@ -1538,7 +1545,7 @@ SessionExecuteSetWatch(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
@@ -1585,7 +1592,7 @@ SessionExecuteEndSession(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     XenStoreSession *session;
@@ -1605,7 +1612,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
@@ -1680,7 +1687,7 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
@@ -1793,7 +1800,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
@@ -1968,7 +1975,7 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
                             ULONG InBufferSize,
                             UCHAR *OutBuffer,
                             ULONG OutBufferSize,
-                            FDO_DATA* fdoData,
+                            XENIFACE_FDO* fdoData,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     int i;
@@ -2089,7 +2096,7 @@ SessionExecuteLog(UCHAR *InBuffer,
                         ULONG InBufferSize,
                         UCHAR *OutBuffer,
                         ULONG OutBufferSize,
-                        FDO_DATA* fdoData,
+                        XENIFACE_FDO* fdoData,
                         UNICODE_STRING *instance,
                         OUT ULONG_PTR *byteswritten) {
 
@@ -2120,7 +2127,7 @@ SessionExecuteStartTransaction(UCHAR *InBuffer,
                         ULONG InBufferSize,
                         UCHAR *OutBuffer,
                         ULONG OutBufferSize,
-                        FDO_DATA* fdoData,
+                        XENIFACE_FDO* fdoData,
                         UNICODE_STRING *instance,
                         OUT ULONG_PTR *byteswritten) {
 
@@ -2159,7 +2166,7 @@ SessionExecuteCommitTransaction(UCHAR *InBuffer,
                         ULONG InBufferSize,
                         UCHAR *OutBuffer,
                         ULONG OutBufferSize,
-                        FDO_DATA* fdoData,
+                        XENIFACE_FDO* fdoData,
                         UNICODE_STRING *instance,
                         OUT ULONG_PTR *byteswritten) {
 
@@ -2199,7 +2206,7 @@ SessionExecuteAbortTransaction(UCHAR *InBuffer,
                         ULONG InBufferSize,
                         UCHAR *OutBuffer,
                         ULONG OutBufferSize,
-                        FDO_DATA* fdoData,
+                        XENIFACE_FDO* fdoData,
                         UNICODE_STRING *instance,
                         OUT ULONG_PTR *byteswritten) {
 
@@ -2240,7 +2247,7 @@ SessionExecuteGetValue(UCHAR *InBuffer,
                         ULONG InBufferSize,
                         UCHAR *OutBuffer,
                         ULONG OutBufferSize,
-                        FDO_DATA* fdoData,
+                        XENIFACE_FDO* fdoData,
                         UNICODE_STRING *instance,
                         OUT ULONG_PTR *byteswritten) {
     NTSTATUS status;
@@ -2311,7 +2318,7 @@ BaseExecuteAddSession(UCHAR *InBuffer,
                         ULONG InBufferSize,
                         UCHAR *OutBuffer,
                         ULONG OutBufferSize,
-                        FDO_DATA* fdoData,
+                        XENIFACE_FDO* fdoData,
                         OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
     UNICODE_STRING ustring;
@@ -2356,7 +2363,7 @@ BaseExecuteAddSession(UCHAR *InBuffer,
 NTSTATUS 
 SessionExecuteMethod(UCHAR *Buffer,
                     ULONG BufferSize,
-                    FDO_DATA* fdoData,
+                    XENIFACE_FDO* fdoData,
                     OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
     WNODE_METHOD_ITEM *Method;
@@ -2511,7 +2518,7 @@ SessionExecuteMethod(UCHAR *Buffer,
 NTSTATUS 
 BaseExecuteMethod(UCHAR *Buffer,
                     ULONG BufferSize,
-                    FDO_DATA* fdoData,
+                    XENIFACE_FDO* fdoData,
                     OUT ULONG_PTR *byteswritten) {
     ULONG RequiredSize;
     WNODE_METHOD_ITEM *Method;
@@ -2546,7 +2553,7 @@ BaseExecuteMethod(UCHAR *Buffer,
 
 NTSTATUS
 WmiExecuteMethod(
-    IN PFDO_DATA fdoData,
+    IN PXENIFACE_FDO fdoData,
     IN PIO_STACK_LOCATION stack,
     OUT ULONG_PTR *byteswritten
    )
@@ -2569,7 +2576,7 @@ WmiExecuteMethod(
 NTSTATUS
 GenerateSessionBlock(UCHAR *Buffer,
                         ULONG BufferSize,
-                        PFDO_DATA fdoData,
+                        PXENIFACE_FDO fdoData,
                         ULONG_PTR *byteswritten) {
     WNODE_ALL_DATA *node;
     ULONG RequiredSize;
@@ -2685,7 +2692,7 @@ GenerateSessionBlock(UCHAR *Buffer,
 }
 
 NTSTATUS
-GenerateBaseBlock(  FDO_DATA *fdoData,
+GenerateBaseBlock(  XENIFACE_FDO *fdoData,
                     UCHAR *Buffer,
                     ULONG BufferSize,
                     ULONG_PTR *byteswritten) {
@@ -2719,7 +2726,7 @@ GenerateBaseBlock(  FDO_DATA *fdoData,
 }
 NTSTATUS
 GenerateBaseInstance(
-                    FDO_DATA *fdoData,
+                    XENIFACE_FDO *fdoData,
                     UCHAR *Buffer,
                     ULONG BufferSize,
                     ULONG_PTR *byteswritten) {
@@ -2769,7 +2776,7 @@ GenerateBaseInstance(
 NTSTATUS
 GenerateSessionInstance(UCHAR *Buffer,
                     ULONG BufferSize,
-                    FDO_DATA *fdoData,
+                    XENIFACE_FDO *fdoData,
                     ULONG_PTR *byteswritten) {
     WNODE_SINGLE_INSTANCE *node;
     ULONG RequiredSize;
@@ -2829,7 +2836,7 @@ GenerateSessionInstance(UCHAR *Buffer,
 
 NTSTATUS
 WmiQueryAllData(
-    IN PFDO_DATA fdoData,
+    IN PXENIFACE_FDO fdoData,
     IN PIO_STACK_LOCATION stack,
     OUT ULONG_PTR *byteswritten
    )
@@ -2857,7 +2864,7 @@ WmiQueryAllData(
 
 NTSTATUS
 WmiQuerySingleInstance(
-    IN PFDO_DATA fdoData,
+    IN PXENIFACE_FDO fdoData,
     IN PIO_STACK_LOCATION stack,
     OUT ULONG_PTR *byteswritten
     )
@@ -2882,7 +2889,7 @@ WmiQuerySingleInstance(
 
 NTSTATUS
 WmiRegInfo(
-    IN PFDO_DATA fdoData,
+    IN PXENIFACE_FDO fdoData,
     IN PIO_STACK_LOCATION stack,
     OUT ULONG_PTR *byteswritten
    )
@@ -2913,7 +2920,7 @@ WmiRegInfo(
                         WMI_BUFFER, sizeof(WMIREGINFO), (UCHAR **)&reginfo,
                         WMI_BUFFER, entries * sizeof(WMIREGGUID), (UCHAR **)&guiddata,
                         WMI_STRING, mofnamesz, &mofnameptr,
-                        WMI_STRING, Globals.RegistryPath.Length+sizeof(USHORT), 
+                        WMI_STRING, DriverParameters.RegistryPath.Length+sizeof(USHORT), 
                                     &regpath,
                         WMI_DONE)){
         reginfo->BufferSize = RequiredSize;
@@ -2925,7 +2932,7 @@ WmiRegInfo(
         reginfo->MofResourceName = (ULONG)((ULONG_PTR)mofnameptr - (ULONG_PTR)reginfo);
         WriteCountedUnicodeString(&mofname, mofnameptr);
         reginfo->RegistryPath = (ULONG)((ULONG_PTR)regpath - (ULONG_PTR)reginfo);
-        WriteCountedUnicodeString(&Globals.RegistryPath, regpath);
+        WriteCountedUnicodeString(&DriverParameters.RegistryPath, regpath);
     }
 
     reginfo->BufferSize = RequiredSize;
@@ -2936,8 +2943,8 @@ WmiRegInfo(
     guid->InstanceCount = 1;
     guid->Guid = CitrixXenStoreBase_GUID;
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO;
-    guid->Pdo = (ULONG_PTR)fdoData->UnderlyingPDO; 
-    ObReferenceObject(fdoData->UnderlyingPDO);
+    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
+	ObReferenceObject(fdoData->PhysicalDeviceObject);
     
     guid = &reginfo->WmiRegGuid[1];
     guid->Guid = CitrixXenStoreSession_GUID;
@@ -2948,16 +2955,16 @@ WmiRegInfo(
     guid->Guid = CitrixXenStoreWatchEvent_GUID;
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO |
                 WMIREG_FLAG_EVENT_ONLY_GUID ;
-    guid->Pdo = (ULONG_PTR)fdoData->UnderlyingPDO; 
-    ObReferenceObject(fdoData->UnderlyingPDO);
+    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
+	ObReferenceObject(fdoData->PhysicalDeviceObject);
 
     guid = &reginfo->WmiRegGuid[3];
     guid->InstanceCount = 1;
     guid->Guid = CitrixXenStoreUnsuspendedEvent_GUID;
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO |
                 WMIREG_FLAG_EVENT_ONLY_GUID ;
-    guid->Pdo = (ULONG_PTR)fdoData->UnderlyingPDO; 
-    ObReferenceObject(fdoData->UnderlyingPDO);
+	guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
+	ObReferenceObject(fdoData->PhysicalDeviceObject);
 
 
     *byteswritten = RequiredSize;
@@ -2966,7 +2973,7 @@ WmiRegInfo(
 
 NTSTATUS
 WmiRegInfoEx(
-    IN PFDO_DATA fdoData,
+    IN PXENIFACE_FDO fdoData,
     IN PIO_STACK_LOCATION stack,
     OUT ULONG_PTR *byteswritten
    )
@@ -2980,34 +2987,40 @@ WmiRegInfoEx(
 
 NTSTATUS
 WmiProcessMinorFunction(
-    IN PDEVICE_OBJECT DeviceObject,
+    IN PXENIFACE_FDO fdoData,
     IN PIRP Irp
 )
 {
     PIO_STACK_LOCATION stack;
     UCHAR MinorFunction;
-    PFDO_DATA fdoData;
 
-    fdoData = (PFDO_DATA)DeviceObject->DeviceExtension;
+	
 
     stack = IoGetCurrentIrpStackLocation(Irp);
 
+	if (stack->Parameters.WMI.ProviderId != (ULONG_PTR)fdoData->Dx->DeviceObject) {
+		XenIfaceDebugPrint(TRACE,"ProviderID %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
+		return STATUS_NOT_SUPPORTED;
+	}
+	else {
+		XenIfaceDebugPrint(TRACE,"ProviderID Match %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
+	}
     MinorFunction = stack->MinorFunction;
 
     switch (MinorFunction)
     {
     case IRP_MN_CHANGE_SINGLE_INSTANCE:
-        return WmiChangeSingleInstance(DeviceObject, stack);
+        return WmiChangeSingleInstance(fdoData, stack);
     case IRP_MN_CHANGE_SINGLE_ITEM:
-        return WmiChangeSingleItem(DeviceObject, stack);
+        return WmiChangeSingleItem(fdoData, stack);
     case IRP_MN_DISABLE_COLLECTION:
-        return WmiDisableCollection(DeviceObject, stack);
+        return WmiDisableCollection(fdoData, stack);
     case IRP_MN_DISABLE_EVENTS:
-        return WmiDisableEvents(DeviceObject, stack);
+        return WmiDisableEvents(fdoData, stack);
     case IRP_MN_ENABLE_COLLECTION:
-        return WmiEnableCollection(DeviceObject, stack);
+        return WmiEnableCollection(fdoData, stack);
     case IRP_MN_ENABLE_EVENTS:
-        return WmiEnableEvents(DeviceObject, stack);
+        return WmiEnableEvents(fdoData, stack);
     case IRP_MN_EXECUTE_METHOD:
         return WmiExecuteMethod(fdoData, stack,  &Irp->IoStatus.Information);
     case IRP_MN_QUERY_ALL_DATA:
@@ -3023,46 +3036,31 @@ WmiProcessMinorFunction(
     }
 }
 
-
 NTSTATUS XenIfaceSystemControl(
-    __in PDEVICE_OBJECT DeviceObject,
+    __in PXENIFACE_FDO		fdoData,
     __inout PIRP Irp
     )
 {
-    PFDO_DATA               fdoData;
-    NTSTATUS                status;
+    NTSTATUS            status;
 
-    fdoData = (PFDO_DATA) DeviceObject->DeviceExtension;
 
-    XenIfaceIoIncrement (fdoData);
 
-    if (Deleted == fdoData->DevicePnPState)
-    {
-        Irp->IoStatus.Status = status = STATUS_NO_SUCH_DEVICE;
-
-        IoCompleteRequest (Irp, IO_NO_INCREMENT);
-
-        XenIfaceIoDecrement (fdoData);
-
-        return status;
-    }
-
-    status = WmiProcessMinorFunction(DeviceObject, Irp);
+    status = WmiProcessMinorFunction(fdoData, Irp);
 
     if (status != STATUS_NOT_SUPPORTED) {
-        Irp->IoStatus.Status = status;
+		Irp->IoStatus.Status = status;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
         
     }
     else {
         IoSkipCurrentIrpStackLocation(Irp);
-        status = IoCallDriver(fdoData->NextLowerDriver, Irp);
+        status = IoCallDriver(fdoData->LowerDeviceObject, Irp);
     }
 
-    XenIfaceIoDecrement(fdoData);
     return(status);
 
 }
+
 
 PCHAR
 WMIMinorFunctionString (

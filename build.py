@@ -265,7 +265,7 @@ def archive(filename, files, tgz=False):
 
 if __name__ == '__main__':
     os.environ['MAJOR_VERSION'] = '7'
-    os.environ['MINOR_VERSION'] = '0'
+    os.environ['MINOR_VERSION'] = '1'
     os.environ['MICRO_VERSION'] = '0'
 
     if 'BUILD_NUMBER' not in os.environ.keys():
@@ -290,6 +290,6 @@ if __name__ == '__main__':
 
 
 
-    listfile = callfnout(['hg','manifest'])
+    listfile = callfnout(['git','ls-tree', '-r', '--name-only', 'HEAD'])
     archive('xeniface\\source.tgz', listfile.splitlines(), tgz=True)
     archive('xeniface.tar', ['xeniface', 'revision'])

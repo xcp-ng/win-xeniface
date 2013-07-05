@@ -1,0 +1,6 @@
+7.0.0 (2013-05-30):
+* Initial public release
+
+7.1.0 (2013-07-08):
+* New 'bottom layer' of code which can be open sourced.
+* Upped version number to reflect build number reset
