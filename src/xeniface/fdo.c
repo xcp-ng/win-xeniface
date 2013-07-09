@@ -744,6 +744,8 @@ FdoD3ToD0(
     SUSPEND(Acquire, Fdo->SuspendInterface);
     SHARED_INFO(Acquire, Fdo->SharedInfoInterface);
 
+	SessionsResumeAll(Fdo);
+
 	Fdo->InterfacesAcquired = TRUE;
 
     status = SUSPEND(Register,
@@ -785,6 +787,7 @@ FdoD0ToD3(
 
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
 	Fdo->InterfacesAcquired = FALSE;
+	SessionsSuspendAll(Fdo);
     SUSPEND(Deregister,
             Fdo->SuspendInterface,
             Fdo->SuspendCallbackLate);
