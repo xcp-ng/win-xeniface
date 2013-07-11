@@ -271,9 +271,9 @@ if __name__ == '__main__':
     if 'BUILD_NUMBER' not in os.environ.keys():
         os.environ['BUILD_NUMBER'] = '0'
 
-    if 'MERCURIAL_REVISION' in os.environ.keys():
+    if 'GIT_REVISION' in os.environ.keys():
         revision = open('revision', 'w')
-        print(os.environ['MERCURIAL_REVISION'], file=revision)
+        print(os.environ['GIT_REVISION'], file=revision)
         revision.close()
 
     debug = { 'checked': True, 'free': False }

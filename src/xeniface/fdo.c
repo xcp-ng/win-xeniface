@@ -744,9 +744,7 @@ FdoD3ToD0(
     SUSPEND(Acquire, Fdo->SuspendInterface);
     SHARED_INFO(Acquire, Fdo->SharedInfoInterface);
 
-	SessionsResumeAll(Fdo);
-
-	Fdo->InterfacesAcquired = TRUE;
+	
 
     status = SUSPEND(Register,
                      Fdo->SuspendInterface,
@@ -756,8 +754,11 @@ FdoD3ToD0(
                      &Fdo->SuspendCallbackLate);
     if (!NT_SUCCESS(status))
         goto fail2;
-
+	Fdo->InterfacesAcquired = TRUE;
     KeLowerIrql(Irql);
+	
+	
+	
 
     return STATUS_SUCCESS;
 
@@ -784,10 +785,9 @@ FdoD0ToD3(
     KIRQL           Irql;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-
-    KeRaiseIrql(DISPATCH_LEVEL, &Irql);
 	Fdo->InterfacesAcquired = FALSE;
-	SessionsSuspendAll(Fdo);
+    KeRaiseIrql(DISPATCH_LEVEL, &Irql);
+
     SUSPEND(Deregister,
             Fdo->SuspendInterface,
             Fdo->SuspendCallbackLate);
@@ -1292,6 +1292,7 @@ __FdoSetDevicePowerUp(
 
     ASSERT3U(DeviceState, ==, PowerDeviceD0);
     status = FdoD3ToD0(Fdo);
+	SessionsResumeAll(Fdo);
     ASSERT(NT_SUCCESS(status));
 
 done:
@@ -1323,8 +1324,10 @@ __FdoSetDevicePowerDown(
 
     ASSERT3U(DeviceState, ==, PowerDeviceD3);
 
-    if (__FdoGetDevicePowerState(Fdo) == PowerDeviceD0)
+    if (__FdoGetDevicePowerState(Fdo) == PowerDeviceD0){
+		SessionsSuspendAll(Fdo);
         FdoD0ToD3(Fdo);
+	}
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
