@@ -47,9 +47,12 @@ DefaultDestDir = 12
 %Citrix%=Citrix,NT$ARCH$
 
 [Citrix.NT$ARCH$]
-; DisplayName               Section           DeviceId
-; -----------               -------           --------
-%XenIfaceDevice.DeviceDesc%=XenIface_Device, XENBUS\CLASS_IFACE&REV_02
+; DisplayName		    Section	      DeviceID
+; -----------		    -------	      --------
+
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_XSC000&DEV_IFACE&REV_00000001
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_XS0001&DEV_IFACE&REV_00000001
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_XS0002&DEV_IFACE&REV_00000001
 
 [XenIface_Device.NT$ARCH$]
 CopyFiles=XenIface_Device.NT.Copy
@@ -63,7 +66,7 @@ xeniface.sys
 AddService = xeniface, %SPSVCINST_ASSOCSERVICE%, xeniface_Service_Inst
 
 [xeniface_Service_Inst]
-DisplayName    = %xeniface.SVCDESC%
+DisplayName    = %XenIfaceDevice.DeviceDesc%
 ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
 StartType      = 3               ; SERVICE_DEMAND_START 
 ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
@@ -80,8 +83,6 @@ xeniface.sys  = 1,,
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
 Citrix= "Citrix Systems, Inc." 
-ClassName = "XenIface"
-DiskId1 = "Citrix Tools for Virtual Machines"
-XenIfaceDevice.DeviceDesc = "Citrix Xen Interface"
-xeniface.SVCDESC = "Citrix Xen Interface Device Driver"
+DiskId1 = "XenServer Tools for Virtual Machines"
+XenIfaceDevice.DeviceDesc = "XenServer Interface"
 

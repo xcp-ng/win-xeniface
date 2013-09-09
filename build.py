@@ -246,7 +246,7 @@ def callfnout(cmd):
 
     if ret != 0:
         raise(Exception("Error %d in : %s" % (ret, cmd)))
-    print("------------------------------------------------------------")
+
     return output.decode('utf-8')
 
 def archive(filename, files, tgz=False):
@@ -256,7 +256,6 @@ def archive(filename, files, tgz=False):
     tar = tarfile.open(filename, access)
     for name in files :
         try:
-            print('adding '+name)
             tar.add(name)
         except:
             pass
@@ -287,8 +286,6 @@ if __name__ == '__main__':
 
     symstore_add('xeniface', 'x86', debug[sys.argv[1]])
     symstore_add('xeniface', 'x64', debug[sys.argv[1]])
-
-
 
     listfile = callfnout(['git','ls-tree', '-r', '--name-only', 'HEAD'])
     archive('xeniface\\source.tgz', listfile.splitlines(), tgz=True)
