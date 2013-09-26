@@ -29,34 +29,74 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _NICINFO_H
-#define _NICINFO_H
+/* Black-box data recorder.  This records stuff which is happening
+   while the agent runs, and tries to push it out to dom0 syslog if we
+   crash. */
+#include "stdafx.h"
+#include <windows.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "XService.h"
+#include "XSAccessor.h"
 
-#include <string>
-#include <list>
-#include <map>
 
-#include "vm_stats.h"
+#define RING_SIZE 8192
 
-using namespace std;
-
-class NicInfo
-{
-public:
-    NicInfo();
-    ~NicInfo();
-
-    void Refresh();
-    void Prime();
-    HANDLE NicChangeEvent;
-
-private:
-    void GetNicInfo();
-
-    int nr_netifs_found;
-    VIFData *netif_data;
-    HANDLE hAddrChange;
-    OVERLAPPED Overlap;
+struct message_ring {
+    HANDLE handle;
+    unsigned prod_idx;
+    unsigned cons_idx;
+    unsigned char payload[RING_SIZE];
 };
 
-#endif
+static __declspec(thread) struct message_ring message_ring;
+
+static char *
+Xsvasprintf(const char *fmt, va_list args)
+{
+    char *work;
+    int work_size;
+    int r;
+
+    work_size = 32;
+    while (1) {
+        work = (char *)malloc(work_size);
+        if (!work)
+            return work;
+        r = _vsnprintf(work, work_size, fmt, args);
+        if (r == 0) {
+            free(work);
+            return NULL;
+        }
+        if (r != -1 && r < work_size) {
+            return work;
+        }
+        free(work);
+        work_size *= 2;
+    }
+}
+
+static char *
+Xsasprintf(const char *fmt, ...)
+{
+    va_list args;
+    char *res;
+
+    va_start(args, fmt);
+    res = Xsvasprintf(fmt, args);
+    va_end(args);
+    return res;
+}
+
+void
+XsLogMsg(const char *fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    XsLog(fmt, args);
+    va_end(args);
+}
+
+

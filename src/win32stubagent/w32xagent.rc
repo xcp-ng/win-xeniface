@@ -33,7 +33,7 @@
 #include <windows.h>
 #include <ntverp.h>
 
-#include "version.h"
+
 
 #define VER_INTERNALNAME_STR "w32xagent.exe"
 #define VER_FILEVERSION_STR "1.0"
@@ -45,5 +45,4 @@
 xen_icon ICON "xen.ico"
 
 #include "common.ver"
-
 #include "messages.rc"
