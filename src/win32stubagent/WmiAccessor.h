@@ -38,7 +38,6 @@
 #include <map>
 #include <string>
 
-#include "vm_stats.h"
 #include "XSAccessor.h"
 
 using namespace std;
@@ -49,42 +48,41 @@ struct WMIAccessor;
 
 extern struct WMIAccessor *wmi;
 
-void ConnectToWMI(void);
-void ReleaseWMIAccessor(struct WMIAccessor *);
+extern LONG wmicount;
+BOOL InitCom(void);
+void ReleaseCom(void);
+BOOL ConnectToWMI(void);
+void ReleaseWMIAccessor(struct WMIAccessor **);
 
-void GetWMIData(WMIAccessor *wmi, VMData& data);
-void DumpOSData(WMIAccessor *wmi);
+void UpdateProcessListInStore(WMIAccessor **wmi);
 
-VOID AddHotFixInfoToStore(WMIAccessor* wmi);
-void UpdateProcessListInStore(WMIAccessor *wmi);
-
-int WmiSessionSetEntry(WMIAccessor* wmi,  void **sessionhandle, 
+int WmiSessionSetEntry(WMIAccessor** wmi,  void **sessionhandle, 
               const char*path, const char * value);
 
-int WmiSessionSetEntry(WMIAccessor* wmi,  void **sessionhandle, 
+int WmiSessionSetEntry(WMIAccessor** wmi,  void **sessionhandle, 
               const char*path, const char * value, size_t len);
-char* WmiSessionGetEntry(WMIAccessor* wmi, void **sessionhandle,
+char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
               const char * path, size_t* len) ;
 
-void *WmiSessionWatch(WMIAccessor* wmi,  void **sessionhandle, 
-                      const char *path, HANDLE event);
-void WmiSessionUnwatch(WMIAccessor* wmi,  void **sessionhandle,
+void *WmiSessionWatch(WMIAccessor** wmi,  void **sessionhandle, 
+                      const char *path, HANDLE event, HANDLE errorevent);
+BOOL WmiSessionUnwatch(WMIAccessor** wmi,  void **sessionhandle,
                          void *watchhandle);
 
-int WmiSessionRemoveEntry(WMIAccessor* wmi,  void **sessionhandle, 
+int WmiSessionRemoveEntry(WMIAccessor** wmi,  void **sessionhandle, 
               const char*path);
 
-char **WmiSessionGetChildren(WMIAccessor* wmi, void **sessionhandle,
+char **WmiSessionGetChildren(WMIAccessor** wmi, void **sessionhandle,
               const char * path, unsigned *numentries);
 
 
-void *WmiUnsuspendedEventWatch(WMIAccessor *wmi, HANDLE event);
+void *WmiUnsuspendedEventWatch(WMIAccessor **wmi, HANDLE event, HANDLE errorevent);
 
-int WmiSessionTransactionAbort(WMIAccessor* wmi,  void **sessionhandle); 
-int WmiSessionTransactionCommit(WMIAccessor* wmi,  void **sessionhandle); 
-int WmiSessionTransactionStart(WMIAccessor* wmi,  void **sessionhandle); 
-void WmiSessionStart(WMIAccessor* wmi,  void **sessionhandle, const char *sessionname);
-void WmiSessionEnd(WMIAccessor* wmi,  void *sessionhandle);
-FILETIME WmiGetXenTime(WMIAccessor *wmi);
-void WmiSessionLog(WMIAccessor* wmi,  void **sessionhandle,const char *fmt, va_list args);
+int WmiSessionTransactionAbort(WMIAccessor** wmi,  void **sessionhandle); 
+int WmiSessionTransactionCommit(WMIAccessor** wmi,  void **sessionhandle); 
+int WmiSessionTransactionStart(WMIAccessor** wmi,  void **sessionhandle); 
+BOOL WmiSessionStart(WMIAccessor** wmi,  void **sessionhandle, const char *sessionname);
+BOOL WmiSessionEnd(WMIAccessor** wmi,  void *sessionhandle);
+FILETIME WmiGetXenTime(WMIAccessor **wmi);
+void WmiSessionLog(WMIAccessor** wmi,  void **sessionhandle,const char *fmt, va_list args);
 #endif

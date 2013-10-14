@@ -34,8 +34,8 @@
 #define _XSACCESSOR_H
 
 #include <string>
+#include "windows.h"
 
-#include "vm_stats.h"
 
 using namespace std;
 
@@ -47,19 +47,16 @@ typedef long long ssize_t;
 typedef long ssize_t;
 #endif
 
-void InitXSAccessor();
-void ShutdownXSAccessor();
-int XenstoreList(const char *path, char ***entries, unsigned *numEntries);
+BOOL InitXSAccessor();
+BOOL ShutdownXSAccessor();
 ssize_t XenstoreRead(const char *path, char **value);
 int XenstoreRemove(const char *path);
 int XenstorePrintf(const char *path, const char *fmt, ...);
 int XenstoreWrite(const char *path, const void *data, size_t len);
-void XenstoreKickXapi(void);
-void XenstoreDoDump(VMData *data);
-int XenstoreDoNicDump(uint32_t num_vif, VIFData *vif);
-void *XenstoreWatch(const char *path, HANDLE event);
-void XenstoreUnwatch(void *watch);
-int ListenSuspend(HANDLE event);
+BOOL XenstoreKickXapi(void);
+void *XenstoreWatch(const char *path, HANDLE event, HANDLE errorevent);
+BOOL XenstoreUnwatch(void *watch);
+int ListenSuspend(HANDLE evt, HANDLE errorevent);
 void GetXenTime(FILETIME *res);
 void XsLog(const char *fmt, ...);
 void XenstoreFree(void *tofree);
@@ -97,7 +94,7 @@ __inline void DebugPrint( IN LPCTSTR msg, IN ... )
         for (;;) {
             p = (TCHAR *)malloc(count * sizeof (TCHAR));
             if (!p) {
-                OutputDebugString(_T("Out of memory for debug message!"));
+                OutputDebugString(_T("Out of memory for debug message!\n"));
                 break;
             }
             res = _vsntprintf(p, count, msg, args);

@@ -32,15 +32,15 @@
 #include <windows.h>
 #include "stdafx.h"
 #include "XSAccessor.h"
-//#include "xs_private.h"
 #include "WMIAccessor.h"
 
 static __declspec(thread) void *WmiSessionHandle = NULL;
 
 static LONG volatile threadcount = 0;
 static __declspec(thread) LONG localthreadcount = 0;
+static __declspec(thread) LONG localwmicount = 0;
 
-static int64_t update_cnt;
+static long update_cnt;
 #define XENSTORE_MAGIC 0x7e6ec123
 
 void *XsAlloc(size_t size) {
@@ -63,7 +63,7 @@ void XsFree(const void *buf) {
         return;
     orig_buf = (void *)((ULONG_PTR)buf - 8);
     if (*(unsigned *)orig_buf != XENSTORE_MAGIC) {
-        OutputDebugString("XsFree() invoked on bad pointer");
+        OutputDebugString("XsFree() invoked on bad pointer\n");
         DebugBreak();
     }
     free(orig_buf);
@@ -71,48 +71,57 @@ void XsFree(const void *buf) {
 
 void GetXenTime(FILETIME *now)
 {
-    *now = WmiGetXenTime(wmi);
+    *now = WmiGetXenTime(&wmi);
 }
 
-int ListenSuspend(HANDLE event)
+
+int ListenSuspend(HANDLE event, HANDLE errorevent)
 {
-    if (!WmiUnsuspendedEventWatch(wmi, event))
+    if (!WmiUnsuspendedEventWatch(&wmi, event, errorevent))
         return -1;
     else
         return 0;
 }
 
-void InitXSAccessor()
+BOOL InitXSAccessor()
 {
-    DBGPRINT(("XSAccessor"));
-    if (WmiSessionHandle == NULL) {
+    OutputDebugString("XSAccessor\n");
+    if (wmicount != localwmicount) {
+		
         if (localthreadcount == 0) {
             localthreadcount = InterlockedIncrement(&threadcount);
         }
         char wminame[12];
         _snprintf(wminame, 12, "XS%x", localthreadcount);
-        WmiSessionStart(wmi, &WmiSessionHandle, wminame);
+        if (WmiSessionStart(&wmi, &WmiSessionHandle, wminame)) {
+			localwmicount = wmicount;
+			return true;
+		}
+		OutputDebugString("XSAccessor Failed\n");
+		return false;
     }
-    if (WmiSessionHandle == NULL)
-        exit(1);
+	return true;
 }
 
 void XsLog(const char *fmt, ...)
 {
     va_list args;
-    if (!WmiSessionHandle) {
-        InitXSAccessor();
-    }
 
     va_start(args, fmt);
-    WmiSessionLog(wmi, &WmiSessionHandle, fmt, args);
+    WmiSessionLog(&wmi, &WmiSessionHandle, fmt, args);
     va_end(args);
 }
 
 
-void ShutdownXSAccessor(void)
+BOOL ShutdownXSAccessor(void)
 {
-    WmiSessionEnd(wmi, WmiSessionHandle);
+	if (wmi == NULL) {
+		return false;
+	}
+	if (WmiSessionHandle == NULL) {
+		return false;
+	}
+    return WmiSessionEnd(&wmi, WmiSessionHandle);
 
 }
 
@@ -120,7 +129,6 @@ int XenstorePrintf(const char *path, const char *fmt, ...)
 {
     va_list l;
     char buf[4096];
-    int ret;
     int cnt;
 
     va_start(l, fmt);
@@ -130,115 +138,35 @@ int XenstorePrintf(const char *path, const char *fmt, ...)
         DBGPRINT (("Cannot format data for XenstorePrintf!"));
         return -1;
     }
-
+	OutputDebugString(buf);
     /* Now have the thing we're trying to write. */
-    return WmiSessionSetEntry(wmi, &WmiSessionHandle, path, buf);
+    return WmiSessionSetEntry(&wmi, &WmiSessionHandle, path, buf);
 }
 
-int XenstoreWrite(const char *path, const void *data, size_t len)
-{
-    return WmiSessionSetEntry(wmi, &WmiSessionHandle, path, (const char *)data, len);
-}
-
-void XenstoreKickXapi()
+BOOL XenstoreKickXapi()
 {
     /* Old protocol */
-    WmiSessionSetEntry(wmi, &WmiSessionHandle, "data/updated", "1");
+    if (WmiSessionSetEntry(&wmi, &WmiSessionHandle, "data/updated", "1"))
+		return false;
     /* New protocol */
-    XenstorePrintf("data/update_cnt", "%I64d", update_cnt);
+    if (XenstorePrintf("data/update_cnt", "%I64d", update_cnt))
+		return false;
 
     update_cnt++;
+	return true;
 }
 
-void XenstoreDoDump(VMData *data)
-{
-    XenstorePrintf("data/meminfo_free", "%I64d", data->meminfo_free);
-    XenstorePrintf("data/meminfo_total", "%I64d", data->meminfo_total);
-}
-
-int XenstoreDoNicDump(
-    uint32_t num_vif,
-    VIFData *vif
-    )
-{
-    DWORD hStatus;
-    unsigned int i;
-    int ret = 0;
-    char path[MAX_CHAR_LEN] = "";
-    const char* domainVifPath = "data/vif";
-    unsigned int entry;     
-    unsigned int numEntries;
-    char** vifEntries = NULL;
-    char vifNode[MAX_XENBUS_PATH];
-
-    //
-    // Do any cleanup first outside of a transaction since failures are allowed
-    // and in some cases expected.
-    //
-    // Remove all of the old vif entries in case the nics have been
-    // disabled.  Otherwise they will have old stale data in xenstore.
-    //
-    if (XenstoreList(domainVifPath, &vifEntries, &numEntries) >= 0) {
-        for (entry = 0; entry < numEntries; entry++) {
-            _snprintf(path, MAX_CHAR_LEN, "%s", vifEntries[entry]);
-            WmiSessionRemoveEntry(wmi, &WmiSessionHandle, path);
-            _snprintf(path, MAX_CHAR_LEN, "attr/eth%s", vifEntries[entry]+9);
-            WmiSessionRemoveEntry(wmi, &WmiSessionHandle, path);
-            XsFree(vifEntries[entry]);
-        }
-        XsFree(vifEntries);
-    }
-    do 
-    {
-        hStatus = ERROR_SUCCESS;
-        WmiSessionTransactionStart(wmi, &WmiSessionHandle );
-        ret |= XenstorePrintf("data/num_vif", "%d", num_vif);
-
-        for( i = 0; i < num_vif; i++ ){
-            if (vif[i].ethnum != -1) {
-                _snprintf(path, MAX_CHAR_LEN, "data/vif/%d/name" , vif[i].ethnum);
-                path[MAX_CHAR_LEN-1] = 0;
-                ret |= XenstorePrintf(path, "%s", vif[i].name);
-
-
-                //
-                // IP address is dumped to /attr/eth[x]/ip
-                //
-                _snprintf (path, MAX_CHAR_LEN, "attr/eth%d/ip", vif[i].ethnum);
-                path[MAX_CHAR_LEN-1] = 0;
-                ret |= XenstorePrintf (path, "%s", vif[i].ip);
-
-            }
-        }
-        if(!WmiSessionTransactionCommit(wmi, &WmiSessionHandle))
-        {
-            hStatus = GetLastError ();
-            if (hStatus != ERROR_RETRY)
-            {
-                return -1;
-            }
-        }
-
-    } while (hStatus == ERROR_RETRY);
-	return ret;
-}
-
-int
-XenstoreList(const char *path, char ***entries, unsigned *numEntries)
-{
-    *entries = WmiSessionGetChildren(wmi, &WmiSessionHandle, path, numEntries);
-    if (*entries) {
-        return 0;
-    }
-    else {
-        return -1;
-    }
-}
 
 int
 XenstoreRemove(const char *path)
 {
-    if (WmiSessionRemoveEntry(wmi, &WmiSessionHandle, path))
+	if (wmi == NULL)
+		return -1;
+
+	if (WmiSessionHandle == NULL)
+		return -1;
+
+    if (WmiSessionRemoveEntry(&wmi, &WmiSessionHandle, path))
         return -1;
     else
         return 0;
@@ -248,7 +176,7 @@ ssize_t
 XenstoreRead(const char* path, char** value)
 {
     size_t len;
-    *value =WmiSessionGetEntry(wmi, &WmiSessionHandle, path, &len);
+    *value =WmiSessionGetEntry(&wmi, &WmiSessionHandle, path, &len);
     if (*value)
         return len;
     else
@@ -256,16 +184,24 @@ XenstoreRead(const char* path, char** value)
 }
 
 void *
-XenstoreWatch(const char *path, HANDLE event)
+XenstoreWatch(const char *path, HANDLE event, HANDLE errorevent)
 {
  
-    return WmiSessionWatch(wmi, &WmiSessionHandle, path, event);
+	if (wmi == NULL) {
+		OutputDebugString("WMI is null\n");
+		return NULL;
+	}
+	if (WmiSessionHandle == NULL) {
+		OutputDebugString("Session is null\n");
+		return NULL;
+	}
+    return WmiSessionWatch(&wmi, &WmiSessionHandle, path, event, errorevent);
 }
 
-void
+BOOL
 XenstoreUnwatch(void *watch)
 {
-    return WmiSessionUnwatch(wmi, &WmiSessionHandle, watch);
+    return WmiSessionUnwatch(&wmi, &WmiSessionHandle, watch);
 }
 
 void 
