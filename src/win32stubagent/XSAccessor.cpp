@@ -40,7 +40,7 @@ static LONG volatile threadcount = 0;
 static __declspec(thread) LONG localthreadcount = 0;
 static __declspec(thread) LONG localwmicount = 0;
 
-static long update_cnt;
+static long update_cnt=0xF0000000;
 #define XENSTORE_MAGIC 0x7e6ec123
 
 void *XsAlloc(size_t size) {
@@ -145,13 +145,16 @@ int XenstorePrintf(const char *path, const char *fmt, ...)
 
 BOOL XenstoreKickXapi()
 {
-    /* Old protocol */
-    if (WmiSessionSetEntry(&wmi, &WmiSessionHandle, "data/updated", "1"))
-		return false;
     /* New protocol */
-    if (XenstorePrintf("data/update_cnt", "%I64d", update_cnt))
+    if (XenstorePrintf("data/update_cnt", "%I64d", update_cnt)){
+        XsLog("New kick failed ");
 		return false;
-
+    }
+    /* Old protocol */
+    if (WmiSessionSetEntry(&wmi, &WmiSessionHandle, "data/updated", "1")){
+        XsLog("Old kick failed");
+		return false;
+    }
     update_cnt++;
 	return true;
 }
@@ -178,7 +181,7 @@ XenstoreRead(const char* path, char** value)
     size_t len;
     *value =WmiSessionGetEntry(&wmi, &WmiSessionHandle, path, &len);
     if (*value)
-        return len;
+        return (ssize_t)len;
     else
         return -1;
 }

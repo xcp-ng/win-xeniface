@@ -556,6 +556,7 @@ BOOL Run()
     }
    
 
+    XsLogMsg("About to add feature shutdown");
     if (!AddFeature(&features, "control/shutdown", "control/feature-shutdown", 
 					"shutdown", maybeReboot, NULL, wmierrorEvent)) {
 		return exit;
@@ -575,8 +576,9 @@ BOOL Run()
     }
 
 
-
+    XsLogMsg("About to advertise features");
     AdvertiseFeatures(&features);
+    XsLogMsg("About to kick xapi ");
 	XenstoreKickXapi();
 
     while (1)
@@ -717,7 +719,6 @@ void WINAPI ServiceMain(int argc, char** argv)
         return;
     }
 	BOOL stopping;
-	//InitCom();
 
 	do {
 		
@@ -731,7 +732,6 @@ void WINAPI ServiceMain(int argc, char** argv)
 		}
 	} while (!stopping);
 	
-	//ReleaseCom();
     XsLog("Guest agent service stopped");
     ShutdownXSAccessor();
 	ServiceControlManagerUpdate(0, SERVICE_STOPPED);

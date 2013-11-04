@@ -1085,24 +1085,29 @@ int WmiSessionSetEntry(WMIAccessor** wmi,  void **sessionhandle,
     if (FAILED(methodExec(wmi,*session, L"SetValue", inMethodInst, &outMethodInst)))
 		goto methodexecfailed;
 
-    if (outMethodInst==NULL)
-        goto sessionExec;
+    if (outMethodInst!=NULL) 
+        outMethodInst->Release();
 
-    outMethodInst->Release();
+	inMethodInst->Release();
+    SysFreeString(vvalue.bstrVal);
+    SysFreeString(vpath.bstrVal);
 
-    err=0;
+    return 0;
 
 methodexecfailed:
-sessionExec:     
+    XsLog("WmiSessionSetEntry:MethodExec Failed");
 	inMethodInst->Release();
 
 sessionstart:
+    XsLog("WmiSessionSetEntry:SessionStart Failed");
     SysFreeString(vvalue.bstrVal);
 
 setvvalue:
+    XsLog("WmiSessionSetEntry:SetVValue Failed");
     SysFreeString(vpath.bstrVal);
 
 setvpath:
+    XsLog("WmiSessionSetEntry:SetVPath Failed ");
     return err;
 }
 
