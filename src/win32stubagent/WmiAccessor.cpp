@@ -120,13 +120,13 @@ class WatchSink : public IWbemObjectSink
     LONG m_lRef;
     bool bDone; 
     HANDLE triggerevent;
-	HANDLE triggererror;
+    HANDLE triggererror;
 public:
     char *path;
     WatchSink(HANDLE event, HANDLE errorevent, const char *path) { 
         m_lRef = 1; 
         triggerevent = event;
-		triggererror = errorevent;
+        triggererror = errorevent;
         this->path = NULL;
         if (path) {
             this->path=(char *)XsAlloc(strlen(path)+1);
@@ -203,10 +203,10 @@ HRESULT WatchSink::SetStatus(
             /* [in] */ IWbemClassObject __RPC_FAR *pObjParam
         )
 {
-	if (FAILED(hResult)) {
-		XsLog("WMI Asyc watch failed %p\n", this);
-		SetEvent(this->triggererror);
-	}
+    if (FAILED(hResult)) {
+        XsLog("WMI Asyc watch failed %p\n", this);
+        SetEvent(this->triggererror);
+    }
     return WBEM_S_NO_ERROR;
 }
 
@@ -246,14 +246,14 @@ static string wstring2string(const wstring& wstr)
                               NULL,
                               NULL);
 
-	return str;
+    return str;
 }
 
 static string bstr2string(const BSTR& bstr)
 {
-	wstring wstr(bstr);
+    wstring wstr(bstr);
 
-	return wstring2string(wstr);
+    return wstring2string(wstr);
 }
 
 IWbemClassObject *getClass(WMIAccessor **wmi, BSTR path) {
@@ -261,7 +261,7 @@ IWbemClassObject *getClass(WMIAccessor **wmi, BSTR path) {
         return NULL;
 
     if ((*wmi)->mpXSSvc == NULL)
-		return NULL;
+        return NULL;
 
     IWbemClassObject *returnedObject;
     HRESULT hres = (*wmi)->mpXSSvc->GetObject(path,WBEM_FLAG_RETURN_WBEM_COMPLETE,
@@ -282,9 +282,9 @@ IWbemClassObject *getObject(WMIAccessor **wmi, BSTR path) {
                                             NULL, 
                                             &returnedEnum);
     if (FAILED(hres)) {
-		OutputDebugString("GetEnum failed\n");
+        OutputDebugString("GetEnum failed\n");
         returnedObject =NULL;
-		return returnedObject;
+        return returnedObject;
     }
     ULONG objects;
 
@@ -357,10 +357,10 @@ static IEnumWbemClassObject* runXSQuery(WMIAccessor **wmi, BSTR query)
                                          &pEnumerator);
     if (FAILED(hres))
     {
-		DBGPRINT(("ExecQuery failed\n"));
-		pEnumerator = NULL;
+        DBGPRINT(("ExecQuery failed\n"));
+        pEnumerator = NULL;
     }
-	return pEnumerator;
+    return pEnumerator;
 }
 static IEnumWbemClassObject* runQuery(WMIAccessor *wmi, BSTR query)
 {
@@ -379,161 +379,161 @@ static IEnumWbemClassObject* runQuery(WMIAccessor *wmi, BSTR query)
                                          &pEnumerator);
     if (FAILED(hres))
     {
-		DBGPRINT(("ExecQuery failed\n"));
-		pEnumerator = NULL;
+        DBGPRINT(("ExecQuery failed\n"));
+        pEnumerator = NULL;
     }
-	return pEnumerator;
+    return pEnumerator;
 }
 
 LONG wmicount = 0;
 static BOOLEAN com_initialized = false;
 static IWbemLocator *locator = 0;
 BOOL InitCom(void) {
-	HRESULT hres;
-	XsLog("Init COM");
-	hres = CoInitializeEx(0, COINIT_MULTITHREADED);
-	if (FAILED(hres)) {
-		goto err_out;
-	}
-	com_initialized = TRUE;
-	//wmi->owning_thread = GetCurrentThread();
-	//XsLog("Wmi connect thread %p", GetCurrentThread());
-	// Initialize COM security.  Most of this is irrelevant to us.
-	XsLog("Init security");
-	hres = CoInitializeSecurity(
-		NULL,     /* Security descriptor. Only relevant to servers */
-		-1,       /* Nr. of auth services. Only relevant to servers */
-		NULL,     /* List of auth services. Only relevant to servers */
-		NULL,     /* Reserved */
-		RPC_C_AUTHN_LEVEL_DEFAULT, /* Default authentication.  The
-										details don't really matter when
-										you're localhost. */
-		RPC_C_IMP_LEVEL_IMPERSONATE, /* WMI needs to be able to
-										impersonate us. */
-		NULL,             /* Authentication info */
-		EOAC_NONE,        /* Additional capabilities */
-		NULL              /* Reserved */
-		);
-	if (FAILED(hres)) {
-		goto err_out;
-	}
-			OutputDebugString("CreateInstance\n");
-		hres = CoCreateInstance(
-			CLSID_WbemLocator,
-			0, 
-			CLSCTX_INPROC_SERVER, 
-			IID_IWbemLocator,
-			(LPVOID *) &locator);
-		OutputDebugString("Check hres\n");
-		if (FAILED(hres)) {
-			goto err_out;
-		}
-		if (locator == NULL) {
-			OutputDebugString("Null locator");
-			goto err_out;
-		}
-	return true;
+    HRESULT hres;
+    XsLog("Init COM");
+    hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+    if (FAILED(hres)) {
+        goto err_out;
+    }
+    com_initialized = TRUE;
+    //wmi->owning_thread = GetCurrentThread();
+    //XsLog("Wmi connect thread %p", GetCurrentThread());
+    // Initialize COM security.  Most of this is irrelevant to us.
+    XsLog("Init security");
+    hres = CoInitializeSecurity(
+        NULL,     /* Security descriptor. Only relevant to servers */
+        -1,       /* Nr. of auth services. Only relevant to servers */
+        NULL,     /* List of auth services. Only relevant to servers */
+        NULL,     /* Reserved */
+        RPC_C_AUTHN_LEVEL_DEFAULT, /* Default authentication.  The
+                                        details don't really matter when
+                                        you're localhost. */
+        RPC_C_IMP_LEVEL_IMPERSONATE, /* WMI needs to be able to
+                                        impersonate us. */
+        NULL,             /* Authentication info */
+        EOAC_NONE,        /* Additional capabilities */
+        NULL              /* Reserved */
+        );
+    if (FAILED(hres)) {
+        goto err_out;
+    }
+            OutputDebugString("CreateInstance\n");
+        hres = CoCreateInstance(
+            CLSID_WbemLocator,
+            0, 
+            CLSCTX_INPROC_SERVER, 
+            IID_IWbemLocator,
+            (LPVOID *) &locator);
+        OutputDebugString("Check hres\n");
+        if (FAILED(hres)) {
+            goto err_out;
+        }
+        if (locator == NULL) {
+            OutputDebugString("Null locator");
+            goto err_out;
+        }
+    return true;
 err_out:
-	return false;
+    return false;
 }
 
 BOOL ConnectToWMI(void)
 {
-		InitCom();
-		HRESULT hres;
-		OutputDebugString("Connect to WMI");
-		wmicount++;
+        InitCom();
+        HRESULT hres;
+        OutputDebugString("Connect to WMI");
+        wmicount++;
 
-		wmi = (struct WMIAccessor *)XsAlloc(sizeof(*wmi));
-		if (wmi == NULL) {
-			return false;
-		}
-		memset(wmi, 0, sizeof(*wmi));
-
-
-		OutputDebugString("Connect Server\n");
-		try {
-			hres = locator->ConnectServer(
-				L"root\\CIMV2",          // WMI namespace
-				NULL,                    // User name
-				NULL,                    // User password
-				NULL,                    // Locale
-				0,                       // Security flags
-				NULL,                    // Authority
-				NULL,                    // Context object
-				&(wmi->mpSvc)              // IWbemServices proxy
-				);
-		}
-		catch(...) {
-			OutputDebugString("Exception connecting to server\n");
-			goto err_out;
-		}
-
-		OutputDebugString("Check result\n");
-		if (FAILED(hres)) {
-			goto err_out;
-		}
-		/* WMI needs to impersonate us, because it normally runs as an
-		   unprivileged user and needs our authority in order to access
-		   device files and so forth.  Turn impersonation on. */
-		OutputDebugString("Proxy blanket\n");
-		hres = CoSetProxyBlanket(
-			wmi->mpSvc,                  // the proxy to set
-			RPC_C_AUTHN_WINNT,           /* LAN manager authentication,
-											although it doesn't really
-											matter on localhost. */
-			RPC_C_AUTHZ_NONE,            // LANMAN can't do much authorization.
-			NULL,                        // Server principal name
-			RPC_C_AUTHN_LEVEL_CALL,      // Do authentication on every call
-			RPC_C_IMP_LEVEL_IMPERSONATE, // Allow full impersonation.
-			NULL,                        // Use current client identity
-			EOAC_NONE                    // No extended proxy capabilities
-		);
-		if (FAILED(hres)) {
-			goto err_out;
-		}
-		OutputDebugString("WMI Server\n");
-		hres = locator->ConnectServer(
-			L"root\\WMI",          // WMI namespace
-			NULL,                    // User name
-			NULL,                    // User password
-			NULL,                    // Locale
-			0,                       // Security flags
-			NULL,                    // Authority
-			NULL,                    // Context object
-			&wmi->mpXSSvc              // IWbemServices proxy
-			);
-
-		if (FAILED(hres)) {
-			goto err_out;
-		}
-		OutputDebugString("Impersonation\n");
-		/* WMI needs to impersonate us, because it normally runs as an
-		   unprivileged user and needs our authority in order to access
-		   device files and so forth.  Turn impersonation on. */
-		hres = CoSetProxyBlanket(
-			wmi->mpXSSvc,                  // the proxy to set
-			RPC_C_AUTHN_WINNT,           /* LAN manager authentication,
-											although it doesn't really
-											matter on localhost. */
-			RPC_C_AUTHZ_NONE,            // LANMAN can't do much authorization.
-			NULL,                        // Server principal name
-			RPC_C_AUTHN_LEVEL_CALL,      // Do authentication on every call
-			RPC_C_IMP_LEVEL_IMPERSONATE, // Allow full impersonation.
-			NULL,                        // Use current client identity
-			EOAC_NONE                    // No extended proxy capabilities
-		);
-		if (FAILED(hres)) {
-			goto err_out;
-		}
+        wmi = (struct WMIAccessor *)XsAlloc(sizeof(*wmi));
+        if (wmi == NULL) {
+            return false;
+        }
+        memset(wmi, 0, sizeof(*wmi));
 
 
-	OutputDebugString("Wmi connected\n");
+        OutputDebugString("Connect Server\n");
+        try {
+            hres = locator->ConnectServer(
+                L"root\\CIMV2",          // WMI namespace
+                NULL,                    // User name
+                NULL,                    // User password
+                NULL,                    // Locale
+                0,                       // Security flags
+                NULL,                    // Authority
+                NULL,                    // Context object
+                &(wmi->mpSvc)              // IWbemServices proxy
+                );
+        }
+        catch(...) {
+            OutputDebugString("Exception connecting to server\n");
+            goto err_out;
+        }
+
+        OutputDebugString("Check result\n");
+        if (FAILED(hres)) {
+            goto err_out;
+        }
+        /* WMI needs to impersonate us, because it normally runs as an
+           unprivileged user and needs our authority in order to access
+           device files and so forth.  Turn impersonation on. */
+        OutputDebugString("Proxy blanket\n");
+        hres = CoSetProxyBlanket(
+            wmi->mpSvc,                  // the proxy to set
+            RPC_C_AUTHN_WINNT,           /* LAN manager authentication,
+                                            although it doesn't really
+                                            matter on localhost. */
+            RPC_C_AUTHZ_NONE,            // LANMAN can't do much authorization.
+            NULL,                        // Server principal name
+            RPC_C_AUTHN_LEVEL_CALL,      // Do authentication on every call
+            RPC_C_IMP_LEVEL_IMPERSONATE, // Allow full impersonation.
+            NULL,                        // Use current client identity
+            EOAC_NONE                    // No extended proxy capabilities
+        );
+        if (FAILED(hres)) {
+            goto err_out;
+        }
+        OutputDebugString("WMI Server\n");
+        hres = locator->ConnectServer(
+            L"root\\WMI",          // WMI namespace
+            NULL,                    // User name
+            NULL,                    // User password
+            NULL,                    // Locale
+            0,                       // Security flags
+            NULL,                    // Authority
+            NULL,                    // Context object
+            &wmi->mpXSSvc              // IWbemServices proxy
+            );
+
+        if (FAILED(hres)) {
+            goto err_out;
+        }
+        OutputDebugString("Impersonation\n");
+        /* WMI needs to impersonate us, because it normally runs as an
+           unprivileged user and needs our authority in order to access
+           device files and so forth.  Turn impersonation on. */
+        hres = CoSetProxyBlanket(
+            wmi->mpXSSvc,                  // the proxy to set
+            RPC_C_AUTHN_WINNT,           /* LAN manager authentication,
+                                            although it doesn't really
+                                            matter on localhost. */
+            RPC_C_AUTHZ_NONE,            // LANMAN can't do much authorization.
+            NULL,                        // Server principal name
+            RPC_C_AUTHN_LEVEL_CALL,      // Do authentication on every call
+            RPC_C_IMP_LEVEL_IMPERSONATE, // Allow full impersonation.
+            NULL,                        // Use current client identity
+            EOAC_NONE                    // No extended proxy capabilities
+        );
+        if (FAILED(hres)) {
+            goto err_out;
+        }
+
+
+    OutputDebugString("Wmi connected\n");
     /* All done. */
     return true;
 
 err_out:
-	OutputDebugString("WMI connection failed\n");
+    OutputDebugString("WMI connection failed\n");
     ReleaseWMIAccessor(&wmi);
     return false;
 }
@@ -541,15 +541,15 @@ err_out:
 
 void ReleaseCom(void) {
 
-	if (com_initialized) {
-		OutputDebugString("Release locator\n");
-		locator->Release();
-		//XsLog("Wmi disconnect thread %p", GetCurrentThread());
+    if (com_initialized) {
+        OutputDebugString("Release locator\n");
+        locator->Release();
+        //XsLog("Wmi disconnect thread %p", GetCurrentThread());
         //ASSERT((*wmi)->owning_thread == GetCurrentThread());
-		com_initialized = 0;
-		OutputDebugString("Uninitialize com\n");
+        com_initialized = 0;
+        OutputDebugString("Uninitialize com\n");
         CoUninitialize();
-		
+        
     }
 }
 
@@ -557,10 +557,10 @@ void ReleaseCom(void) {
    allocated them. */
 void ReleaseWMIAccessor(struct WMIAccessor **wmi)
 {
-	OutputDebugString("Should I release wmi?\n");
+    OutputDebugString("Should I release wmi?\n");
     if (*wmi == NULL)
         return;
-	OutputDebugString("Get rid of WMI servers\n");
+    OutputDebugString("Get rid of WMI servers\n");
     if ((*wmi)->mpXSSvc != NULL)
         (*wmi)->mpXSSvc->Release();
     if ((*wmi)->mpSvc != NULL)
@@ -569,9 +569,9 @@ void ReleaseWMIAccessor(struct WMIAccessor **wmi)
     /* Poison wmi to make use-after-free()s a bit more obvious. */
     memset((*wmi), 0xab, sizeof(**wmi));
     XsFree(*wmi);
-	*wmi = NULL;
-	ReleaseCom();
-	OutputDebugString("Released WMI\n");
+    *wmi = NULL;
+    ReleaseCom();
+    OutputDebugString("Released WMI\n");
 }
 
 /* The fact that something is documented as being a uint64_t field
@@ -733,21 +733,21 @@ public:
 IWbemClassObject *getBase(WMIAccessor** wmi) 
 {
     IWbemClassObject* base = getObject(wmi, L"CitrixXenStoreBase");
-	if (base == NULL) {
-		*wmi = NULL;
-		return NULL;
-	}
-	return base;
+    if (base == NULL) {
+        *wmi = NULL;
+        return NULL;
+    }
+    return base;
 }
 
 IWbemClassObject *getBaseClass(WMIAccessor** wmi) 
 {
     IWbemClassObject* baseclass =  getClass(wmi, L"CitrixXenStoreBase");
-	if (baseclass == NULL) {
-		*wmi = NULL;
-		return NULL;
-	}
-	return baseclass;
+    if (baseclass == NULL) {
+        *wmi = NULL;
+        return NULL;
+    }
+    return baseclass;
 }
 
 ULONGLONG get64BitUnsigned(VARIANT *var) {
@@ -772,7 +772,7 @@ ULONGLONG get64BitUnsigned(VARIANT *var) {
 FILETIME WmiGetXenTime(WMIAccessor **wmi) {
      FILETIME out;
      
-	 IWbemClassObject *base = getBase(wmi);
+     IWbemClassObject *base = getBase(wmi);
      if (base == NULL) {
          DBGPRINT(("Unable to find base WMI session\n"));
          goto getbasefailed;
@@ -780,13 +780,13 @@ FILETIME WmiGetXenTime(WMIAccessor **wmi) {
 
      VARIANT timevar;
      BSTR timename = mkBstr("XenTime", 7);
-	 if (timename == NULL)
-		 goto buildtimenamefailed;
-		 
+     if (timename == NULL)
+         goto buildtimenamefailed;
+         
 
 
      if (FAILED(base->Get(timename, 0, &timevar, NULL, NULL)))
-		 goto gettimefailed;
+         goto gettimefailed;
 
      ULONGLONG time =get64BitUnsigned(&timevar);;
 
@@ -797,7 +797,7 @@ FILETIME WmiGetXenTime(WMIAccessor **wmi) {
 gettimefailed:
 buildtimenamefailed:
 getbasefailed:
-	 out.dwLowDateTime = 0;
+     out.dwLowDateTime = 0;
      out.dwHighDateTime = 0;
      return out ;
 }
@@ -807,8 +807,8 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
     HRESULT hres;
 
     BSTR query = formatBstr("SELECT * FROM CitrixXenStoreSession WHERE Id=\"Citrix Xen Win32 Service : %s\"", sessionname);
-	if (query == NULL)
-		goto formatsessionbstrfailed;
+    if (query == NULL)
+        goto formatsessionbstrfailed;
 
     IEnumWbemClassObject * sessions = runXSQuery(wmi, query);
     SysFreeString(query);
@@ -817,13 +817,13 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
         IWbemClassObject *returnedObject;
         ULONG count;
         hres = sessions->Next(WBEM_INFINITE, 1, &returnedObject, &count);
-		sessions->Release();
+        sessions->Release();
 
         if (count>0) {
             if (sessionname !=NULL ) {
                 if (!WmiSessionEnd(wmi, returnedObject)) {
-					return NULL;
-				}
+                    return NULL;
+                }
             }
             else {
                 return returnedObject;
@@ -839,91 +839,91 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
 
     IWbemClassObject *baseclass = getBaseClass(wmi);
 
-	if (baseclass == NULL)
-		goto getbaseclassfailed;
+    if (baseclass == NULL)
+        goto getbaseclassfailed;
 
     IWbemClassObject *inMethod;
 
     IWbemClassObject *inMethodInst;
     IWbemClassObject *outMethodInst;
     if (FAILED(baseclass->GetMethod(L"AddSession",0,&inMethod, NULL)))
-		goto getmethodaddsessionfailed;
+        goto getmethodaddsessionfailed;
 
     if (FAILED(inMethod->SpawnInstance(0, &inMethodInst)))
-		goto inmethodspawnfailed;
+        goto inmethodspawnfailed;
 
     VARIANT var;
     var.vt = VT_BSTR;
     var.bstrVal=formatBstr("Citrix Xen Win32 Service : %s", sessionname);
 
-	if (var.bstrVal == NULL)
-		goto formatnamebstrfailed;
+    if (var.bstrVal == NULL)
+        goto formatnamebstrfailed;
 
     if (FAILED(inMethodInst->Put(L"Id", 0, &var, 0)))
-		goto methodputfailed;
+        goto methodputfailed;
 
     if (FAILED(methodExec(wmi, base, L"AddSession", inMethodInst, &outMethodInst)))
-		goto methodexecaddsessionfailed;
+        goto methodexecaddsessionfailed;
     
     if (FAILED(outMethodInst->Get(L"SessionId", 0, &var, NULL, NULL)))
-		goto outmethodgetfailed;
+        goto outmethodgetfailed;
 
     ULONG query_len;
     query_len = strlen("SELECT * FROM CitrixXenStoreSession WHERE SessionId=")+10;
     query = SysAllocStringLen(NULL, query_len);
 
-	if (query == NULL)
-		goto allocqueryfailed;
+    if (query == NULL)
+        goto allocqueryfailed;
 
     swprintf_s(query,query_len, L"SELECT * FROM CitrixXenStoreSession WHERE SessionId=%d", var.uintVal);
 
     sessions = runXSQuery(wmi, query );
-	SysFreeString(query);
+    SysFreeString(query);
 
     if (sessions) {
         IWbemClassObject *returnedObject;
         ULONG count;
         hres = sessions->Next(WBEM_INFINITE, 1, &returnedObject, &count);
-		sessions->Release();
+        sessions->Release();
         if (count>0) {
             return returnedObject;
         }
         
     }
-	
-	outMethodInst->Release();
-	VariantClear(&var);
-	inMethodInst->Release();
-	inMethod->Release();
+    
+    outMethodInst->Release();
+    VariantClear(&var);
+    inMethodInst->Release();
+    inMethod->Release();
     base->Release();
-	baseclass->Release();
+    baseclass->Release();
     return NULL;
 
 allocqueryfailed:
 outmethodgetfailed:
-	outMethodInst->Release();
+    outMethodInst->Release();
 
 methodexecaddsessionfailed:
 methodputfailed:
-	VariantClear(&var);
+    VariantClear(&var);
 
 formatnamebstrfailed:
-	inMethodInst->Release();
+    inMethodInst->Release();
 inmethodspawnfailed:
-	inMethod->Release();
+    inMethod->Release();
 
 
 getmethodaddsessionfailed:
-	baseclass->Release();
+    baseclass->Release();
 
 getbaseclassfailed:
-	base->Release();
+    base->Release();
 
 getbasefailed:
 
 
 formatsessionbstrfailed:
-	return NULL;
+    return NULL;
 }
 
 IWbemClassObject* sessionMethodStart(WMIAccessor**wmi,  
@@ -932,33 +932,33 @@ IWbemClassObject* sessionMethodStart(WMIAccessor**wmi,
     IWbemClassObject *inMethod;
     IWbemClassObject *inMethodInst = NULL;
     IWbemClassObject *sessionClass;
-	HRESULT hr;
+    HRESULT hr;
 
-	ASSERT(wmi != NULL);
+    ASSERT(wmi != NULL);
 
     sessionClass = getClass(wmi, L"CitrixXenStoreSession");
-	if (sessionClass == NULL)
-		goto getclassfailed;
+    if (sessionClass == NULL)
+        goto getclassfailed;
 
     hr = sessionClass->GetMethod(methodname,0,&inMethod, NULL);
-	if (FAILED(hr))
-		goto getmethodfailed;
+    if (FAILED(hr))
+        goto getmethodfailed;
 
     hr = inMethod->SpawnInstance(0, &inMethodInst);
-	if (FAILED(hr))
-		goto spawninstancefailed;
+    if (FAILED(hr))
+        goto spawninstancefailed;
 
-	inMethod->Release();
+    inMethod->Release();
 
-	sessionClass->Release();
-	return inMethodInst;
+    sessionClass->Release();
+    return inMethodInst;
 
 
 spawninstancefailed:
-	inMethod->Release();
-	
+    inMethod->Release();
+    
 getmethodfailed:
-	sessionClass->Release();
+    sessionClass->Release();
 
 getclassfailed:
     return NULL;
@@ -968,7 +968,7 @@ getclassfailed:
 char * bstrToChar(BSTR bst, size_t *len) {
     *len = wcslen(bst);
     char *space = (char *)XsAlloc(*len+1);
-	if (space)
+    if (space)
         wcstombs_s(len, space, *len+1, bst,  _TRUNCATE);
     return space;
 }
@@ -978,10 +978,10 @@ void WmiSessionLog(WMIAccessor** wmi,  void **sessionhandle,const char *fmt, va_
     
     char* message = formatCharStrInt(fmt,args);
     
-	OutputDebugString(message);
-	if (((*wmi)==NULL) || ((*sessionhandle)==NULL) ) {
-		goto nowmi;
-	}
+    OutputDebugString(message);
+    if (((*wmi)==NULL) || ((*sessionhandle)==NULL) ) {
+        goto nowmi;
+    }
     VARIANT vmessage;
     if (setVariantString(&vmessage, message))
         goto setvmessage;
@@ -991,14 +991,14 @@ void WmiSessionLog(WMIAccessor** wmi,  void **sessionhandle,const char *fmt, va_
         goto sessionstart;
     
      if (FAILED(inMethodInst->Put(L"Message",0,&vmessage,0)))
-		 goto methodputfailed;
+         goto methodputfailed;
 
      if (FAILED(methodExec(wmi,*session, L"Log", inMethodInst, NULL)))
-		 goto methodexecfailed;
+         goto methodexecfailed;
 
 methodexecfailed:
 methodputfailed:
-	 inMethodInst->Release();
+     inMethodInst->Release();
 
 sessionstart:
     VariantClear(&vmessage);
@@ -1021,11 +1021,11 @@ char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
     IWbemClassObject *outMethodInst;
 
     IWbemClassObject *inMethodInst = sessionMethodStart( wmi, L"GetValue");
-	if (inMethodInst == NULL) 
-		goto sessionmethodstartfailed;
+    if (inMethodInst == NULL) 
+        goto sessionmethodstartfailed;
     
-	if (FAILED(inMethodInst->Put(L"PathName",0,&vpath,0))) 
-		goto methodexecfailed;
+    if (FAILED(inMethodInst->Put(L"PathName",0,&vpath,0))) 
+        goto methodexecfailed;
 
     methodExec(wmi,*session, L"GetValue", inMethodInst, &outMethodInst);
     if (outMethodInst==NULL)
@@ -1035,7 +1035,7 @@ char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
     VariantInit(&outval);
 
     if (FAILED(outMethodInst->Get(L"value", 0, &outval, NULL, NULL)))
-		goto methodgetfailed;
+        goto methodgetfailed;
 
     char *space = NULL;
     
@@ -1044,21 +1044,21 @@ char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
         space = bstrToChar(outval.bstrVal, len);
     }
 
-	outMethodInst->Release();
-	inMethodInst->Release();
-	VariantClear(&vpath);
+    outMethodInst->Release();
+    inMethodInst->Release();
+    VariantClear(&vpath);
     VariantClear(&outval); 
     return space;
 
 methodgetfailed:
-	outMethodInst->Release();
+    outMethodInst->Release();
 
 methodexecfailed:
 sessionExec:
-	inMethodInst->Release();
+    inMethodInst->Release();
 
 sessionmethodstartfailed:
-	VariantClear(&vpath);
+    VariantClear(&vpath);
 
 setvpath:
     return NULL;
@@ -1088,12 +1088,12 @@ int WmiSessionSetEntry(WMIAccessor** wmi,  void **sessionhandle,
     inMethodInst->Put(L"value",0,&vvalue,0);
 
     if (FAILED(methodExec(wmi,*session, L"SetValue", inMethodInst, &outMethodInst)))
-		goto methodexecfailed;
+        goto methodexecfailed;
 
     if (outMethodInst!=NULL) 
         outMethodInst->Release();
 
-	inMethodInst->Release();
+    inMethodInst->Release();
     SysFreeString(vvalue.bstrVal);
     SysFreeString(vpath.bstrVal);
 
@@ -1101,7 +1101,7 @@ int WmiSessionSetEntry(WMIAccessor** wmi,  void **sessionhandle,
 
 methodexecfailed:
     XsLog("WmiSessionSetEntry:MethodExec Failed");
-	inMethodInst->Release();
+    inMethodInst->Release();
 
 sessionstart:
     XsLog("WmiSessionSetEntry:SessionStart Failed");
@@ -1136,12 +1136,12 @@ int WmiSessionRemoveEntry(WMIAccessor** wmi,  void **sessionhandle,
         goto sessionstart;
 
     if (FAILED(inMethodInst->Put(L"PathName",0,&vpath,0)))
-		goto methodputfailed;
+        goto methodputfailed;
 
     IWbemClassObject* outMethodInst;
 
     if (FAILED(methodExec(wmi,*session, L"RemoveValue", inMethodInst, &outMethodInst)))
-		goto methodexecfailed;
+        goto methodexecfailed;
 
     if (outMethodInst==NULL)
         goto sessionExec;
@@ -1150,7 +1150,7 @@ int WmiSessionRemoveEntry(WMIAccessor** wmi,  void **sessionhandle,
     err=0;
 methodexecfailed:
 methodputfailed:
-	inMethodInst->Release();
+    inMethodInst->Release();
 
 sessionstart:
     VariantClear(&vpath);
@@ -1164,7 +1164,7 @@ setvpath:
 BOOL WmiSessionUnwatch(WMIAccessor** wmi,  void **sessionhandle,
                          void *watchhandle) {
     IWbemClassObject **session = (IWbemClassObject **)sessionhandle;
-	XsLog("Unwatch %p",watchhandle);
+    XsLog("Unwatch %p",watchhandle);
     WatchSink * sink = (WatchSink *)watchhandle;
 
     VARIANT vpath;
@@ -1178,7 +1178,7 @@ BOOL WmiSessionUnwatch(WMIAccessor** wmi,  void **sessionhandle,
 
     inMethodInst->Put(L"PathName",0,&vpath,0);
     if FAILED(methodExec(wmi,*session, L"RemoveWatch", inMethodInst, &outMethodInst))
-		goto methodexecfailed;
+        goto methodexecfailed;
     if (outMethodInst==NULL)
         goto sessionexecfailed;
 
@@ -1191,36 +1191,36 @@ sessionexecfailed:
 sessionstart:
 setvpath:
     sink->Release();
-	return true;
+    return true;
 }
 
 BOOL WmiSessionStart(WMIAccessor** wmi,  void **sessionhandle, const char* sessionname) 
 {
     IWbemClassObject **session = (IWbemClassObject **)sessionhandle;
     if ((*session = openSession(wmi, sessionname)) == NULL) {
-		return false;
-	}
-	return true;
+        return false;
+    }
+    return true;
 }
 
 
 BOOL WmiSessionEnd(WMIAccessor** wmi,  void *sessionhandle) 
 {
-	HRESULT hr;
-	ASSERT(*wmi != NULL);
+    HRESULT hr;
+    ASSERT(*wmi != NULL);
 
     IWbemClassObject *session = (IWbemClassObject *)sessionhandle;
     if (session==NULL) {
         return false;
     }
     hr = methodExec(wmi, session, L"EndSession", NULL,NULL);
-	if FAILED(hr)
-		goto execmethodfailed;
+    if FAILED(hr)
+        goto execmethodfailed;
     session->Release();
-	return true;
+    return true;
 
 execmethodfailed:
-	return false;
+    return false;
 
 }
 
@@ -1231,20 +1231,20 @@ void *WmiSessionWatch(WMIAccessor** wmi,  void **sessionhandle,
 
     IWbemClassObject **session = (IWbemClassObject **)sessionhandle;
     
-	ASSERT((*wmi) != NULL);
-	ASSERT((*sessionhandle) != NULL);
+    ASSERT((*wmi) != NULL);
+    ASSERT((*sessionhandle) != NULL);
 
     WatchSink * sink = new WatchSink(event, errorevent, path);
     BSTR query=formatBstr("SELECT * from CitrixXenStoreWatchEvent WHERE EventId=\"%s\"", path);
-	if (query == NULL) {
-		goto formatstringfailed;
-	}
+    if (query == NULL) {
+        goto formatstringfailed;
+    }
 
-	hr = (*wmi)->mpXSSvc->ExecNotificationQueryAsync(L"WQL", query,0,NULL, sink);
+    hr = (*wmi)->mpXSSvc->ExecNotificationQueryAsync(L"WQL", query,0,NULL, sink);
     if (FAILED(hr)){
-		*wmi = NULL;
-		goto wmifailed;
-	}
+        *wmi = NULL;
+        goto wmifailed;
+    }
 
     VARIANT vpath;
     if (setVariantString(&vpath, path)){
@@ -1257,61 +1257,61 @@ void *WmiSessionWatch(WMIAccessor** wmi,  void **sessionhandle,
         goto sessionstart;
 
     hr = inMethodInst->Put(L"PathName",0,&vpath,0);
-	if (FAILED(hr))
-		goto methodputfailed;
+    if (FAILED(hr))
+        goto methodputfailed;
 
     hr = methodExec(wmi,*session, L"SetWatch", inMethodInst, NULL);
-	if (FAILED(hr))
-		goto methodexecfailed;
+    if (FAILED(hr))
+        goto methodexecfailed;
 
-	VariantClear(&vpath);
+    VariantClear(&vpath);
 
-	SysFreeString(query);
+    SysFreeString(query);
 
-	return sink;
+    return sink;
 
 
 methodexecfailed:
-	OutputDebugString(__FUNCTION__ " : methodexecfailed\n");
+    OutputDebugString(__FUNCTION__ " : methodexecfailed\n");
 methodputfailed:
-	OutputDebugString(__FUNCTION__ " : methodputfailed\n");
-	inMethodInst->Release();
+    OutputDebugString(__FUNCTION__ " : methodputfailed\n");
+    inMethodInst->Release();
 sessionstart:
-	OutputDebugString(__FUNCTION__ " : sessionstart\n");
-	VariantClear(&vpath);
+    OutputDebugString(__FUNCTION__ " : sessionstart\n");
+    VariantClear(&vpath);
 setvpath:
-	OutputDebugString(__FUNCTION__ " : setvpath\n");
+    OutputDebugString(__FUNCTION__ " : setvpath\n");
 wmifailed:
-	SysFreeString(query);
+    SysFreeString(query);
 formatstringfailed:
-	OutputDebugString(__FUNCTION__ " : formatstringfailed\n");
-	delete sink;
+    OutputDebugString(__FUNCTION__ " : formatstringfailed\n");
+    delete sink;
     return NULL;
 }
 
 void *WmiUnsuspendedEventWatch(WMIAccessor **wmi, HANDLE event, HANDLE errorevent) 
 {
-	HRESULT hr;
+    HRESULT hr;
 
-	ASSERT(*wmi != NULL);
+    ASSERT(*wmi != NULL);
 
     WatchSink * sink = new WatchSink(event, errorevent, NULL);
     BSTR query=formatBstr("SELECT * from CitrixXenStoreUnsuspendedEvent");
-	if (query==NULL) {
-		goto formatstringfailed;
-	}
+    if (query==NULL) {
+        goto formatstringfailed;
+    }
 
     hr = (*wmi)->mpXSSvc->ExecNotificationQueryAsync(L"WQL", query,0,NULL, sink);
-	if FAILED(hr)
-		goto asyncqueryfailed;
+    if FAILED(hr)
+        goto asyncqueryfailed;
 
-	SysFreeString(query);
+    SysFreeString(query);
     return sink;
 
 asyncqueryfailed:
-	SysFreeString(query);
+    SysFreeString(query);
 formatstringfailed:
-	delete sink;
-	return NULL;
+    delete sink;
+    return NULL;
 }
 
