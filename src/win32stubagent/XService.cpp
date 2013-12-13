@@ -73,31 +73,31 @@ static void GetWindowsVersion();
 
 void PrintError(const char *func, DWORD err)
 {
-	LPVOID lpMsgBuf;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER |
-		FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL,
-		err,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR) &lpMsgBuf,
-		0,
-		NULL);
-	OutputDebugString((LPTSTR)lpMsgBuf);
+    LPVOID lpMsgBuf;
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM,
+        NULL,
+        err,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR) &lpMsgBuf,
+        0,
+        NULL);
+    OutputDebugString((LPTSTR)lpMsgBuf);
     XenstorePrintf("control/error", "%s failed: %s (%x)", func, lpMsgBuf, err);
-	LocalFree(lpMsgBuf);
+    LocalFree(lpMsgBuf);
 }
 
 void PrintError(const char *func)
 {
-	PrintError(func, GetLastError());
+    PrintError(func, GetLastError());
 }
 
 void PrintUsage()
 {
-	printf("Usage: xenservice [-u]\n");
+    printf("Usage: xenservice [-u]\n");
 
-	printf("\t -u: uninstall service\n");
+    printf("\t -u: uninstall service\n");
 }
 
 
@@ -142,7 +142,7 @@ EstablishWatch(const char *path, HANDLE errorevent)
 {
     struct watch_event *we;
     DWORD err;
-	XsLog("Establish watch %s",path);
+    XsLog("Establish watch %s",path);
     we = (struct watch_event *)malloc(sizeof(*we));
     if (!we) {
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
@@ -154,7 +154,7 @@ EstablishWatch(const char *path, HANDLE errorevent)
     if (we->event != INVALID_HANDLE_VALUE)
         we->watch = XenstoreWatch(path, we->event, errorevent);
     if (we->watch == NULL) {
-		OutputDebugString("Watch is null\n");
+        OutputDebugString("Watch is null\n");
         err = GetLastError();
         ReleaseWatch(we);
         SetLastError(err);
@@ -199,7 +199,7 @@ AddFeature(struct watch_feature_set *wfs, const char *path,
     if (wfs->features[n].name == NULL)
         goto failname;
     wfs->nr_features++;
-	return true;
+    return true;
 
 failname:
     PrintError("Failed to allocate string");
@@ -212,14 +212,14 @@ failfeatures:
 }
 
 static void RemoveFeatures(struct watch_feature_set *wfs) {
-	unsigned x;
+    unsigned x;
     for (x = 0; x < wfs->nr_features; x++) {
-		ReleaseWatch(wfs->features[x].watch);
-		wfs->features[x].watch = NULL;
+        ReleaseWatch(wfs->features[x].watch);
+        wfs->features[x].watch = NULL;
         FreeString(wfs->features[x].name);
-		XenstoreRemove(wfs->features[x].feature_flag);
-	}
-	wfs->nr_features = 0;
+        XenstoreRemove(wfs->features[x].feature_flag);
+    }
+    wfs->nr_features = 0;
 }
 
 static BOOL
@@ -232,44 +232,44 @@ AdvertiseFeatures(struct watch_feature_set *wfs)
                 XsLog("Failed to advertise %s",wfs->features[x].name);
             }
     }
-	return true;
+    return true;
 }
 
 
 void ServiceUninstall()
 {
-	SC_HANDLE   hSvc;
-	SC_HANDLE   hMgr;
-	
-	hMgr = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    SC_HANDLE   hSvc;
+    SC_HANDLE   hMgr;
+    
+    hMgr = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
 
-	if ( hMgr )
-	{
-		hSvc = OpenService(hMgr, SVC_NAME, SERVICE_ALL_ACCESS);
+    if ( hMgr )
+    {
+        hSvc = OpenService(hMgr, SVC_NAME, SERVICE_ALL_ACCESS);
 
-		if (hSvc)
-		{
-			 // try to stop the service
-			 if ( ControlService( hSvc, SERVICE_CONTROL_STOP, &ServiceStatus ) )
-			 {
-				printf("Stopping %s.", SVC_DISPLAYNAME);
-				Sleep( 1000 );
+        if (hSvc)
+        {
+             // try to stop the service
+             if ( ControlService( hSvc, SERVICE_CONTROL_STOP, &ServiceStatus ) )
+             {
+                printf("Stopping %s.", SVC_DISPLAYNAME);
+                Sleep( 1000 );
 
-				while ( QueryServiceStatus( hSvc, &ServiceStatus ) )
-				{
-					if ( ServiceStatus.dwCurrentState == SERVICE_STOP_PENDING )
-					{
-						printf(".");
-						Sleep( 1000 );
-					}
-					else
-						break;
-				}
+                while ( QueryServiceStatus( hSvc, &ServiceStatus ) )
+                {
+                    if ( ServiceStatus.dwCurrentState == SERVICE_STOP_PENDING )
+                    {
+                        printf(".");
+                        Sleep( 1000 );
+                    }
+                    else
+                        break;
+                }
 
-				if ( ServiceStatus.dwCurrentState == SERVICE_STOPPED )
-					printf("\n%s stopped.\n", SVC_DISPLAYNAME );
-				else
-					printf("\n%s failed to stop.\n", SVC_DISPLAYNAME );
+                if ( ServiceStatus.dwCurrentState == SERVICE_STOPPED )
+                    printf("\n%s stopped.\n", SVC_DISPLAYNAME );
+                else
+                    printf("\n%s failed to stop.\n", SVC_DISPLAYNAME );
          }
 
          // now remove the service
@@ -299,28 +299,28 @@ WinMain(HINSTANCE hInstance, HINSTANCE ignore,
     local_hinstance = hInstance;
 
     if (strlen(lpCmdLine) == 0) {
-		SERVICE_TABLE_ENTRY ServiceTable[2];
-		ServiceTable[0].lpServiceName = SVC_NAME;
-		ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
+        SERVICE_TABLE_ENTRY ServiceTable[2];
+        ServiceTable[0].lpServiceName = SVC_NAME;
+        ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
 
-		ServiceTable[1].lpServiceName = NULL;
-		ServiceTable[1].lpServiceProc = NULL;
+        ServiceTable[1].lpServiceName = NULL;
+        ServiceTable[1].lpServiceProc = NULL;
 
-		DBGPRINT(("XenSvc: starting ctrl dispatcher "));
+        DBGPRINT(("XenSvc: starting ctrl dispatcher "));
 
-		// Start the control dispatcher thread for our service
-		if (!StartServiceCtrlDispatcher(ServiceTable))
-		{
-			int err = GetLastError();
-			if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
-			{
-				DBGPRINT(("XenSvc: unable to start ctrl dispatcher - %d", GetLastError()));
-			}
-		}
-		else
-		{
-			// We get here when the service is shut down.
-		}
+        // Start the control dispatcher thread for our service
+        if (!StartServiceCtrlDispatcher(ServiceTable))
+        {
+            int err = GetLastError();
+            if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
+            {
+                DBGPRINT(("XenSvc: unable to start ctrl dispatcher - %d", GetLastError()));
+            }
+        }
+        else
+        {
+            // We get here when the service is shut down.
+        }
     } else if (!strcmp(lpCmdLine, "-u") || !strcmp(lpCmdLine, "\"-u\"")) {
         ServiceUninstall();
     } else {
@@ -359,45 +359,45 @@ static void AcquireSystemShutdownPrivilege(void)
 }
 
 enum XShutdownType {
-	XShutdownPoweroff,
-	XShutdownReboot,
-	XShutdownSuspend,
+    XShutdownPoweroff,
+    XShutdownReboot,
+    XShutdownSuspend,
     XShutdownS3
 };
 
 static BOOL maybeReboot(void *ctx)
 {
-	char *shutdown_type;
-	BOOL res;
-	enum XShutdownType type;
+    char *shutdown_type;
+    BOOL res;
+    enum XShutdownType type;
     int cntr = 0;
     HANDLE eventLog;
 
     XsLog("Check if we need to shutdown");
 
-	if (XenstoreRead("control/shutdown", &shutdown_type) < 0) {
+    if (XenstoreRead("control/shutdown", &shutdown_type) < 0) {
         XsLog("No need to shutdown");
-		return true;
+        return true;
     }
-	XsLog("Shutdown type %s\n", shutdown_type);
-	if (strcmp(shutdown_type, "poweroff") == 0 ||
-	    strcmp(shutdown_type, "halt") == 0) {
-		type = XShutdownPoweroff;
-	} else if (strcmp(shutdown_type, "reboot") == 0) {
-		type = XShutdownReboot;
-	} else if (strcmp(shutdown_type, "hibernate") == 0) {
-		type = XShutdownSuspend;
-	} else if (strcmp(shutdown_type, "s3") == 0) {
-		type = XShutdownS3;
-	} else {
-		DBGPRINT(("Bad shutdown type %s\n", shutdown_type));
-		goto out;
-	}
+    XsLog("Shutdown type %s\n", shutdown_type);
+    if (strcmp(shutdown_type, "poweroff") == 0 ||
+        strcmp(shutdown_type, "halt") == 0) {
+        type = XShutdownPoweroff;
+    } else if (strcmp(shutdown_type, "reboot") == 0) {
+        type = XShutdownReboot;
+    } else if (strcmp(shutdown_type, "hibernate") == 0) {
+        type = XShutdownSuspend;
+    } else if (strcmp(shutdown_type, "s3") == 0) {
+        type = XShutdownS3;
+    } else {
+        DBGPRINT(("Bad shutdown type %s\n", shutdown_type));
+        goto out;
+    }
 
     XsLog("Report Shutdown Event");
-	/* We try to shutdown even if this fails, since it might work
-	   and it can't do any harm. */
-	AcquireSystemShutdownPrivilege();
+    /* We try to shutdown even if this fails, since it might work
+       and it can't do any harm. */
+    AcquireSystemShutdownPrivilege();
 
     eventLog = RegisterEventSource(NULL, "xensvc");
     if (eventLog) {
@@ -424,10 +424,10 @@ static BOOL maybeReboot(void *ctx)
 
     XsLog("Do the shutdown");
 
-	/* do the shutdown */
-	switch (type) {
-	case XShutdownPoweroff:
-	case XShutdownReboot:
+    /* do the shutdown */
+    switch (type) {
+    case XShutdownPoweroff:
+    case XShutdownReboot:
         if (WindowsVersion >= 0x500 && WindowsVersion < 0x600)
         {
             /* Windows 2000 InitiateSystemShutdownEx is funny in
@@ -440,8 +440,8 @@ static BOOL maybeReboot(void *ctx)
                InitiateSystemShutdownEx behaves so badly. */
             /* If this is a legacy hal then use EWX_SHUTDOWN when shutting
                down instead of EWX_POWEROFF. */
-	    /* Similar problem on XP. Shutdown/Reboot will hang until the Welcome
-		screen screensaver is dismissed by the guest */
+        /* Similar problem on XP. Shutdown/Reboot will hang until the Welcome
+        screen screensaver is dismissed by the guest */
 #pragma warning (disable : 28159)
             res = ExitWindowsEx((type == XShutdownReboot ? 
                                     EWX_REBOOT : 
@@ -455,13 +455,13 @@ static BOOL maybeReboot(void *ctx)
 #pragma warning (default: 28159)
             if (!res) {
                 PrintError("ExitWindowsEx");
-				return false;
-			}
+                return false;
+            }
             else
             {
-				if (XenstoreRemove("control/shutdown"))
-					return false;
-			}
+                if (XenstoreRemove("control/shutdown"))
+                    return false;
+            }
         } else {
 #pragma warning (disable : 28159)
             res = InitiateSystemShutdownEx(
@@ -476,46 +476,46 @@ static BOOL maybeReboot(void *ctx)
 #pragma warning (default: 28159)
             if (!res) {
                 PrintError("InitiateSystemShutdownEx");
-				return false;
+                return false;
             } else {
                 if (XenstoreRemove("control/shutdown"))
-					return false;
+                    return false;
             }
         }
-		break;
-	case XShutdownSuspend:
+        break;
+    case XShutdownSuspend:
         if (XenstorePrintf ("control/hibernation-state", "started"))
-			return false;
+            return false;
         /* Even if we think hibernation is disabled, try it anyway.
            It's not like it can do any harm. */
-		res = SetSystemPowerState(FALSE, FALSE);
+        res = SetSystemPowerState(FALSE, FALSE);
         if (XenstoreRemove ("control/shutdown"))
-		{ 
-			return false;	
-		}
+        { 
+            return false;    
+        }
         if (!res) {
             /* Tell the tools that we've failed. */
             PrintError("SetSystemPowerState");
             if (XenstorePrintf ("control/hibernation-state", "failed"))
-				return false;
+                return false;
         }
-		break;
+        break;
     case XShutdownS3:
         if (XenstorePrintf ("control/s3-state", "started"))
-			return false;
+            return false;
         res = SetSuspendState(FALSE, TRUE, FALSE);
         XenstoreRemove ("control/shutdown");
         if (!res) {
             PrintError("SetSuspendState");
             if (XenstorePrintf ("control/s3-state", "failed"))
-				return false;
+                return false;
         }
         break;
-	}
+    }
 
 out:
-	XenstoreFree(shutdown_type);
-	return true;
+    XenstoreFree(shutdown_type);
+    return true;
 }
 
 /* We need to resync the clock when we recover from suspend/resume. */
@@ -528,10 +528,10 @@ finishSuspend(void)
 
     DBGPRINT(("Coming back from suspend.\n"));
     GetXenTime(&now);
-	if ((now.dwLowDateTime == 0) && (now.dwHighDateTime == 0)) {
-		XsLog("Cannot set system time to xentime, unable to contact WMI");
-		return;
-	}
+    if ((now.dwLowDateTime == 0) && (now.dwHighDateTime == 0)) {
+        XsLog("Cannot set system time to xentime, unable to contact WMI");
+        return;
+    }
     XsLog("Xen time is %I64x", now);
     if (!FileTimeToSystemTime(&now, &sys_time)) {
         PrintError("FileTimeToSystemTime()");
@@ -568,49 +568,49 @@ BOOL Run()
     struct watch_feature_set features;
     BOOL snap = FALSE;
 
-	OutputDebugString("Trying to connect to WMI\n");
-	while (!ConnectToWMI()) {
-		OutputDebugString("Unable to connect to WMI, sleeping\n");
-		if (WaitForSingleObject(hServiceExitEvent, 1000*10) == WAIT_OBJECT_0) {
-			exit = true;
-			return exit;
-		}
-	}
-	while (InitXSAccessor()==false) {
-		OutputDebugString("Unable to initialise WMI session, sleeping\n");
-		if (WaitForSingleObject(hServiceExitEvent, 1000*10) == WAIT_OBJECT_0) {
-			exit = true;
-			return exit;
-		}
-	}
+    OutputDebugString("Trying to connect to WMI\n");
+    while (!ConnectToWMI()) {
+        OutputDebugString("Unable to connect to WMI, sleeping\n");
+        if (WaitForSingleObject(hServiceExitEvent, 1000*10) == WAIT_OBJECT_0) {
+            exit = true;
+            return exit;
+        }
+    }
+    while (InitXSAccessor()==false) {
+        OutputDebugString("Unable to initialise WMI session, sleeping\n");
+        if (WaitForSingleObject(hServiceExitEvent, 1000*10) == WAIT_OBJECT_0) {
+            exit = true;
+            return exit;
+        }
+    }
     XsLog("Guest agent lite main loop starting");
 
     memset(&features, 0, sizeof(features));
 
-	HANDLE wmierrorEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    HANDLE wmierrorEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (!wmierrorEvent) {
         PrintError("CreateEvent() wmierrorEvent");
-		return exit;
+        return exit;
     }
    
 
     XsLog("About to add feature shutdown");
     if (!AddFeature(&features, "control/shutdown", "control/feature-shutdown", 
-					"shutdown", maybeReboot, NULL, wmierrorEvent)) {
-		return exit;
-	}
+                    "shutdown", maybeReboot, NULL, wmierrorEvent)) {
+        return exit;
+    }
 
     suspendEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (!suspendEvent) {
         PrintError("CreateEvent() suspendEvent");
-		return exit;
+        return exit;
     }
-	
+    
     if (ListenSuspend(suspendEvent, wmierrorEvent) < 0) {
-		PrintError("ListenSuspend()");
-		CloseHandle(suspendEvent);
-		suspendEvent = NULL;
-		return exit;
+        PrintError("ListenSuspend()");
+        CloseHandle(suspendEvent);
+        suspendEvent = NULL;
+        return exit;
     }
 
 
@@ -618,7 +618,7 @@ BOOL Run()
     AdvertiseFeatures(&features);
     
     XsLog("About to kick xapi ");
-	XenstoreKickXapi();
+    XenstoreKickXapi();
 
     while (1)
     {
@@ -628,8 +628,8 @@ BOOL Run()
         unsigned x;
 
         handles[0] = hServiceExitEvent;
-		if (wmierrorEvent)
-			handles[nr_handles++] = wmierrorEvent;
+        if (wmierrorEvent)
+            handles[nr_handles++] = wmierrorEvent;
         if (suspendEvent)
             handles[nr_handles++] = suspendEvent;
         for (x = 0; x < features.nr_features; x++)
@@ -653,7 +653,7 @@ BOOL Run()
             if (event == hServiceExitEvent)
             {
                 XsLog("service exit event");
-				exit = true;
+                exit = true;
                 break;
             }
             else if (event == suspendEvent)
@@ -661,34 +661,34 @@ BOOL Run()
                 XsLog("Suspend event");
                 finishSuspend();
                 AdvertiseFeatures(&features);
-				XenstoreKickXapi();
+                XenstoreKickXapi();
                 XsLog("Handled suspend event");
             }
-			else if (event == wmierrorEvent)
-			{
-				break;
-			}
+            else if (event == wmierrorEvent)
+            {
+                break;
+            }
             else
             {
-				BOOL fail = false;
+                BOOL fail = false;
                 for (x = 0; x < features.nr_features; x++) {
                     if (features.features[x].watch->event == event) {
                         XsLog("Fire %p",features.features[x].name);
                         XsLog("fire feature %s", features.features[x].name);
-						OutputDebugString("Event triggered\n");
+                        OutputDebugString("Event triggered\n");
                         if (!(features.features[x].handler(features.features[x].ctx)))
-						{
+                        {
                             XsLog("Firing feature failed");
-						    PrintError("Feature failed");
-						    fail = true;
-						}
+                            PrintError("Feature failed");
+                            fail = true;
+                        }
                         XsLog("fired feature %s",
                                 features.features[x].name);
                     }
                 }
-				if (fail) {
+                if (fail) {
                     XsLog("Resetting");
-					break;
+                    break;
                 }
             }
         }
@@ -698,9 +698,9 @@ BOOL Run()
             break;
         }
     }
-	OutputDebugString("WMI Watch loop terminated\n");
-	RemoveFeatures(&features);
-	XenstoreKickXapi();
+    OutputDebugString("WMI Watch loop terminated\n");
+    RemoveFeatures(&features);
+    XenstoreKickXapi();
 
     XsLog("Guest agent lite loop finishing");
     ReleaseWMIAccessor(&wmi);
@@ -709,14 +709,14 @@ BOOL Run()
   
 
     XsLog("Guest agent lite loop finished %d", exit);
-	return exit;
+    return exit;
 }
 
 
 // Service initialization
 bool ServiceInit()
 {
-	ServiceStatus.dwServiceType        = SERVICE_WIN32; 
+    ServiceStatus.dwServiceType        = SERVICE_WIN32; 
     ServiceStatus.dwCurrentState       = SERVICE_START_PENDING; 
     ServiceStatus.dwControlsAccepted   =
         SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN |
@@ -727,20 +727,20 @@ bool ServiceInit()
     ServiceStatus.dwWaitHint           = 0; 
  
     hStatus = RegisterServiceCtrlHandlerEx(
-		"XenService", 
-		ServiceControlHandler,
+        "XenService", 
+        ServiceControlHandler,
         NULL);
     if (hStatus == (SERVICE_STATUS_HANDLE)0) 
     { 
         // Registering Control Handler failed
-		DBGPRINT(("XenSvc: Registering service control handler failed - %d\n", GetLastError()));
+        DBGPRINT(("XenSvc: Registering service control handler failed - %d\n", GetLastError()));
         return false; 
     }  
 
-	ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
-	SetServiceStatus (hStatus, &ServiceStatus);
+    ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
+    SetServiceStatus (hStatus, &ServiceStatus);
 
-	return true;
+    return true;
 }
 
 void WINAPI ServiceMain(int argc, char** argv)
@@ -758,23 +758,23 @@ void WINAPI ServiceMain(int argc, char** argv)
         DBGPRINT(("XenSvc: Unable to init xenservice\n"));
         return;
     }
-	BOOL stopping;
+    BOOL stopping;
 
-	do {
-		
-		__try
-		{
-			stopping = Run();
-			
-		}
-		__except(EXCEPTION_EXECUTE_HANDLER)
-		{
-		}
-	} while (!stopping);
-	
+    do {
+        
+        __try
+        {
+            stopping = Run();
+            
+        }
+        __except(EXCEPTION_EXECUTE_HANDLER)
+        {
+        }
+    } while (!stopping);
+    
     XsLog("Guest agent service stopped");
     ShutdownXSAccessor();
-	ServiceControlManagerUpdate(0, SERVICE_STOPPED);
+    ServiceControlManagerUpdate(0, SERVICE_STOPPED);
     return;
 }
 
@@ -807,7 +807,7 @@ static DWORD WINAPI ServiceControlHandler(DWORD request, DWORD evtType,
             return NO_ERROR;
 
         default:
-	    DBGPRINT(("XenSvc: unknown request."));
+        DBGPRINT(("XenSvc: unknown request."));
             break;
     } 
 

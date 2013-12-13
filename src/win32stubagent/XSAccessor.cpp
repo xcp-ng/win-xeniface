@@ -87,20 +87,20 @@ BOOL InitXSAccessor()
 {
     OutputDebugString("XSAccessor\n");
     if (wmicount != localwmicount) {
-		
+        
         if (localthreadcount == 0) {
             localthreadcount = InterlockedIncrement(&threadcount);
         }
         char wminame[12];
         _snprintf(wminame, 12, "XS%x", localthreadcount);
         if (WmiSessionStart(&wmi, &WmiSessionHandle, wminame)) {
-			localwmicount = wmicount;
-			return true;
-		}
-		OutputDebugString("XSAccessor Failed\n");
-		return false;
+            localwmicount = wmicount;
+            return true;
+        }
+        OutputDebugString("XSAccessor Failed\n");
+        return false;
     }
-	return true;
+    return true;
 }
 
 void XsLog(const char *fmt, ...)
@@ -115,12 +115,12 @@ void XsLog(const char *fmt, ...)
 
 BOOL ShutdownXSAccessor(void)
 {
-	if (wmi == NULL) {
-		return false;
-	}
-	if (WmiSessionHandle == NULL) {
-		return false;
-	}
+    if (wmi == NULL) {
+        return false;
+    }
+    if (WmiSessionHandle == NULL) {
+        return false;
+    }
     return WmiSessionEnd(&wmi, WmiSessionHandle);
 
 }
@@ -138,7 +138,7 @@ int XenstorePrintf(const char *path, const char *fmt, ...)
         DBGPRINT (("Cannot format data for XenstorePrintf!"));
         return -1;
     }
-	OutputDebugString(buf);
+    OutputDebugString(buf);
     /* Now have the thing we're trying to write. */
     return WmiSessionSetEntry(&wmi, &WmiSessionHandle, path, buf);
 }
@@ -148,26 +148,26 @@ BOOL XenstoreKickXapi()
     /* New protocol */
     if (XenstorePrintf("data/update_cnt", "%I64d", update_cnt)){
         XsLog("New kick failed ");
-		return false;
+        return false;
     }
     /* Old protocol */
     if (WmiSessionSetEntry(&wmi, &WmiSessionHandle, "data/updated", "1")){
         XsLog("Old kick failed");
-		return false;
+        return false;
     }
     update_cnt++;
-	return true;
+    return true;
 }
 
 
 int
 XenstoreRemove(const char *path)
 {
-	if (wmi == NULL)
-		return -1;
+    if (wmi == NULL)
+        return -1;
 
-	if (WmiSessionHandle == NULL)
-		return -1;
+    if (WmiSessionHandle == NULL)
+        return -1;
 
     if (WmiSessionRemoveEntry(&wmi, &WmiSessionHandle, path))
         return -1;
@@ -190,14 +190,14 @@ void *
 XenstoreWatch(const char *path, HANDLE event, HANDLE errorevent)
 {
  
-	if (wmi == NULL) {
-		OutputDebugString("WMI is null\n");
-		return NULL;
-	}
-	if (WmiSessionHandle == NULL) {
-		OutputDebugString("Session is null\n");
-		return NULL;
-	}
+    if (wmi == NULL) {
+        OutputDebugString("WMI is null\n");
+        return NULL;
+    }
+    if (WmiSessionHandle == NULL) {
+        OutputDebugString("Session is null\n");
+        return NULL;
+    }
     return WmiSessionWatch(&wmi, &WmiSessionHandle, path, event, errorevent);
 }
 
