@@ -969,7 +969,7 @@ char * bstrToChar(BSTR bst, size_t *len) {
     *len = wcslen(bst);
     char *space = (char *)XsAlloc(*len+1);
 	if (space)
-		wcstombs_s(len, space, *len+1, bst,  _TRUNCATE);
+        wcstombs_s(len, space, *len+1, bst,  _TRUNCATE);
     return space;
 }
 
@@ -1011,6 +1011,7 @@ nowmi:
 char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
               const char * path, size_t* len) 
 {
+    *len = 0;
     IWbemClassObject **session = (IWbemClassObject **)sessionhandle;
 
     VARIANT vpath;
@@ -1036,7 +1037,12 @@ char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
     if (FAILED(outMethodInst->Get(L"value", 0, &outval, NULL, NULL)))
 		goto methodgetfailed;
 
-    char *space = bstrToChar(outval.bstrVal, len);
+    char *space = NULL;
+    
+    if (V_VT(&outval) == VT_BSTR) 
+    {
+        space = bstrToChar(outval.bstrVal, len);
+    }
 
 	outMethodInst->Release();
 	inMethodInst->Release();
@@ -1055,7 +1061,6 @@ sessionmethodstartfailed:
 	VariantClear(&vpath);
 
 setvpath:
-    *len = 0;
     return NULL;
 }
 
