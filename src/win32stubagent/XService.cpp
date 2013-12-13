@@ -119,6 +119,24 @@ ReleaseWatch(struct watch_event *we)
     free(we);
 }
 
+static char * InitString(const char * inputstring)
+{
+    char *outputstring = (char *)calloc((strlen(inputstring)+1),sizeof(char));
+    if (outputstring == NULL)
+        goto failalloc;
+    strcpy(outputstring, inputstring);
+    return outputstring; 
+
+failalloc:
+    XsLog(__FUNCTION__ " : Fail malloc");
+    return NULL;
+}
+
+static void FreeString(const char *string) 
+{
+    free((void *)string);
+}
+
 static struct watch_event *
 EstablishWatch(const char *path, HANDLE errorevent)
 {
@@ -165,22 +183,32 @@ AddFeature(struct watch_feature_set *wfs, const char *path,
            BOOL (*handler)(void *), void *ctx, HANDLE errorevent)
 {
     unsigned n;
-    if (wfs->nr_features == MAX_FEATURES) {
-        PrintError("Too many features!", ERROR_INVALID_FUNCTION);
-        return false;
-    }
+    if (wfs->nr_features == MAX_FEATURES)
+        goto failfeatures;
+
     n = wfs->nr_features;
+
     wfs->features[n].watch = EstablishWatch(path, errorevent);
-    if (wfs->features[n].watch == NULL) {
-        PrintError("EstablishWatch() for AddFeature()");
-        return false;
-    }
+    if (wfs->features[n].watch == NULL)
+        goto failwatch;
+    
     wfs->features[n].feature_flag = flag;
     wfs->features[n].handler = handler;
     wfs->features[n].ctx = ctx;
-    wfs->features[n].name = name;
+    wfs->features[n].name = InitString(name);
+    if (wfs->features[n].name == NULL)
+        goto failname;
     wfs->nr_features++;
 	return true;
+
+failname:
+    PrintError("Failed to allocate string");
+failwatch:
+    PrintError("EstablishWatch() for AddFeature()");
+failfeatures:
+    XsLog("Too many features");
+    PrintError("Too many features!", ERROR_INVALID_FUNCTION);
+    return false;
 }
 
 static void RemoveFeatures(struct watch_feature_set *wfs) {
@@ -188,6 +216,7 @@ static void RemoveFeatures(struct watch_feature_set *wfs) {
     for (x = 0; x < wfs->nr_features; x++) {
 		ReleaseWatch(wfs->features[x].watch);
 		wfs->features[x].watch = NULL;
+        FreeString(wfs->features[x].name);
 		XenstoreRemove(wfs->features[x].feature_flag);
 	}
 	wfs->nr_features = 0;
@@ -199,8 +228,9 @@ AdvertiseFeatures(struct watch_feature_set *wfs)
     unsigned x;
     for (x = 0; x < wfs->nr_features; x++) {
         if (wfs->features[x].feature_flag != NULL)
-            if (XenstorePrintf(wfs->features[x].feature_flag, "1"))
-				return false;
+            if (XenstorePrintf(wfs->features[x].feature_flag, "1")){
+                XsLog("Failed to advertise %s",wfs->features[x].name);
+            }
     }
 	return true;
 }
@@ -343,9 +373,13 @@ static BOOL maybeReboot(void *ctx)
     int cntr = 0;
     HANDLE eventLog;
 
-	if (XenstoreRead("control/shutdown", &shutdown_type) < 0)
+    XsLog("Check if we need to shutdown");
+
+	if (XenstoreRead("control/shutdown", &shutdown_type) < 0) {
+        XsLog("No need to shutdown");
 		return true;
-	DBGPRINT(("Shutdown type %s\n", shutdown_type));
+    }
+	XsLog("Shutdown type %s\n", shutdown_type);
 	if (strcmp(shutdown_type, "poweroff") == 0 ||
 	    strcmp(shutdown_type, "halt") == 0) {
 		type = XShutdownPoweroff;
@@ -360,6 +394,7 @@ static BOOL maybeReboot(void *ctx)
 		goto out;
 	}
 
+    XsLog("Report Shutdown Event");
 	/* We try to shutdown even if this fails, since it might work
 	   and it can't do any harm. */
 	AcquireSystemShutdownPrivilege();
@@ -386,6 +421,9 @@ static BOOL maybeReboot(void *ctx)
                     NULL, NULL);
         DeregisterEventSource(eventLog);
     }
+
+    XsLog("Do the shutdown");
+
 	/* do the shutdown */
 	switch (type) {
 	case XShutdownPoweroff:
@@ -545,7 +583,7 @@ BOOL Run()
 			return exit;
 		}
 	}
-    XsLogMsg("Guest agent lite main loop starting");
+    XsLog("Guest agent lite main loop starting");
 
     memset(&features, 0, sizeof(features));
 
@@ -556,7 +594,7 @@ BOOL Run()
     }
    
 
-    XsLogMsg("About to add feature shutdown");
+    XsLog("About to add feature shutdown");
     if (!AddFeature(&features, "control/shutdown", "control/feature-shutdown", 
 					"shutdown", maybeReboot, NULL, wmierrorEvent)) {
 		return exit;
@@ -567,8 +605,8 @@ BOOL Run()
         PrintError("CreateEvent() suspendEvent");
 		return exit;
     }
-    
-	if (ListenSuspend(suspendEvent, wmierrorEvent) < 0) {
+	
+    if (ListenSuspend(suspendEvent, wmierrorEvent) < 0) {
 		PrintError("ListenSuspend()");
 		CloseHandle(suspendEvent);
 		suspendEvent = NULL;
@@ -576,9 +614,10 @@ BOOL Run()
     }
 
 
-    XsLogMsg("About to advertise features");
+    XsLog("About to advertise features");
     AdvertiseFeatures(&features);
-    XsLogMsg("About to kick xapi ");
+    
+    XsLog("About to kick xapi ");
 	XenstoreKickXapi();
 
     while (1)
@@ -596,9 +635,9 @@ BOOL Run()
         for (x = 0; x < features.nr_features; x++)
             handles[nr_handles++] = features.features[x].watch->event;
 
-        XsLogMsg("win agent going to sleep");
+        XsLog("win agent going to sleep");
         status = WaitForMultipleObjects(nr_handles, handles, FALSE, INFINITE);
-        XsLogMsg("win agent woke up for %d", status);
+        XsLog("win agent woke up for %d", status);
 
         /* WAIT_OBJECT_0 happens to be 0, so the compiler gets shirty
            about status >= WAIT_OBJECT_0 (since status is unsigned).
@@ -613,19 +652,17 @@ BOOL Run()
             HANDLE event = handles[status - WAIT_OBJECT_0];
             if (event == hServiceExitEvent)
             {
-				OutputDebugString("Service Exit fired\n");
-                XsLogMsg("service exit event");
+                XsLog("service exit event");
 				exit = true;
                 break;
             }
             else if (event == suspendEvent)
             {
-				OutputDebugString("Suspend fired\n");
-                XsLogMsg("Suspend event");
+                XsLog("Suspend event");
                 finishSuspend();
                 AdvertiseFeatures(&features);
 				XenstoreKickXapi();
-                XsLogMsg("Handled suspend event");
+                XsLog("Handled suspend event");
             }
 			else if (event == wmierrorEvent)
 			{
@@ -633,23 +670,26 @@ BOOL Run()
 			}
             else
             {
-				OutputDebugString("Feature fired\n");
 				BOOL fail = false;
                 for (x = 0; x < features.nr_features; x++) {
                     if (features.features[x].watch->event == event) {
-                        XsLogMsg("fire feature %s", features.features[x].name);
+                        XsLog("Fire %p",features.features[x].name);
+                        XsLog("fire feature %s", features.features[x].name);
 						OutputDebugString("Event triggered\n");
                         if (!(features.features[x].handler(features.features[x].ctx)))
 						{
-							PrintError("Feature failed");
-							fail = true;
+                            XsLog("Firing feature failed");
+						    PrintError("Feature failed");
+						    fail = true;
 						}
-                        XsLogMsg("fired feature %s",
-                                 features.features[x].name);
+                        XsLog("fired feature %s",
+                                features.features[x].name);
                     }
                 }
-				if (fail)
+				if (fail) {
+                    XsLog("Resetting");
 					break;
+                }
             }
         }
         else
@@ -662,13 +702,13 @@ BOOL Run()
 	RemoveFeatures(&features);
 	XenstoreKickXapi();
 
-    XsLogMsg("Guest agent lite loop finishing");
+    XsLog("Guest agent lite loop finishing");
     ReleaseWMIAccessor(&wmi);
 
 
   
 
-    XsLogMsg("Guest agent lite loop finished %d", exit);
+    XsLog("Guest agent lite loop finished %d", exit);
 	return exit;
 }
 
