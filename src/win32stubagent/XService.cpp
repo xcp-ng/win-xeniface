@@ -62,6 +62,7 @@ static ULONG WindowsVersion;
 static BOOL LegacyHal = FALSE;
 static HINSTANCE local_hinstance;
 
+HANDLE eventLog;
 #define SIZECHARS(x) (sizeof((x))/sizeof(TCHAR))
 
 // Internal routines
@@ -371,7 +372,6 @@ static BOOL maybeReboot(void *ctx)
     BOOL res;
     enum XShutdownType type;
     int cntr = 0;
-    HANDLE eventLog;
 
     XsLog("Check if we need to shutdown");
 
@@ -399,7 +399,6 @@ static BOOL maybeReboot(void *ctx)
        and it can't do any harm. */
     AcquireSystemShutdownPrivilege();
 
-    eventLog = RegisterEventSource(NULL, "xensvc");
     if (eventLog) {
         DWORD eventId;
 
@@ -419,7 +418,6 @@ static BOOL maybeReboot(void *ctx)
         }
         ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, eventId, NULL, 0, 0,
                     NULL, NULL);
-        DeregisterEventSource(eventLog);
     }
 
     XsLog("Do the shutdown");
@@ -585,6 +583,9 @@ BOOL Run()
     }
     XsLog("Guest agent lite main loop starting");
 
+    if (eventLog == NULL)
+        XsLog("Event log was not initialised");
+
     memset(&features, 0, sizeof(features));
 
     HANDLE wmierrorEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -658,6 +659,10 @@ BOOL Run()
             }
             else if (event == suspendEvent)
             {
+                if (!ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, EVENT_XENUSER_UNSUSPENDED, NULL, 0, 0,
+                            NULL, NULL)) {
+                    XsLog("Cannot send to event log %x",GetLastError());    
+                }
                 XsLog("Suspend event");
                 finishSuspend();
                 AdvertiseFeatures(&features);
@@ -666,6 +671,8 @@ BOOL Run()
             }
             else if (event == wmierrorEvent)
             {
+                ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, EVENT_XENUSER_WMI, NULL, 0, 0,
+                            NULL, NULL);
                 break;
             }
             else
@@ -688,6 +695,8 @@ BOOL Run()
                 }
                 if (fail) {
                     XsLog("Resetting");
+                ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, EVENT_XENUSER_UNEXPECTED, NULL, 0, 0,
+                            NULL, NULL);
                     break;
                 }
             }
@@ -746,6 +755,7 @@ bool ServiceInit()
 void WINAPI ServiceMain(int argc, char** argv)
 {
     // Perform common initialization
+    eventLog = RegisterEventSource(NULL, "xensvc");
     hServiceExitEvent = CreateEvent(NULL, false, false, NULL);
     if (hServiceExitEvent == NULL)
     {
@@ -774,6 +784,7 @@ void WINAPI ServiceMain(int argc, char** argv)
     
     XsLog("Guest agent service stopped");
     ShutdownXSAccessor();
+    DeregisterEventSource(eventLog);
     ServiceControlManagerUpdate(0, SERVICE_STOPPED);
     return;
 }

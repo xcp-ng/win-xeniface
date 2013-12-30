@@ -32,3 +32,35 @@ SymbolicName=EVENT_XENUSER_S3
 Language=English
 The tools requested that the local VM enter power state S3.
 .
+
+MessageId=0x0005
+Facility=XenUser
+Severity=Informational
+SymbolicName=EVENT_XENUSER_WMI
+Language=English
+The tools noticed that WMI became non-functional.
+.
+
+MessageId=0x0006
+Facility=XenUser
+Severity=Informational
+SymbolicName=EVENT_XENUSER_STARTED
+Language=English
+The tools initiated.
+.
+
+MessageId=0x0007
+Facility=XenUser
+Severity=Informational
+SymbolicName=EVENT_XENUSER_UNSUSPENDED
+Language=English
+The tools returned from suspend.
+.
+
+MessageId=0x0008
+Facility=XenUser
+Severity=Informational
+SymbolicName=EVENT_XENUSER_UNEXPECTED
+Language=English
+The tools experienced an unexpected error.
+.
