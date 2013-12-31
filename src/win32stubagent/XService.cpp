@@ -137,6 +137,19 @@ static void FreeString(const char *string)
     free((void *)string);
 }
 
+static char* PrintfString(const char *fmt, ...){
+    va_list l;
+    va_start(l, fmt);
+    int numchars = _vscprintf(fmt, l);
+    char *outputstring = (char *)calloc(numchars + 1, sizeof(char));
+
+    if (outputstring == NULL)
+        return NULL;
+
+    _vsnprintf(outputstring, numchars, fmt, l);
+    return outputstring;
+}
+
 static struct watch_event *
 EstablishWatch(const char *path, HANDLE errorevent)
 {
@@ -518,21 +531,139 @@ out:
     return true;
 }
 
-/* We need to resync the clock when we recover from suspend/resume. */
-static void
-finishSuspend(void)
+static bool registryMatchString(HKEY    hKey,
+                                LPCTSTR lpValueName,
+                                LPCTSTR comparestring,
+                                bool    matchcase)
 {
-    FILETIME now = {0};
-    SYSTEMTIME sys_time;
-    SYSTEMTIME current_time;
+    bool    result = false;
+    LONG    buffersize = sizeof(TCHAR)*256;
+    TCHAR   *outstring = NULL;
+    DWORD  outstringsize;
+    LONG    status;
+    do {
+        outstringsize = buffersize;
+        outstring = (TCHAR *)realloc(outstring, outstringsize);
 
-    DBGPRINT(("Coming back from suspend.\n"));
+        status = RegQueryValueEx(hKey,
+                                 lpValueName,
+                                 NULL,
+                                 NULL,
+                                 (LPBYTE) outstring,
+                                 &outstringsize);
+        buffersize *= 2;
+    } while (status == ERROR_MORE_DATA);
+
+    if (status == ERROR_FILE_NOT_FOUND)
+        goto done;
+
+    if (matchcase) {
+        if (_tcsncmp(comparestring, outstring, outstringsize))
+            goto done;
+    }
+    else {
+        if (_tcsnicoll(comparestring, outstring, outstringsize))
+            goto done;
+    }
+
+    result = true;
+
+done:
+    free(outstring);
+
+    return result;
+}
+
+static bool
+adjustXenTimeToUTC(FILETIME *now)
+{
+    DWORD           timeoffset;
+    char            *vm;
+    char            *rtckey;
+    ULARGE_INTEGER  longoffset;
+    ULARGE_INTEGER  longnow;
+    size_t          vmlen;
+    
+    // XenTime is assumed to be in UTC, so we need to remove any
+    // offsets that are applied to it
+
+    vmlen = XenstoreRead("vm", &vm);
+    if (vmlen <= 0)
+        goto fail_readvm;
+
+    rtckey = PrintfString("%s/rtc/timeoffset", vm);
+    if (rtckey == NULL)
+        goto fail_rtckey;
+
+    if (!XenstoreReadDword(rtckey, &timeoffset)) {
+        if (!XenstoreReadDword("platform/timeoffset", &timeoffset))
+            goto fail_platformtimeoffset;
+    }
+
+    //Convert offset from seconds to nanoseconds
+    longoffset.QuadPart =  timeoffset;
+    longoffset.QuadPart = longoffset.QuadPart * 10000000;
+    
+    // Subtract nanosecond timeoffset from now
+    longnow.LowPart = now->dwLowDateTime;
+    longnow.HighPart = now->dwHighDateTime;
+    longnow.QuadPart -= longoffset.QuadPart;
+    now->dwLowDateTime = longnow.LowPart;
+    now->dwHighDateTime = longnow.HighPart;
+
+    FreeString(rtckey);
+    XsFree(vm);
+
+    return true;
+
+fail_platformtimeoffset:
+    XsLog("%s: Read platform time offset", __FUNCTION__);
+
+    FreeString(rtckey);
+
+fail_rtckey:
+    XsLog("%s: Read RTC Key", __FUNCTION__);
+
+    XsFree(vm);
+
+fail_readvm:
+    XsLog("%s: Read VM Key", __FUNCTION__);
+
+    return false;
+}
+
+static void
+setTimeToXenTime(void)
+{
+    FILETIME    now = {0};
+    SYSTEMTIME  sys_time;
+    SYSTEMTIME  current_time;
+    HKEY        InstallRegKey;
+    bool        utc=false;
+    XsLog("Set time to XenTime");
+
     GetXenTime(&now);
     if ((now.dwLowDateTime == 0) && (now.dwHighDateTime == 0)) {
         XsLog("Cannot set system time to xentime, unable to contact WMI");
-        return;
+        goto fail_readtime;
     }
-    XsLog("Xen time is %I64x", now);
+
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, 
+                     XENTOOLS_INSTALL_REG_KEY,
+                     0,
+                     KEY_ALL_ACCESS,
+                     &InstallRegKey) != ERROR_SUCCESS)
+        goto fail_registrykey;
+
+    if (registryMatchString(InstallRegKey, "HostTime", "UTC", false)) 
+    {
+        XsLog("Try UTC");
+        if (!adjustXenTimeToUTC(&now))
+            goto fail_adjusttime;
+        utc=true;
+    }
+
+
     if (!FileTimeToSystemTime(&now, &sys_time)) {
         PrintError("FileTimeToSystemTime()");
         DBGPRINT(("FileTimeToSystemTime(%x.%x)\n",
@@ -547,9 +678,34 @@ finishSuspend(void)
               current_time.wYear, current_time.wMonth, current_time.wDay,
               current_time.wHour, current_time.wMinute, current_time.wSecond,
               current_time.wMilliseconds);
-        if (!SetLocalTime(&sys_time))
-            PrintError("SetSystemTime()");
+        if (utc) {
+            if (!SetSystemTime(&sys_time))
+                PrintError("SetSystemTime()");
+        }
+        else {
+            if (!SetLocalTime(&sys_time))
+                PrintError("SetLocalTime()");
+        }
     }
+
+    return;
+
+fail_adjusttime:
+    XsLog("%s: Adjust time", __FUNCTION__);
+    RegCloseKey(InstallRegKey);
+
+fail_registrykey:    
+    XsLog("%s: Open Registry Key", __FUNCTION__);
+fail_readtime:
+    XsLog("%s: ReadTime", __FUNCTION__);
+}
+
+/* We need to resync the clock when we recover from suspend/resume. */
+static void
+finishSuspend(void)
+{
+    DBGPRINT(("Coming back from suspend.\n"));
+    setTimeToXenTime();
 }
 
 
@@ -584,6 +740,8 @@ BOOL Run()
         }
     }
     XsLog("Guest agent lite main loop starting");
+
+    setTimeToXenTime();
 
     memset(&features, 0, sizeof(features));
 

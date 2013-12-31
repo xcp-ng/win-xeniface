@@ -62,6 +62,7 @@ void XsLog(const char *fmt, ...);
 void XenstoreFree(void *tofree);
 void *XsAlloc(size_t size);
 void XsFree(const void *buf);
+bool XenstoreReadDword(const char * path, DWORD *value);
 
 #if DBG
 
