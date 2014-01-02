@@ -1143,20 +1143,26 @@ int WmiSessionRemoveEntry(WMIAccessor** wmi,  void **sessionhandle,
     if (FAILED(methodExec(wmi,*session, L"RemoveValue", inMethodInst, &outMethodInst)))
         goto methodexecfailed;
 
-    if (outMethodInst==NULL)
-        goto sessionExec;
     outMethodInst->Release();
 
     err=0;
+    inMethodInst->Release();
+    VariantClear(&vpath);
+    return err;
 methodexecfailed:
+    OutputDebugString(__FUNCTION__ " MethodExecFailed");
 methodputfailed:
+    OutputDebugString(__FUNCTION__ " MethodPutFailed");
     inMethodInst->Release();
 
 sessionstart:
+    OutputDebugString(__FUNCTION__ " SessionStartFailed");
     VariantClear(&vpath);
 
 sessionExec:
+    OutputDebugString(__FUNCTION__ " SessionExecFailed");
 setvpath:
+    OutputDebugString(__FUNCTION__ " SetVpathFailed");
     return err; 
 }
 
