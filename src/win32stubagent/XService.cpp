@@ -85,6 +85,7 @@ void PrintError(const char *func, DWORD err)
         0,
         NULL);
     OutputDebugString((LPTSTR)lpMsgBuf);
+    XsLog("%s failed: %s (%x)", func, lpMsgBuf, err);
     XenstorePrintf("control/error", "%s failed: %s (%x)", func, lpMsgBuf, err);
     LocalFree(lpMsgBuf);
 }
@@ -695,8 +696,8 @@ BOOL Run()
                 }
                 if (fail) {
                     XsLog("Resetting");
-                ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, EVENT_XENUSER_UNEXPECTED, NULL, 0, 0,
-                            NULL, NULL);
+                    ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, EVENT_XENUSER_UNEXPECTED, NULL, 0, 0,
+                                NULL, NULL);
                     break;
                 }
             }
