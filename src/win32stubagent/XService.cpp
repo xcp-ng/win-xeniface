@@ -780,6 +780,13 @@ void WINAPI ServiceMain(int argc, char** argv)
         }
         __except(EXCEPTION_EXECUTE_HANDLER)
         {
+            __try {
+                XsLog("Exception hit");
+            }
+            __except(EXCEPTION_EXECUTE_HANDLER)
+            {
+            }
+            stopping = false;
         }
     } while (!stopping);
     
