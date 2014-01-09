@@ -1143,7 +1143,8 @@ int WmiSessionRemoveEntry(WMIAccessor** wmi,  void **sessionhandle,
     if (FAILED(methodExec(wmi,*session, L"RemoveValue", inMethodInst, &outMethodInst)))
         goto methodexecfailed;
 
-    outMethodInst->Release();
+    if (outMethodInst != NULL)
+        outMethodInst->Release();
 
     err=0;
     inMethodInst->Release();

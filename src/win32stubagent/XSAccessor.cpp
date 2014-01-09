@@ -210,6 +210,6 @@ XenstoreUnwatch(void *watch)
 void 
 XenstoreFree(void *tofree)
 {
-    return free(tofree);
+    return XsFree(tofree);
 }
 
