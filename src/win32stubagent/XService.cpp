@@ -417,8 +417,6 @@ static BOOL maybeReboot(void *ctx)
             eventId = EVENT_XENUSER_S3;
             break;
         }
-        ReportEvent(eventLog, EVENTLOG_SUCCESS, 0, eventId, NULL, 0, 0,
-                    NULL, NULL);
     }
 
     XsLog("Do the shutdown");
@@ -781,7 +779,7 @@ void WINAPI ServiceMain(int argc, char** argv)
         __except(EXCEPTION_EXECUTE_HANDLER)
         {
             __try {
-                XsLog("Exception hit");
+                XsLog("Exception hit %x", GetExceptionCode());
             }
             __except(EXCEPTION_EXECUTE_HANDLER)
             {

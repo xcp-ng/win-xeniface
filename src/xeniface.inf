@@ -100,5 +100,5 @@ DiskId1 = "XenServer Tools for Virtual Machines"
 XenIfaceDevice.DeviceDesc = "XenServer Interface"
 xeniface.SVCDESC = "XenServer  Interface Device Driver"
 LITESVC_FLAGS= 0x00000800
-xenlite.SVCDESC= "XenSerrver Lite Guest Agent"
+xenlite.SVCDESC= "XenServer Lite Guest Agent"
 
