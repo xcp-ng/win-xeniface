@@ -95,8 +95,8 @@
       <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)
-copy $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)</Command>
+        <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+            xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
     </CustomBuildStep>
     <CustomBuildStep>
       <Message>Copying output files</Message>
@@ -120,8 +120,8 @@ copy $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)</Com
       <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)
-copy $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)</Command>
+        <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+            xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
     </CustomBuildStep>
     <CustomBuildStep>
       <Message>Copying output files</Message>
