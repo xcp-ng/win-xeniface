@@ -152,8 +152,8 @@
     </Link>
     <CustomBuildStep>
       <Message>Copying output files</Message>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)
-copy $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)</Command>
+      <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+          xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
       <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
       <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
     </CustomBuildStep>
@@ -181,8 +181,8 @@ copy $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)</Com
     </Link>
     <CustomBuildStep>
       <Message>Copying output files</Message>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)
-copy $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)</Command>
+      <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+          xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
       <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
       <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
     </CustomBuildStep>
