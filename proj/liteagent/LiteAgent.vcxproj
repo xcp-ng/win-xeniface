@@ -95,12 +95,13 @@
       <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\x86
-</Command>
+        <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+            xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
     </CustomBuildStep>
     <CustomBuildStep>
       <Message>Copying output files</Message>
-      <Outputs>$(SolutionDir)\..\xeniface\x86\$(TargetFileName)</Outputs>
+      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
+      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -119,11 +120,13 @@
       <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\x64</Command>
+        <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+            xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
     </CustomBuildStep>
     <CustomBuildStep>
       <Message>Copying output files</Message>
-      <Outputs>$(SolutionDir)\..\xeniface\x64\$(TargetFileName)</Outputs>
+      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
+      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -149,10 +152,10 @@
     </Link>
     <CustomBuildStep>
       <Message>Copying output files</Message>
-      <Command>copy $(TargetPath) $(SolutionDir)\..\xeniface\x86
-</Command>
-      <Outputs>$(SolutionDir)\..\xeniface\x86\$(TargetFileName)</Outputs>
-      <Inputs>$(TargetPath)</Inputs>
+      <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+          xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
+      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
+      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -178,10 +181,10 @@
     </Link>
     <CustomBuildStep>
       <Message>Copying output files</Message>
-      <Command>
-copy $(TargetPath) $(SolutionDir)\..\xeniface\x64</Command>
-      <Outputs>$(SolutionDir)\..\xeniface\x64\$(TargetFileName)</Outputs>
-      <Inputs>$(TargetPath)</Inputs>
+      <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
+          xcopy /y $(TargetDir)LiteAgent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
+      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
+      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
