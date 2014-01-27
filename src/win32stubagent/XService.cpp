@@ -48,10 +48,11 @@
 #include <wintrust.h>
 #include <shellapi.h>
 
-#ifdef AMD64
-#define XENTOOLS_INSTALL_REG_KEY "SOFTWARE\\Wow6432Node\\Citrix\\XenTools"
+#ifdef _WIN64
+#define XENTOOLS_INSTALL_REG_KEY   "SOFTWARE\\Wow6432Node\\Citrix\\XenTools"
+#define XENTOOLS_INSTALL_REG_KEY64 "SOFTWARE\\Citrix\\XenTools"
 #else
-#define XENTOOLS_INSTALL_REG_KEY "SOFTWARE\\Citrix\\XenTools"
+#define XENTOOLS_INSTALL_REG_KEY   "SOFTWARE\\Citrix\\XenTools"
 #endif
 
 SERVICE_STATUS ServiceStatus; 
@@ -574,31 +575,52 @@ done:
 static bool
 adjustXenTimeToUTC(FILETIME *now)
 {
-    DWORD           timeoffset;
+    DWORD           dwtimeoffset;
+    long            timeoffset;
     char            *vm;
     char            *rtckey;
-    ULARGE_INTEGER  longoffset;
+    LARGE_INTEGER   longoffset;
     ULARGE_INTEGER  longnow;
     size_t          vmlen;
     
     // XenTime is assumed to be in UTC, so we need to remove any
     // offsets that are applied to it
 
-    vmlen = XenstoreRead("vm", &vm);
-    if (vmlen <= 0)
+    __try {
+        vmlen = XenstoreRead("vm", &vm);
+        if (vmlen <= 0)
+            goto fail_readvm;
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
         goto fail_readvm;
+    }
 
     rtckey = PrintfString("%s/rtc/timeoffset", vm);
     if (rtckey == NULL)
         goto fail_rtckey;
 
-    if (!XenstoreReadDword(rtckey, &timeoffset)) {
-        if (!XenstoreReadDword("platform/timeoffset", &timeoffset))
-            goto fail_platformtimeoffset;
+    _try {
+        BOOL rtcreadworked;
+        __try {
+            rtcreadworked = XenstoreReadDword(rtckey, &dwtimeoffset);
+        }
+        __except(EXCEPTION_EXECUTE_HANDLER) {
+            rtcreadworked = false;
+        }
+        if (!rtcreadworked) {
+            if (!XenstoreReadDword("platform/timeoffset", &dwtimeoffset))
+                goto fail_platformtimeoffset;
+        }
     }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+        goto fail_platformtimeoffset;
+    }
+    timeoffset = (long)dwtimeoffset;
 
     //Convert offset from seconds to nanoseconds
-    longoffset.QuadPart =  timeoffset;
+    longoffset.QuadPart =  (LONGLONG)timeoffset;
     longoffset.QuadPart = longoffset.QuadPart * 10000000;
     
     // Subtract nanosecond timeoffset from now
@@ -610,21 +632,61 @@ adjustXenTimeToUTC(FILETIME *now)
 
     FreeString(rtckey);
     XsFree(vm);
-
     return true;
 
 fail_platformtimeoffset:
     XsLog("%s: Read platform time offset", __FUNCTION__);
-
     FreeString(rtckey);
 
 fail_rtckey:
     XsLog("%s: Read RTC Key", __FUNCTION__);
-
     XsFree(vm);
 
 fail_readvm:
     XsLog("%s: Read VM Key", __FUNCTION__);
+    return false;
+}
+
+static bool hosttimeIsUTC()
+{
+    HKEY        InstallRegKey;
+    bool        utc = false;
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, 
+                     XENTOOLS_INSTALL_REG_KEY,
+                     0,
+                     KEY_ALL_ACCESS,
+                     &InstallRegKey) != ERROR_SUCCESS)
+        goto fail_registrykey;
+    
+#ifdef _WIN64
+    
+    if (registryMatchString(InstallRegKey, "HostTime", "UTC", false)) 
+    {
+         utc = true;
+         goto done;
+    }
+
+    RegCloseKey(InstallRegKey);
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, 
+                     XENTOOLS_INSTALL_REG_KEY64,
+                     0,
+                     KEY_ALL_ACCESS,
+                     &InstallRegKey) != ERROR_SUCCESS)
+        goto fail_registrykey;
+
+#endif 
+
+    if (registryMatchString(InstallRegKey, "HostTime", "UTC", false)) 
+    {
+        utc=true;
+    }
+
+done:
+    RegCloseKey(InstallRegKey);
+    return utc;
+
+fail_registrykey:    
+    XsLog("%s: Open Registry Key", __FUNCTION__);
 
     return false;
 }
@@ -635,7 +697,6 @@ setTimeToXenTime(void)
     FILETIME    now = {0};
     SYSTEMTIME  sys_time;
     SYSTEMTIME  current_time;
-    HKEY        InstallRegKey;
     bool        utc=false;
     XsLog("Set time to XenTime");
 
@@ -645,36 +706,29 @@ setTimeToXenTime(void)
         goto fail_readtime;
     }
 
-    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, 
-                     XENTOOLS_INSTALL_REG_KEY,
-                     0,
-                     KEY_ALL_ACCESS,
-                     &InstallRegKey) != ERROR_SUCCESS)
-        goto fail_registrykey;
+    utc = hosttimeIsUTC();
 
-    if (registryMatchString(InstallRegKey, "HostTime", "UTC", false)) 
-    {
+    if (utc) {
         XsLog("Try UTC");
         if (!adjustXenTimeToUTC(&now))
             goto fail_adjusttime;
-        utc=true;
     }
 
-
     if (!FileTimeToSystemTime(&now, &sys_time)) {
+        XsLog("Gould not convert file time to system time");
         PrintError("FileTimeToSystemTime()");
         DBGPRINT(("FileTimeToSystemTime(%x.%x)\n",
                   now.dwLowDateTime, now.dwHighDateTime));
     } else {
-        XsLog("Set time to %d.%d.%d %d:%d:%d.%d",
-              sys_time.wYear, sys_time.wMonth, sys_time.wDay,
-              sys_time.wHour, sys_time.wMinute, sys_time.wSecond,
-              sys_time.wMilliseconds);
         GetLocalTime(&current_time);
         XsLog("Time is now  %d.%d.%d %d:%d:%d.%d",
               current_time.wYear, current_time.wMonth, current_time.wDay,
               current_time.wHour, current_time.wMinute, current_time.wSecond,
               current_time.wMilliseconds);
+        XsLog("Set time to %d.%d.%d %d:%d:%d.%d",
+              sys_time.wYear, sys_time.wMonth, sys_time.wDay,
+              sys_time.wHour, sys_time.wMinute, sys_time.wSecond,
+              sys_time.wMilliseconds);
         if (utc) {
             if (!SetSystemTime(&sys_time))
                 PrintError("SetSystemTime()");
@@ -689,10 +743,7 @@ setTimeToXenTime(void)
 
 fail_adjusttime:
     XsLog("%s: Adjust time", __FUNCTION__);
-    RegCloseKey(InstallRegKey);
 
-fail_registrykey:    
-    XsLog("%s: Open Registry Key", __FUNCTION__);
 fail_readtime:
     XsLog("%s: ReadTime", __FUNCTION__);
 }

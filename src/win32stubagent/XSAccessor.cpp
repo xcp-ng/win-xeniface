@@ -189,7 +189,7 @@ XenstoreRead(const char* path, char** value)
 
 bool XenstoreReadDword(const char *path, DWORD *value) {
     char* buffer;
-    size_t len;
+    ssize_t len;
     len = XenstoreRead(path, &buffer);
     if (len <= 0) {
         return false;
