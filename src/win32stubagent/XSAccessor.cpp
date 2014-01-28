@@ -186,6 +186,21 @@ XenstoreRead(const char* path, char** value)
         return -1;
 }
 
+
+bool XenstoreReadDword(const char *path, DWORD *value) {
+    char* buffer;
+    ssize_t len;
+    len = XenstoreRead(path, &buffer);
+    if (len <= 0) {
+        return false;
+    }
+    *value = atoi(buffer);
+
+    XsFree(buffer);
+
+    return true;
+}
+
 void *
 XenstoreWatch(const char *path, HANDLE event, HANDLE errorevent)
 {
