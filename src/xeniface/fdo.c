@@ -871,6 +871,7 @@ FdoStartDevice(
 
 fail5:
 	Error("fail5\n");
+#pragma warning(suppress : 6031)
 	IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
 
 fail4:
@@ -1003,8 +1004,9 @@ FdoSurpriseRemoval(
     __FdoSetDevicePnpState(Fdo, SurpriseRemovePending);
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
-	IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
-	WmiFinalise(Fdo);
+#pragma warning(suppress : 6031) 
+    IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
+    WmiFinalise(Fdo);
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
@@ -1037,8 +1039,9 @@ done:
     __FdoSetDevicePnpState(Fdo, Deleted);
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
-	IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
-	WmiFinalise(Fdo);
+#pragma warning(suppress : 6031) 
+    IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
+    WmiFinalise(Fdo);
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
@@ -1990,8 +1993,6 @@ FdoCreateFile (
 {
     NTSTATUS     status;
 
-    PAGED_CODE();
-
 
     XenIfaceDebugPrint(TRACE, "Create \n");
 
@@ -2022,8 +2023,6 @@ FdoClose (
 
     NTSTATUS     status;
 
-    PAGED_CODE();
-
     XenIfaceDebugPrint(TRACE, "Close \n");
 
     status = STATUS_SUCCESS;
@@ -2044,9 +2043,6 @@ FdoReadWrite (
 {
 
     NTSTATUS     status;
-
-    PAGED_CODE();
-
 
     XenIfaceDebugPrint(TRACE, "ReadWrite called\n");
 
@@ -2391,6 +2387,7 @@ FdoCreate(
     if (!NT_SUCCESS(status))
         goto fail5;
 
+#pragma prefast(suppress:6014) // Possibly leaking Fdo->InterfaceName
 	status = IoRegisterDeviceInterface(PhysicalDeviceObject,
 										(LPGUID)&GUID_INTERFACE_XENIFACE,
 										NULL,
