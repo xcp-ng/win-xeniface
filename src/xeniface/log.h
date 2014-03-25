@@ -42,6 +42,8 @@
 
 #pragma warning(disable:4127)   // conditional expression is constant
 
+#define __MODULE__ "XENIFACE"
+
 static __inline VOID
 __Error(
     IN  const CHAR  *Prefix,
