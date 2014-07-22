@@ -41,6 +41,7 @@
 
 
 #include "driver.h"
+#include "registry.h"
 #include "fdo.h"
 #include "thread.h"
 #include "mutex.h"
@@ -70,7 +71,12 @@ FdoInitialiseXSRegistryEntries(
     char *value;
     NTSTATUS status;
 	NT_ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
-    status = STORE(Read, Fdo->StoreInterface, NULL, NULL, "/mh/boot-time/management-mac-address", &value);
+    status = XENBUS_STORE(Read,
+                          &Fdo->StoreInterface,
+                          NULL,
+                          NULL,
+                          "/mh/boot-time/management-mac-address",
+                          &value);
     if (!NT_SUCCESS(status)){
         XenIfaceDebugPrint(ERROR, "no such xenstore key\n");
         goto failXS;
@@ -109,7 +115,7 @@ FdoInitialiseXSRegistryEntries(
     ZwClose(RegHandle);
     
     RtlFreeUnicodeString(&UnicodeValue);
-    STORE(Free, Fdo->StoreInterface, value);
+    XENBUS_STORE(Free, &Fdo->StoreInterface, value);
 
     return;
 
@@ -122,7 +128,8 @@ failWrite:
 failReg:
 
     XenIfaceDebugPrint(ERROR, "Fail : Reg\n");
-    STORE(Free, Fdo->StoreInterface, value);
+    XENBUS_STORE(Free, &Fdo->StoreInterface, value);
+
 failXS:
     XenIfaceDebugPrint(ERROR, "Failed to initialise registry (%08x)\n", status);
     return;
@@ -151,11 +158,9 @@ static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
 		status = KeWaitForMultipleObjects(REGISTRY_EVENTS, (PVOID *)threadevents, WaitAny, Executive, KernelMode, TRUE, NULL, NULL);
 		if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
 			if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
-				if (Fdo->StoreInterface) {
-					XenIfaceDebugPrint(ERROR,"WriteRegistry\n");
-					FdoInitialiseXSRegistryEntries(Fdo);
-					KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
-				}
+                XenIfaceDebugPrint(ERROR,"WriteRegistry\n");
+                FdoInitialiseXSRegistryEntries(Fdo);
+                KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
 			}
 			if (status == STATUS_WAIT_0+REGISTRY_THREAD_END_EVENT) {
 				if (ThreadIsAlerted(Self))
@@ -642,40 +647,24 @@ FdoParseResources(
     }
 }
 
-
-PXENBUS_STORE_INTERFACE
-FdoGetStoreInterface(
-    IN  PXENIFACE_FDO Fdo
-    )
-{
-    return Fdo->StoreInterface;
-}
-
-
-PXENBUS_SUSPEND_INTERFACE
-FdoGetSuspendInterface(
-    IN  PXENIFACE_FDO Fdo
-    )
-{
-    return Fdo->SuspendInterface;
-}
-
-
 static FORCEINLINE NTSTATUS
 __FdoD3ToD0(
     IN  PXENIFACE_FDO Fdo
     )
 {
     POWER_STATE     PowerState;
+    NTSTATUS        status;
 
     Trace("====>\n");
 
     ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
     ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD3);
 
-    __FdoSetDevicePowerState(Fdo, PowerDeviceD0);
+    status = XENBUS_STORE(Acquire, &Fdo->StoreInterface);
+    if (!NT_SUCCESS(status))
+        goto fail1;
 
-    STORE(Acquire, Fdo->StoreInterface);
+    __FdoSetDevicePowerState(Fdo, PowerDeviceD0);
 
     PowerState.DeviceState = PowerDeviceD0;
     PoSetPowerState(Fdo->Dx->DeviceObject,
@@ -685,6 +674,11 @@ __FdoD3ToD0(
     Trace("<====\n");
 
     return STATUS_SUCCESS;
+
+fail1:
+    Error("fail1 (%08x)\n", status);
+
+    return status;
 }
 
 static FORCEINLINE VOID
@@ -706,7 +700,7 @@ __FdoD0ToD3(
 
     __FdoSetDevicePowerState(Fdo, PowerDeviceD3);
 
-    STORE(Release, Fdo->StoreInterface);
+    XENBUS_STORE(Release, &Fdo->StoreInterface);
 
     Trace("<====\n");
 }
@@ -741,31 +735,40 @@ FdoD3ToD0(
     if (!NT_SUCCESS(status))
         goto fail1;
 
-    SUSPEND(Acquire, Fdo->SuspendInterface);
-    SHARED_INFO(Acquire, Fdo->SharedInfoInterface);
-
-	
-
-    status = SUSPEND(Register,
-                     Fdo->SuspendInterface,
-                     SUSPEND_CALLBACK_LATE,
-                     FireSuspendEvent,
-                     Fdo,
-                     &Fdo->SuspendCallbackLate);
+    status = XENBUS_SUSPEND(Acquire, &Fdo->SuspendInterface);
     if (!NT_SUCCESS(status))
         goto fail2;
+
+    status = XENBUS_SHARED_INFO(Acquire, &Fdo->SharedInfoInterface);
+    if (!NT_SUCCESS(status))
+        goto fail3;
+
+    status = XENBUS_SUSPEND(Register,
+                            &Fdo->SuspendInterface,
+                            SUSPEND_CALLBACK_LATE,
+                            FireSuspendEvent,
+                            Fdo,
+                            &Fdo->SuspendCallbackLate);
+    if (!NT_SUCCESS(status))
+        goto fail4;
+
 	Fdo->InterfacesAcquired = TRUE;
     KeLowerIrql(Irql);
-	
-	
-	
 
     return STATUS_SUCCESS;
 
+fail4:
+    Error("fail4\n");
+
+	XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+
+fail3:
+    Error("fail3\n");
+
+    XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
+
 fail2:
     Error("fail2\n");
-	SHARED_INFO(Release, Fdo->SharedInfoInterface);
-    SUSPEND(Release, Fdo->SuspendInterface);
 
     __FdoD0ToD3(Fdo);
 
@@ -788,13 +791,14 @@ FdoD0ToD3(
 	Fdo->InterfacesAcquired = FALSE;
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
 
-    SUSPEND(Deregister,
-            Fdo->SuspendInterface,
-            Fdo->SuspendCallbackLate);
+    XENBUS_SUSPEND(Deregister,
+                   &Fdo->SuspendInterface,
+                   Fdo->SuspendCallbackLate);
     Fdo->SuspendCallbackLate = NULL;
 
-	SHARED_INFO(Release, Fdo->SharedInfoInterface);
-    SUSPEND(Release, Fdo->SuspendInterface);
+	XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+
+    XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
 
     __FdoD0ToD3(Fdo);
 	
@@ -2105,24 +2109,65 @@ FdoDispatch(
     return status;
 }
 
+#define SERVICES_KEY        L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Services"
 
-static NTSTATUS
-FdoQueryStoreInterface(
-    IN  PXENIFACE_FDO     Fdo
+static FORCEINLINE NTSTATUS
+__FdoQueryInterface(
+    IN  PXENIFACE_FDO   Fdo,
+    IN  const WCHAR     *ProviderName,
+    IN  const CHAR      *InterfaceName,
+    IN  const GUID      *Guid,
+    IN  ULONG           Version,
+    OUT PINTERFACE      Interface,
+    IN  ULONG           Size,
+    IN  BOOLEAN         Optional
     )
 {
+    UNICODE_STRING      Unicode;
+    HANDLE              InterfacesKey;
+    HANDLE              SubscriberKey;
     KEVENT              Event;
     IO_STATUS_BLOCK     StatusBlock;
     PIRP                Irp;
     PIO_STACK_LOCATION  StackLocation;
-    INTERFACE           Interface;
     NTSTATUS            status;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
 
+    Unicode.MaximumLength = (USHORT)((wcslen(SERVICES_KEY) +
+                                      1 +
+                                      wcslen(ProviderName) +
+                                      1 +
+                                      wcslen(L"Interfaces") +
+                                      1) * sizeof (WCHAR));
+
+    Unicode.Buffer = __FdoAllocate(Unicode.MaximumLength);
+
+    status = STATUS_NO_MEMORY;
+    if (Unicode.Buffer == NULL)
+        goto fail1;
+
+    status = RtlStringCbPrintfW(Unicode.Buffer,
+                                Unicode.MaximumLength,
+                                SERVICES_KEY L"\\%ws\\Interfaces",
+                                ProviderName);
+    ASSERT(NT_SUCCESS(status));
+
+    Unicode.Length = (USHORT)(wcslen(Unicode.Buffer) * sizeof (WCHAR));
+
+    status = RegistryOpenKey(NULL, &Unicode, KEY_READ, &InterfacesKey);
+    if (!NT_SUCCESS(status))
+        goto fail2;
+
+    status = RegistryCreateSubKey(InterfacesKey, 
+                                  "XENIFACE", 
+                                  REG_OPTION_NON_VOLATILE, 
+                                  &SubscriberKey);
+    if (!NT_SUCCESS(status))
+        goto fail3;
+                   
     KeInitializeEvent(&Event, NotificationEvent, FALSE);
     RtlZeroMemory(&StatusBlock, sizeof(IO_STATUS_BLOCK));
-    RtlZeroMemory(&Interface, sizeof(INTERFACE));
 
     Irp = IoBuildSynchronousFsdRequest(IRP_MJ_PNP,
                                        Fdo->LowerDeviceObject,
@@ -2134,15 +2179,15 @@ FdoQueryStoreInterface(
 
     status = STATUS_UNSUCCESSFUL;
     if (Irp == NULL)
-        goto fail1;
+        goto fail4;
 
     StackLocation = IoGetNextIrpStackLocation(Irp);
     StackLocation->MinorFunction = IRP_MN_QUERY_INTERFACE;
 
-    StackLocation->Parameters.QueryInterface.InterfaceType = &GUID_STORE_INTERFACE;
-    StackLocation->Parameters.QueryInterface.Size = sizeof (INTERFACE);
-    StackLocation->Parameters.QueryInterface.Version = STORE_INTERFACE_VERSION;
-    StackLocation->Parameters.QueryInterface.Interface = &Interface;
+    StackLocation->Parameters.QueryInterface.InterfaceType = Guid;
+    StackLocation->Parameters.QueryInterface.Size = (USHORT)Size;
+    StackLocation->Parameters.QueryInterface.Version = (USHORT)Version;
+    StackLocation->Parameters.QueryInterface.Interface = Interface;
     
     Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
 
@@ -2156,96 +2201,48 @@ FdoQueryStoreInterface(
         status = StatusBlock.Status;
     }
 
-    if (!NT_SUCCESS(status))
-        goto fail2;
+    if (!NT_SUCCESS(status)) {
+        if (status == STATUS_NOT_SUPPORTED && Optional)
+            goto done;
 
-    status = STATUS_INVALID_PARAMETER;
-    if (Interface.Version != STORE_INTERFACE_VERSION)
-        goto fail3;
-
-    Fdo->StoreInterface = (PXENBUS_STORE_INTERFACE)Interface.Context;
-
-    return STATUS_SUCCESS;
-
-fail3:
-    Error("fail3\n");
-
-fail2:
-    Error("fail2\n");
-
-fail1:
-    Error("fail1 (%08x)\n", status);
-
-    return status;
-}
-
-
-static NTSTATUS
-FdoQuerySuspendInterface(
-    IN  PXENIFACE_FDO     Fdo
-    )
-{
-    KEVENT              Event;
-    IO_STATUS_BLOCK     StatusBlock;
-    PIRP                Irp;
-    PIO_STACK_LOCATION  StackLocation;
-    INTERFACE           Interface;
-    NTSTATUS            status;
-
-    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-
-    KeInitializeEvent(&Event, NotificationEvent, FALSE);
-    RtlZeroMemory(&StatusBlock, sizeof(IO_STATUS_BLOCK));
-    RtlZeroMemory(&Interface, sizeof(INTERFACE));
-
-    Irp = IoBuildSynchronousFsdRequest(IRP_MJ_PNP,
-                                       Fdo->LowerDeviceObject,
-                                       NULL,
-                                       0,
-                                       NULL,
-                                       &Event,
-                                       &StatusBlock);
-
-    status = STATUS_UNSUCCESSFUL;
-    if (Irp == NULL)
-        goto fail1;
-
-    StackLocation = IoGetNextIrpStackLocation(Irp);
-    StackLocation->MinorFunction = IRP_MN_QUERY_INTERFACE;
-
-    StackLocation->Parameters.QueryInterface.InterfaceType = &GUID_SUSPEND_INTERFACE;
-    StackLocation->Parameters.QueryInterface.Size = sizeof (INTERFACE);
-    StackLocation->Parameters.QueryInterface.Version = SUSPEND_INTERFACE_VERSION;
-    StackLocation->Parameters.QueryInterface.Interface = &Interface;
-    
-    Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-
-    status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
-    if (status == STATUS_PENDING) {
-        (VOID) KeWaitForSingleObject(&Event,
-                                     Executive,
-                                     KernelMode,
-                                     FALSE,
-                                     NULL);
-        status = StatusBlock.Status;
+        goto fail5;
     }
 
+    status = RegistryUpdateDwordValue(SubscriberKey,
+                                      (PCHAR)InterfaceName,
+                                      Version);
     if (!NT_SUCCESS(status))
-        goto fail2;
+        goto fail6;
 
-    status = STATUS_INVALID_PARAMETER;
-    if (Interface.Version != SUSPEND_INTERFACE_VERSION)
-        goto fail3;
+done:
+    RegistryCloseKey(SubscriberKey);
 
-    Fdo->SuspendInterface = (PXENBUS_SUSPEND_INTERFACE)Interface.Context;
+    RegistryCloseKey(InterfacesKey);
+
+    __FdoFree(Unicode.Buffer);
 
     return STATUS_SUCCESS;
+
+fail6:
+    Error("fail6\n");
+
+fail5:
+    Error("fail5\n");
+
+fail4:
+    Error("fail4\n");
+
+    RegistryCloseKey(SubscriberKey);
 
 fail3:
     Error("fail3\n");
 
+    RegistryCloseKey(InterfacesKey);
+
 fail2:
     Error("fail2\n");
+
+    __FdoFree(Unicode.Buffer);
 
 fail1:
     Error("fail1 (%08x)\n", status);
@@ -2253,78 +2250,23 @@ fail1:
     return status;
 }
 
-static NTSTATUS
-FdoQuerySharedInfoInterface(
-    IN  PXENIFACE_FDO     Fdo
-    )
-{
-    KEVENT              Event;
-    IO_STATUS_BLOCK     StatusBlock;
-    PIRP                Irp;
-    PIO_STACK_LOCATION  StackLocation;
-    INTERFACE           Interface;
-    NTSTATUS            status;
+#define FDO_QUERY_INTERFACE(                                                            \
+    _Fdo,                                                                               \
+    _ProviderName,                                                                      \
+    _InterfaceName,                                                                     \
+    _Version,                                                                           \
+    _Interface,                                                                         \
+    _Size,                                                                              \
+    _Optional)                                                                          \
+    __FdoQueryInterface((_Fdo),                                                         \
+                        L ## #_ProviderName,                                            \
+                        #_InterfaceName,                                                \
+                        &GUID_ ## _ProviderName ## _ ## _InterfaceName ## _INTERFACE,   \
+                        (_Version),                                                     \
+                        (_Interface),                                                   \
+                        (_Size),                                                        \
+                        (_Optional))
 
-    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-
-    KeInitializeEvent(&Event, NotificationEvent, FALSE);
-    RtlZeroMemory(&StatusBlock, sizeof(IO_STATUS_BLOCK));
-    RtlZeroMemory(&Interface, sizeof(INTERFACE));
-
-    Irp = IoBuildSynchronousFsdRequest(IRP_MJ_PNP,
-                                       Fdo->LowerDeviceObject,
-                                       NULL,
-                                       0,
-                                       NULL,
-                                       &Event,
-                                       &StatusBlock);
-
-    status = STATUS_UNSUCCESSFUL;
-    if (Irp == NULL)
-        goto fail1;
-
-    StackLocation = IoGetNextIrpStackLocation(Irp);
-    StackLocation->MinorFunction = IRP_MN_QUERY_INTERFACE;
-
-    StackLocation->Parameters.QueryInterface.InterfaceType = &GUID_SHARED_INFO_INTERFACE;
-    StackLocation->Parameters.QueryInterface.Size = sizeof (INTERFACE);
-    StackLocation->Parameters.QueryInterface.Version = SHARED_INFO_INTERFACE_VERSION;
-    StackLocation->Parameters.QueryInterface.Interface = &Interface;
-    
-    Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-
-    status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
-    if (status == STATUS_PENDING) {
-        (VOID) KeWaitForSingleObject(&Event,
-                                     Executive,
-                                     KernelMode,
-                                     FALSE,
-                                     NULL);
-        status = StatusBlock.Status;
-    }
-
-    if (!NT_SUCCESS(status))
-        goto fail2;
-
-    status = STATUS_INVALID_PARAMETER;
-    if (Interface.Version != SHARED_INFO_INTERFACE_VERSION)
-        goto fail3;
-
-    Fdo->SharedInfoInterface = (PXENBUS_SHARED_INFO_INTERFACE)Interface.Context;
-
-    return STATUS_SUCCESS;
-
-fail3:
-    Error("fail3\n");
-
-fail2:
-    Error("fail2\n");
-
-fail1:
-    Error("fail1 (%08x)\n", status);
-
-    return status;
-}
 NTSTATUS
 FdoCreate(
     IN  PDEVICE_OBJECT  PhysicalDeviceObject
@@ -2399,17 +2341,35 @@ FdoCreate(
     if (!NT_SUCCESS(status))
         goto fail7;
 
-    status = FdoQueryStoreInterface(Fdo);
+    status = FDO_QUERY_INTERFACE(Fdo,
+                                 XENBUS,
+                                 SUSPEND,
+                                 XENBUS_SUSPEND_INTERFACE_VERSION_MAX,
+                                 (PINTERFACE)&Fdo->SuspendInterface,
+                                 sizeof (Fdo->SuspendInterface),
+                                 FALSE);
     if (!NT_SUCCESS(status))
         goto fail8;
 
-    status = FdoQuerySuspendInterface(Fdo);
+    status = FDO_QUERY_INTERFACE(Fdo,
+                                 XENBUS,
+                                 SHARED_INFO,
+                                 XENBUS_SHARED_INFO_INTERFACE_VERSION_MAX,
+                                 (PINTERFACE)&Fdo->SharedInfoInterface,
+                                 sizeof (Fdo->SharedInfoInterface),
+                                 FALSE);
     if (!NT_SUCCESS(status))
         goto fail9;
 
-	status = FdoQuerySharedInfoInterface(Fdo);
-	if (!NT_SUCCESS(status))
-		goto fail10;
+    status = FDO_QUERY_INTERFACE(Fdo,
+                                 XENBUS,
+                                 STORE,
+                                 XENBUS_STORE_INTERFACE_VERSION_MAX,
+                                 (PINTERFACE)&Fdo->StoreInterface,
+                                 sizeof (Fdo->StoreInterface),
+                                 FALSE);
+    if (!NT_SUCCESS(status))
+        goto fail10;
 
     InitializeMutex(&Fdo->Mutex);
     InitializeListHead(&Dx->ListEntry);
@@ -2435,16 +2395,21 @@ FdoCreate(
 	
 fail11:
 	Error("fail11\n");
-	Fdo->SharedInfoInterface = NULL;
+
+    RtlZeroMemory(&Fdo->StoreInterface,
+                  sizeof (XENBUS_STORE_INTERFACE));
 
 fail10:
 	Error("fail10\n");
-	Fdo->SuspendInterface = NULL;
+
+    RtlZeroMemory(&Fdo->SharedInfoInterface,
+                  sizeof (XENBUS_SHARED_INFO_INTERFACE));
 
 fail9:
     Error("fail8\n");
 
-    Fdo->StoreInterface = NULL;
+    RtlZeroMemory(&Fdo->SuspendInterface,
+                  sizeof (XENBUS_SUSPEND_INTERFACE));
 
 fail8:
     Error("fail8\n");
@@ -2521,9 +2486,15 @@ FdoDestroy(
     RtlZeroMemory(&Fdo->Mutex, sizeof (XENIFACE_MUTEX));
 
 	Fdo->InterfacesAcquired = FALSE;
-    Fdo->SuspendInterface = NULL;
-    Fdo->StoreInterface = NULL;
-	Fdo->SharedInfoInterface = NULL;
+
+    RtlZeroMemory(&Fdo->StoreInterface,
+                  sizeof (XENBUS_STORE_INTERFACE));
+
+    RtlZeroMemory(&Fdo->SharedInfoInterface,
+                  sizeof (XENBUS_SHARED_INFO_INTERFACE));
+
+    RtlZeroMemory(&Fdo->SuspendInterface,
+                  sizeof (XENBUS_SUSPEND_INTERFACE));
 
 	ThreadAlert(Fdo->registryThread);
     ThreadJoin(Fdo->registryThread);

@@ -103,7 +103,7 @@ IoctlRead(
     if (!__IsValidStr(Buffer, InLen))
         goto fail2;
 
-    status = STORE(Read, Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
+    status = XENBUS_STORE(Read, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
     if (!NT_SUCCESS(status))
         goto fail3;
 
@@ -127,12 +127,12 @@ IoctlRead(
 
 done:
     *Info = (ULONG_PTR)Length;
-    STORE(Free, Fdo->StoreInterface, Value);
+    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
     return status;
 
 fail4:
     XenIfaceDebugPrint(ERROR, "|%s: Fail4 (\"%s\")=(%d < %d)\n", __FUNCTION__, Buffer, OutLen, Length);
-    STORE(Free, Fdo->StoreInterface, Value);
+    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
     XenIfaceDebugPrint(ERROR, "|%s: Fail3 (\"%s\")\n", __FUNCTION__, Buffer);
 fail2:
@@ -168,7 +168,7 @@ IoctlWrite(
     if (!__IsValidStr(Value, InLen - Length))
         goto fail3;
 
-    status = STORE(Write, Fdo->StoreInterface, NULL, NULL, Buffer, Value);
+    status = XENBUS_STORE(Printf, &Fdo->StoreInterface, NULL, NULL, Buffer, Value);
     if (!NT_SUCCESS(status))
         goto fail4;
 
@@ -208,7 +208,7 @@ IoctlDirectory(
     if (!__IsValidStr(Buffer, InLen))
         goto fail2;
 
-    status = STORE(Directory, Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
+    status = XENBUS_STORE(Directory, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
     if (!NT_SUCCESS(status))
         goto fail3;
 
@@ -236,12 +236,12 @@ IoctlDirectory(
 
 done:
     *Info = (ULONG_PTR)Length;
-    STORE(Free, Fdo->StoreInterface, Value);
+    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
     return status;
 
 fail4:
     XenIfaceDebugPrint(ERROR, "|%s: Fail4 (\"%s\")=(%d < %d)\n", __FUNCTION__, Buffer, OutLen, Length);
-    STORE(Free, Fdo->StoreInterface, Value);
+    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
     XenIfaceDebugPrint(ERROR, "|%s: Fail3 (\"%s\")\n", __FUNCTION__, Buffer);
 fail2:
@@ -269,7 +269,7 @@ IoctlRemove(
     if (!__IsValidStr(Buffer, InLen))
         goto fail2;
 
-    status = STORE(Remove, Fdo->StoreInterface, NULL, NULL, Buffer);
+    status = XENBUS_STORE(Remove, &Fdo->StoreInterface, NULL, NULL, Buffer);
     if (!NT_SUCCESS(status))
         goto fail3;
 
@@ -298,9 +298,6 @@ XenIFaceIoctl(
     ULONG               OutLen = Stack->Parameters.DeviceIoControl.OutputBufferLength;
 
     status = STATUS_DEVICE_NOT_READY;
-    if (Fdo->StoreInterface == NULL)
-        goto done;
-
     if (Fdo->InterfacesAcquired == FALSE)
         goto done;
 

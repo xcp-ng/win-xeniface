@@ -814,7 +814,7 @@ StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
     RtlZeroMemory(tmppath, ansipath.Length+1);
     RtlCopyBytes(tmppath,ansipath.Buffer, ansipath.Length);
     
-    status = STORE(Watch, fdoData->StoreInterface, NULL, tmppath, &watch->watchevent, &watch->watchhandle );
+    status = XENBUS_STORE(WatchAdd, &fdoData->StoreInterface, NULL, tmppath, &watch->watchevent, &watch->watchhandle );
     if (!NT_SUCCESS(status)) {
         ExFreePool(tmppath);
         RtlFreeAnsiString(&ansipath);
@@ -871,11 +871,11 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             else
             {
                 if (!session->suspended) {
-                    if (watch->suspendcount !=SUSPEND(Count, watch->fdoData->SuspendInterface)) {
-                        watch->suspendcount = SUSPEND(Count, watch->fdoData->SuspendInterface);
+                    if (watch->suspendcount !=XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface)) {
+                        watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
                         XenIfaceDebugPrint(WARNING,"SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
                         
-                        STORE(Unwatch, watch->fdoData->StoreInterface, watch->watchhandle);
+                        XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
                         StartWatch(watch->fdoData, watch);
                     }
                 }
@@ -939,7 +939,7 @@ SessionAddWatchLocked(XenStoreSession *session,
 
 
    
-    (*watch)->suspendcount = SUSPEND(Count, fdoData->SuspendInterface);
+    (*watch)->suspendcount = XENBUS_SUSPEND(GetCount, &fdoData->SuspendInterface);
     
 
     KeInitializeEvent(&(*watch)->watchevent, NotificationEvent, FALSE);
@@ -979,7 +979,7 @@ void SessionRemoveWatchLocked(XenStoreSession *session, XenStoreWatch *watch) {
     XenIfaceDebugPrint(TRACE, "handle %p\n", watch->watchhandle);
 
     if (watch->watchhandle) {
-        STORE(Unwatch, watch->fdoData->StoreInterface, watch->watchhandle);
+        XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
         watch->watchhandle=NULL;
         watch->finished = TRUE;
     XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
@@ -1172,7 +1172,7 @@ RemoveSessionLocked(XENIFACE_FDO *fdoData,
     fdoData->Sessions--;
     SessionRemoveWatchesLocked(session);
     if (session->transaction != NULL) {
-        STORE(TransactionEnd, fdoData->StoreInterface, session->transaction, FALSE);  
+        XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);  
     }  
     session->closing = TRUE;
     KeSetEvent(&session->SessionChangedEvent, IO_NO_INCREMENT, FALSE);
@@ -1215,7 +1215,7 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
     for (i=0; watch != (XenStoreWatch *)&session->watches; i++) {
         XenIfaceDebugPrint(TRACE,"Suspend unwatch %p\n", watch->watchhandle);
 
-        STORE(Unwatch, watch->fdoData->StoreInterface, watch->watchhandle);
+        XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
     XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
@@ -1236,7 +1236,7 @@ void SuspendSessionLocked(XENIFACE_FDO *fdoData,
     if (session->transaction != NULL) {
         XenIfaceDebugPrint(TRACE, "End transaction %p\n",session->transaction);
         
-        STORE(TransactionEnd, fdoData->StoreInterface, session->transaction, FALSE);  
+        XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);  
         session->transaction = NULL;
     }  
 }
@@ -1262,7 +1262,7 @@ void SessionRenewWatchesLocked(XenStoreSession *session) {
     watch = (XenStoreWatch *)session->watches.Flink;
     for (i=0; watch != (XenStoreWatch *)&session->watches; i++) {
         if (!watch->finished) {
-            watch->suspendcount = SUSPEND(Count, watch->fdoData->SuspendInterface);
+            watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
             StartWatch(watch->fdoData, watch);
         }
         watch = (XenStoreWatch *)watch->listentry.Flink;
@@ -1477,7 +1477,7 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
             NULL){
         goto fail2;
     }
-    status = STORE(Remove, fdoData->StoreInterface, session->transaction, NULL, tmpbuffer);
+    status = XENBUS_STORE(Remove, &fdoData->StoreInterface, session->transaction, NULL, tmpbuffer);
     UnlockSessions(fdoData);
 
 fail2:
@@ -1662,7 +1662,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
             NULL){
         goto fail4;
     }
-    status = STORE(Write, fdoData->StoreInterface, session->transaction, NULL, tmppath, tmpvalue);
+    status = XENBUS_STORE(Printf, &fdoData->StoreInterface, session->transaction, NULL, tmppath, tmpvalue);
     XenIfaceDebugPrint(TRACE, " Write %s to %s (%p)\n", tmpvalue, tmppath, status); 
     UnlockSessions(fdoData);
 
@@ -1727,7 +1727,7 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
             NULL){
         goto fail2;
     }
-    status = STORE(Directory,fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
+    status = XENBUS_STORE(Directory,&fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
     UnlockSessions(fdoData);
                         
     if (!NT_SUCCESS(status)) {
@@ -1781,7 +1781,7 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
 
 fail4:
 fail3:
-    STORE(Free, fdoData->StoreInterface, listresults);
+    XENBUS_STORE(Free, &fdoData->StoreInterface, listresults);
 
     *byteswritten = RequiredSize;
 
@@ -1874,7 +1874,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
 
     }
 
-    status = STORE(Directory,fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
+    status = XENBUS_STORE(Directory,&fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
     UnlockSessions(fdoData);
                         
     if (!NT_SUCCESS(status)) {
@@ -1955,7 +1955,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
 
 fail5:
 fail4:
-    STORE(Free, fdoData->StoreInterface, listresults);
+    XENBUS_STORE(Free, &fdoData->StoreInterface, listresults);
 
 fail3:
     ExFreePool(tmpleaf);
@@ -2018,7 +2018,7 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
             NULL){
         goto fail2;
     }
-    status = STORE(Directory,fdoData->StoreInterface,session->transaction,NULL, tmppath, &listresults);
+    status = XENBUS_STORE(Directory,&fdoData->StoreInterface,session->transaction,NULL, tmppath, &listresults);
     UnlockSessions(fdoData);
                         
     if (!NT_SUCCESS(status)) {
@@ -2079,7 +2079,7 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
 
 fail4:
 fail3:
-    STORE(Free, fdoData->StoreInterface, listresults);
+    XENBUS_STORE(Free, &fdoData->StoreInterface, listresults);
 
 fail2:
     ExFreePool(tmppath);
@@ -2149,7 +2149,7 @@ SessionExecuteStartTransaction(UCHAR *InBuffer,
         goto failtransactionactive;
     }
 
-    STORE(TransactionStart, fdoData->StoreInterface, &session->transaction);
+    XENBUS_STORE(TransactionStart, &fdoData->StoreInterface, &session->transaction);
     
 
 failtransactionactive:
@@ -2188,7 +2188,7 @@ SessionExecuteCommitTransaction(UCHAR *InBuffer,
         goto failtransactionnotactive;
     }
 
-    status = STORE(TransactionEnd,fdoData->StoreInterface, session->transaction, TRUE);
+    status = XENBUS_STORE(TransactionEnd,&fdoData->StoreInterface, session->transaction, TRUE);
     
     session->transaction = NULL;
 
@@ -2228,7 +2228,7 @@ SessionExecuteAbortTransaction(UCHAR *InBuffer,
         goto failtransactionnotactive;
     }
 
-    status = STORE(TransactionEnd, fdoData->StoreInterface, session->transaction, FALSE);
+    status = XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);
     
     session->transaction = NULL;
 
@@ -2287,7 +2287,7 @@ SessionExecuteGetValue(UCHAR *InBuffer,
             NULL){
         goto fail2;
     }
-    status = STORE(Read, fdoData->StoreInterface, session->transaction, NULL, tmppath, &value);
+    status = XENBUS_STORE(Read, &fdoData->StoreInterface, session->transaction, NULL, tmppath, &value);
     UnlockSessions(fdoData);
                 
     if (!NT_SUCCESS(status)) 
@@ -2303,7 +2303,7 @@ SessionExecuteGetValue(UCHAR *InBuffer,
     WriteCountedUTF8String(value, valuepos);
 
 fail3:
-    STORE(Free, fdoData->StoreInterface, value);
+    XENBUS_STORE(Free, &fdoData->StoreInterface, value);
     *byteswritten = RequiredSize;
 
 fail2:
@@ -2714,7 +2714,7 @@ GenerateBaseBlock(  XENIFACE_FDO *fdoData,
                                 WNODE_FLAG_FIXED_INSTANCE_SIZE |
                                 WNODE_FLAG_PDO_INSTANCE_NAMES;
     if (fdoData->InterfacesAcquired) {
-        *time = SHARED_INFO(GetTime, fdoData->SharedInfoInterface).QuadPart;
+        *time = XENBUS_SHARED_INFO(GetTime, &fdoData->SharedInfoInterface).QuadPart;
     }
     else {
         *time = 0;
@@ -2758,7 +2758,7 @@ GenerateBaseInstance(
         return STATUS_WMI_ITEMID_NOT_FOUND;
     }
     if (fdoData->InterfacesAcquired) {
-        *time = SHARED_INFO(GetTime, fdoData->SharedInfoInterface).QuadPart;
+        *time = XENBUS_SHARED_INFO(GetTime, &fdoData->SharedInfoInterface).QuadPart;
     }
     else {
         *time = 0;

@@ -56,49 +56,49 @@ typedef struct _FDO_RESOURCE {
 
 
 typedef struct _XENIFACE_FDO {
-    struct _XENIFACE_DX         *Dx;
-    PDEVICE_OBJECT              LowerDeviceObject;
-    PDEVICE_OBJECT              PhysicalDeviceObject;
-    DEVICE_CAPABILITIES         LowerDeviceCapabilities;
-    ULONG                       Usage[DeviceUsageTypeDumpFile + 1];
-    BOOLEAN                     NotDisableable;
+    struct _XENIFACE_DX             *Dx;
+    PDEVICE_OBJECT                  LowerDeviceObject;
+    PDEVICE_OBJECT                  PhysicalDeviceObject;
+    DEVICE_CAPABILITIES             LowerDeviceCapabilities;
+    ULONG                           Usage[DeviceUsageTypeDumpFile + 1];
+    BOOLEAN                         NotDisableable;
 
-    PXENIFACE_THREAD            SystemPowerThread;
-    PIRP                        SystemPowerIrp;
-    PXENIFACE_THREAD            DevicePowerThread;
-    PIRP                        DevicePowerIrp;
+    PXENIFACE_THREAD                SystemPowerThread;
+    PIRP                            SystemPowerIrp;
+    PXENIFACE_THREAD                DevicePowerThread;
+    PIRP                            DevicePowerIrp;
 
-    XENIFACE_MUTEX              Mutex;
-    ULONG                       References;
+    XENIFACE_MUTEX                  Mutex;
+    ULONG                           References;
 
-    FDO_RESOURCE                Resource[RESOURCE_COUNT];
+    FDO_RESOURCE                    Resource[RESOURCE_COUNT];
 
 
-    PXENBUS_STORE_INTERFACE     StoreInterface;
+    XENBUS_STORE_INTERFACE          StoreInterface;
 
-    PXENBUS_SUSPEND_INTERFACE   SuspendInterface;
+    XENBUS_SUSPEND_INTERFACE        SuspendInterface;
 
-	PXENBUS_SHARED_INFO_INTERFACE SharedInfoInterface;
+	XENBUS_SHARED_INFO_INTERFACE    SharedInfoInterface;
 
-    PXENBUS_SUSPEND_CALLBACK    SuspendCallbackLate;
+    PXENBUS_SUSPEND_CALLBACK        SuspendCallbackLate;
 
-	BOOLEAN						InterfacesAcquired;
+	BOOLEAN						    InterfacesAcquired;
 
 	#define MAX_SESSIONS    (65536)
 
-    int							WmiReady;
+    int							    WmiReady;
 
-    USHORT						Sessions;
-    FAST_MUTEX					SessionLock;
-    LIST_ENTRY					SessionHead;
+    USHORT						    Sessions;
+    FAST_MUTEX					    SessionLock;
+    LIST_ENTRY					    SessionHead;
 
-	PXENIFACE_THREAD			registryThread;
-	KEVENT						registryWriteEvent;
+	PXENIFACE_THREAD			    registryThread;
+	KEVENT						    registryWriteEvent;
 
 
-	UNICODE_STRING				SuggestedInstanceName;
+	UNICODE_STRING				    SuggestedInstanceName;
 
-	UNICODE_STRING				InterfaceName;
+	UNICODE_STRING				    InterfaceName;
 
 } XENIFACE_FDO, *PXENIFACE_FDO;
 

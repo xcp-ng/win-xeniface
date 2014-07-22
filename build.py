@@ -1,36 +1,5 @@
 #!python -u
 
-# Copyright (c) Citrix Systems Inc.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, 
-# with or without modification, are permitted provided 
-# that the following conditions are met:
-#
-# *   Redistributions of source code must retain the above 
-#     copyright notice, this list of conditions and the 
-#     following disclaimer.
-# *   Redistributions in binary form must reproduce the above 
-#     copyright notice, this list of conditions and the 
-#     following disclaimer in the documentation and/or other 
-#     materials provided with the distribution.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
-# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
-# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
-# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
-# SUCH DAMAGE.
-
-
 import os, sys
 import datetime
 import re
@@ -38,11 +7,32 @@ import glob
 import tarfile
 import subprocess
 import shutil
+import time
+
+def next_build_number():
+    try:
+        file = open('.build_number', 'r')
+        build_number = file.read()
+        file.close()
+    except IOError:
+        build_number = '0'
+
+    file = open('.build_number', 'w')
+    file.write(str(int(build_number) + 1))
+    file.close()
+
+    return build_number
+
 
 def make_header():
     now = datetime.datetime.now()
 
     file = open('include\\version.h', 'w')
+
+    file.write('#define COMPANY_NAME_STR\t"' + os.environ['COMPANY_NAME'] + '"\n')
+    file.write('#define PRODUCT_NAME_STR\t"' + os.environ['PRODUCT_NAME'] + '"\n')
+    file.write('\n')
+
     file.write('#define MAJOR_VERSION\t' + os.environ['MAJOR_VERSION'] + '\n')
     file.write('#define MAJOR_VERSION_STR\t"' + os.environ['MAJOR_VERSION'] + '"\n')
     file.write('\n')
@@ -61,18 +51,37 @@ def make_header():
 
     file.write('#define YEAR\t' + str(now.year) + '\n')
     file.write('#define YEAR_STR\t"' + str(now.year) + '"\n')
+    file.write('\n')
 
     file.write('#define MONTH\t' + str(now.month) + '\n')
     file.write('#define MONTH_STR\t"' + str(now.month) + '"\n')
+    file.write('\n')
 
     file.write('#define DAY\t' + str(now.day) + '\n')
     file.write('#define DAY_STR\t"' + str(now.day) + '"\n')
-
+    file.write('\n')
 
     file.close()
 
 
-def get_expired_symbols(age = 30):
+def copy_inf(name):
+    src = open('src\\%s.inf' % name, 'r')
+    dst = open('proj\\%s.inf' % name, 'w')
+
+    for line in src:
+        line = re.sub('@MAJOR_VERSION@', os.environ['MAJOR_VERSION'], line)
+        line = re.sub('@MINOR_VERSION@', os.environ['MINOR_VERSION'], line)
+        line = re.sub('@MICRO_VERSION@', os.environ['MICRO_VERSION'], line)
+        line = re.sub('@BUILD_NUMBER@', os.environ['BUILD_NUMBER'], line)
+        line = re.sub('@COMPANY_NAME@', os.environ['COMPANY_NAME'], line)
+        line = re.sub('@PRODUCT_NAME@', os.environ['PRODUCT_NAME'], line)
+        dst.write(line)
+
+    dst.close()
+    src.close()
+
+
+def get_expired_symbols(name, age = 30):
     path = os.path.join(os.environ['SYMBOL_SERVER'], '000Admin\\history.txt')
 
     try:
@@ -91,6 +100,7 @@ def get_expired_symbols(age = 30):
             id = item[0]
             date = item[3].split('/')
             time = item[4].split(':')
+            tag = item[5].strip('"')
 
             age = datetime.datetime(year = int(date[2]),
                                     month = int(date[0]),
@@ -98,7 +108,7 @@ def get_expired_symbols(age = 30):
                                     hour = int(time[0]),
                                     minute = int(time[1]),
                                     second = int(time[2]))
-            if (age < threshold):
+            if (tag == name and age < threshold):
                 expired.append(id)
 
         elif (re.match('del', item[1])):
@@ -111,6 +121,8 @@ def get_expired_symbols(age = 30):
     file.close()
 
     return expired
+
+
 def get_configuration(release, debug):
     configuration = release
 
@@ -121,25 +133,32 @@ def get_configuration(release, debug):
 
     return configuration
 
+
 def get_target_path(release, arch, debug):
     configuration = get_configuration(release, debug)
     name = ''.join(configuration.split(' '))
-    target = { 'x86': 'proj', 'x64': os.sep.join(['proj', 'x64']) }
-    target_path = os.sep.join([target[arch], name])
+    target = { 'x86': os.sep.join([name, 'Win32']), 'x64': os.sep.join([name, 'x64']) }
+    target_path = os.sep.join(['proj', target[arch]])
 
     return target_path
 
 
-def shell(command):
+def shell(command, dir):
+    print(dir)
     print(command)
     sys.stdout.flush()
+    
+    sub = subprocess.Popen(' '.join(command), cwd=dir,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, 
+                           universal_newlines=True)
 
-    pipe = os.popen(command, 'r', 1)
-
-    for line in pipe:
+    for line in sub.stdout:
         print(line.rstrip())
 
-    return pipe.close()
+    sub.wait()
+
+    return sub.returncode
 
 
 class msbuild_failure(Exception):
@@ -149,22 +168,19 @@ class msbuild_failure(Exception):
         return repr(self.value)
 
 def msbuild(platform, configuration, target, file, args, dir):
-
     os.environ['PLATFORM'] = platform
     os.environ['CONFIGURATION'] = configuration
     os.environ['TARGET'] = target
     os.environ['FILE'] = file
     os.environ['EXTRA'] = args
 
-    cwd = os.getcwd()
-    bin = os.path.join(cwd, 'msbuild.bat')
+    bin = os.path.join(os.getcwd(), 'msbuild.bat')
 
-    os.chdir(dir)
-    status = shell(bin)
-    os.chdir(cwd)
+    status = shell([bin], dir)
 
-    if (status != None):
+    if (status != 0):
         raise msbuild_failure(configuration)
+
 
 def build_sln(name, release, arch, debug):
     configuration = get_configuration(release, debug)
@@ -176,7 +192,7 @@ def build_sln(name, release, arch, debug):
 
     cwd = os.getcwd()
 
-    msbuild(platform, configuration, 'Build', name+'.sln', '', 'proj')
+    msbuild(platform, configuration, 'Build', name + '.sln', '', 'proj')
 
 
 def remove_timestamps(path):
@@ -197,14 +213,62 @@ def remove_timestamps(path):
     dst.close()
     src.close()
 
+def sdv_clean(name):
+    path = ['proj', name, 'sdv']
+    print(path)
+
+    shutil.rmtree(os.path.join(*path), True)
+
+    path = ['proj', name, 'sdv.temp']
+    print(path)
+
+    shutil.rmtree(os.path.join(*path), True)
+
+    path = ['proj', name, 'staticdv.job']
+    print(path)
+
+    try:
+        os.unlink(os.path.join(*path))
+    except OSError:
+        pass
+
+    path = ['proj', name, 'refine.sdv']
+    print(path)
+
+    try:
+        os.unlink(os.path.join(*path))
+    except OSError:
+        pass
+
+    path = ['proj', name, 'sdv-map.h']
+    print(path)
+
+    try:
+        os.unlink(os.path.join(*path))
+    except OSError:
+        pass
+
+
 def run_sdv(name, dir):
     configuration = get_configuration('Windows 8', False)
     platform = 'x64'
 
     msbuild(platform, configuration, 'Build', name + '.vcxproj',
             '', os.path.join('proj', name))
+
+    sdv_clean(name)
+
     msbuild(platform, configuration, 'sdv', name + '.vcxproj',
-            '/p:Inputs="/clean"', os.path.join('proj', name))
+            '/p:Inputs="/scan"', os.path.join('proj', name))
+
+    path = ['proj', name, 'sdv-map.h']
+    file = open(os.path.join(*path), 'r')
+
+    for line in file:
+        print(line)
+
+    file.close()
+
     msbuild(platform, configuration, 'sdv', name + '.vcxproj',
             '/p:Inputs="/check:default.sdv"', os.path.join('proj', name))
 
@@ -217,7 +281,13 @@ def run_sdv(name, dir):
     path = ['proj', name, name + '.DVL.XML']
     shutil.copy(os.path.join(*path), dir)
 
-def symstore_del(age):
+    path = ['proj', name, 'refine.sdv']
+    if os.path.isfile(os.path.join(*path)):
+        msbuild(platform, configuration, 'sdv', name + '.vcxproj',
+                '/p:Inputs=/refine', os.path.join('proj', name))
+
+
+def symstore_del(name, age):
     symstore_path = [os.environ['KIT'], 'Debuggers']
     if os.environ['PROCESSOR_ARCHITECTURE'] == 'x86':
         symstore_path.append('x86')
@@ -227,7 +297,7 @@ def symstore_del(age):
 
     symstore = os.path.join(*symstore_path)
 
-    for id in get_expired_symbols(age):
+    for id in get_expired_symbols(name, age):
         command=['"' + symstore + '"']
         command.append('del')
         command.append('/i')
@@ -235,10 +305,10 @@ def symstore_del(age):
         command.append('/s')
         command.append(os.environ['SYMBOL_SERVER'])
 
-        shell(' '.join(command))
+        shell(command, None)
+
 
 def symstore_add(name, release, arch, debug):
-    cwd = os.getcwd()
     target_path = get_target_path(release, arch, debug)
 
     symstore_path = [os.environ['KIT'], 'Debuggers']
@@ -255,7 +325,6 @@ def symstore_add(name, release, arch, debug):
                         os.environ['MICRO_VERSION'],
                         os.environ['BUILD_NUMBER']])
 
-    os.chdir(target_path)
     command=['"' + symstore + '"']
     command.append('add')
     command.append('/s')
@@ -268,12 +337,11 @@ def symstore_add(name, release, arch, debug):
     command.append('/v')
     command.append(version)
 
-    shell(' '.join(command))
+    shell(command, target_path)
 
-    os.chdir(cwd)
 
-def callfnout(cmd):
-    print(cmd)
+def manifest():
+    cmd = ['git', 'ls-tree', '-r', '--name-only', 'HEAD']
 
     sub = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     output = sub.communicate()[0]
@@ -283,6 +351,7 @@ def callfnout(cmd):
         raise(Exception("Error %d in : %s" % (ret, cmd)))
 
     return output.decode('utf-8')
+
 
 def archive(filename, files, tgz=False):
     access='w'
@@ -298,25 +367,35 @@ def archive(filename, files, tgz=False):
 
 
 if __name__ == '__main__':
-
+    debug = { 'checked': True, 'free': False }
+    sdv = { 'nosdv': False, None: True }
     driver = 'xeniface'
-    os.environ['MAJOR_VERSION'] = '7'
-    os.environ['MINOR_VERSION'] = '2'
+
+    if 'COMPANY_NAME' not in os.environ.keys():
+        os.environ['COMPANY_NAME'] = 'Xen Project'
+
+    if 'PRODUCT_NAME' not in os.environ.keys():
+        os.environ['PRODUCT_NAME'] = 'Xen'
+
+    os.environ['MAJOR_VERSION'] = '8'
+    os.environ['MINOR_VERSION'] = '0'
     os.environ['MICRO_VERSION'] = '0'
 
     if 'BUILD_NUMBER' not in os.environ.keys():
-        os.environ['BUILD_NUMBER'] = '0'
+        os.environ['BUILD_NUMBER'] = next_build_number()
+
+    print("BUILD_NUMBER=%s" % os.environ['BUILD_NUMBER'])
 
     if 'GIT_REVISION' in os.environ.keys():
         revision = open('revision', 'w')
         print(os.environ['GIT_REVISION'], file=revision)
         revision.close()
 
-    debug = { 'checked': True, 'free': False }
-
     make_header()
 
-    symstore_del(30)
+    copy_inf(driver)
+
+    symstore_del(driver, 30)
 
     release = 'Windows Vista'
 
@@ -326,9 +405,9 @@ if __name__ == '__main__':
     symstore_add(driver, release, 'x86', debug[sys.argv[1]])
     symstore_add(driver, release, 'x64', debug[sys.argv[1]])
 
-    if len(sys.argv) <= 2 or sys.argv[2] != 'nosdv':
-        run_sdv(driver, driver)
+    if len(sys.argv) <= 2 or sdv[sys.argv[2]]:
+        run_sdv('xeniface', driver)
 
-    listfile = callfnout(['git','ls-tree', '-r', '--name-only', 'HEAD'])
-    archive('xeniface\\source.tgz', listfile.splitlines(), tgz=True)
-    archive('xeniface.tar', ['xeniface', 'revision'])
+    archive(driver + '\\source.tgz', manifest().splitlines(), tgz=True)
+    archive(driver + '.tar', [driver,'revision'])
+
