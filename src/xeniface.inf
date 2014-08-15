@@ -32,22 +32,18 @@
 Signature="$WINDOWS NT$"
 Class=System
 ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318} 
-Provider=%Citrix%
-DriverVer=09/07/2011,6.0.0.0
+Provider=%Company%
+DriverVer=01/01/1900,0.0.0.0
 CatalogFile=xeniface.cat
 
 [DestinationDirs]
 DefaultDestDir = 12
 ServiceDestDir.NT.Copy = 11
 
-;*****************************************
-; Xeniface Device  Install Section
-;*****************************************
-
 [Manufacturer]
-%Citrix%=Citrix,NT$ARCH$
+%Company%=Inst,NT$ARCH$
 
-[Citrix.NT$ARCH$]
+[Inst.NT$ARCH$]
 ; DisplayName		    Section	      DeviceID
 ; -----------		    -------	      --------
 
@@ -63,8 +59,6 @@ xeniface.sys
 
 [ServiceDestDir.NT.Copy]
 liteagent.exe
-
-;-------------- Service installation
 
 [Xeniface_Device.NT$ARCH$.Services]
 AddService = xeniface, %SPSVCINST_ASSOCSERVICE%, xeniface_Service_Inst
@@ -85,7 +79,6 @@ StartType      = 2               ; SERVICE_AUTO_START
 ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
 ServiceBinary  = %11%\liteagent.exe
 
-
 [SourceDisksNames]
 1 = %DiskId1%,,,""
 
@@ -95,10 +88,9 @@ liteagent.exe = 1,,
 
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
-Citrix= "Citrix Systems, Inc." 
-DiskId1 = "XenServer Tools for Virtual Machines"
-XenIfaceDevice.DeviceDesc = "XenServer Interface"
-xeniface.SVCDESC = "XenServer  Interface Device Driver"
+Company= "@COMPANY_NAME@" 
+DiskId1 = "@PRODUCT_NAME@ Interface Package"
+XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME Interface"
 LITESVC_FLAGS= 0x00000800
-xenlite.SVCDESC= "XenServer Lite Guest Agent"
+xenlite.SVCDESC= "@PRODUCT_NAME Interface Service"
 

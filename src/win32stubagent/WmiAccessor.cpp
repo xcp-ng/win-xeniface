@@ -44,6 +44,14 @@
 //#include "xs_private.h"
 #include <wbemidl.h>
 
+#include <version.h>
+
+#define WIDEN2(x) L ## x
+#define WIDEN(x) WIDEN2(x)
+
+#define OBJECT_NAME_A(_Name) OBJECT_PREFIX_STR "XenStore" #_Name
+#define OBJECT_NAME_W(_Name) WIDEN(OBJECT_PREFIX_STR) L"XenStore" WIDEN(#_Name)
+
 #pragma comment(lib, "wbemuuid.lib")
 #pragma comment(lib, "uuid.lib")
 #pragma comment(lib, "comsuppw.lib")
@@ -732,7 +740,7 @@ public:
 
 IWbemClassObject *getBase(WMIAccessor** wmi) 
 {
-    IWbemClassObject* base = getObject(wmi, L"CitrixXenStoreBase");
+    IWbemClassObject* base = getObject(wmi, OBJECT_NAME_W(Base));
     if (base == NULL) {
         *wmi = NULL;
         return NULL;
@@ -742,7 +750,7 @@ IWbemClassObject *getBase(WMIAccessor** wmi)
 
 IWbemClassObject *getBaseClass(WMIAccessor** wmi) 
 {
-    IWbemClassObject* baseclass =  getClass(wmi, L"CitrixXenStoreBase");
+    IWbemClassObject* baseclass = getClass(wmi, OBJECT_NAME_W(Base));
     if (baseclass == NULL) {
         *wmi = NULL;
         return NULL;
@@ -806,7 +814,7 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
 {
     HRESULT hres;
 
-    BSTR query = formatBstr("SELECT * FROM CitrixXenStoreSession WHERE Id=\"Citrix Xen Win32 Service : %s\"", sessionname);
+    BSTR query = formatBstr("SELECT * FROM " OBJECT_NAME_A(Session) " WHERE Id=\"" OBJECT_PREFIX_STR " Xen Win32 Service : %s\"", sessionname);
     if (query == NULL)
         goto formatsessionbstrfailed;
 
@@ -854,7 +862,7 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
 
     VARIANT var;
     var.vt = VT_BSTR;
-    var.bstrVal=formatBstr("Citrix Xen Win32 Service : %s", sessionname);
+    var.bstrVal=formatBstr(COMPANY_NAME_STR " Xen Win32 Service : %s", sessionname);
 
     if (var.bstrVal == NULL)
         goto formatnamebstrfailed;
@@ -869,13 +877,13 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
         goto outmethodgetfailed;
 
     size_t query_len;
-    query_len = strlen("SELECT * FROM CitrixXenStoreSession WHERE SessionId=")+10;
+    query_len = strlen("SELECT * FROM " OBJECT_NAME_A(Session) " WHERE SessionId=")+10;
     query = SysAllocStringLen(NULL, (UINT)query_len);
 
     if (query == NULL)
         goto allocqueryfailed;
 
-    swprintf_s(query,query_len, L"SELECT * FROM CitrixXenStoreSession WHERE SessionId=%d", var.uintVal);
+    swprintf_s(query,query_len, L"SELECT * FROM " OBJECT_NAME_W(Session) L" WHERE SessionId=%d", var.uintVal);
 
     sessions = runXSQuery(wmi, query );
     SysFreeString(query);
@@ -936,7 +944,7 @@ IWbemClassObject* sessionMethodStart(WMIAccessor**wmi,
 
     ASSERT(wmi != NULL);
 
-    sessionClass = getClass(wmi, L"CitrixXenStoreSession");
+    sessionClass = getClass(wmi, OBJECT_NAME_W(Session));
     if (sessionClass == NULL)
         goto getclassfailed;
 
@@ -1241,7 +1249,7 @@ void *WmiSessionWatch(WMIAccessor** wmi,  void **sessionhandle,
     ASSERT((*sessionhandle) != NULL);
 
     WatchSink * sink = new WatchSink(event, errorevent, path);
-    BSTR query=formatBstr("SELECT * from CitrixXenStoreWatchEvent WHERE EventId=\"%s\"", path);
+    BSTR query=formatBstr("SELECT * from " OBJECT_NAME_A(WatchEvent) " WHERE EventId=\"%s\"", path);
     if (query == NULL) {
         goto formatstringfailed;
     }
@@ -1302,7 +1310,7 @@ void *WmiUnsuspendedEventWatch(WMIAccessor **wmi, HANDLE event, HANDLE erroreven
     ASSERT(*wmi != NULL);
 
     WatchSink * sink = new WatchSink(event, errorevent, NULL);
-    BSTR query=formatBstr("SELECT * from CitrixXenStoreUnsuspendedEvent");
+    BSTR query=formatBstr("SELECT * from " OBJECT_NAME_A(UnsuspendedEvent));
     if (query==NULL) {
         goto formatstringfailed;
     }

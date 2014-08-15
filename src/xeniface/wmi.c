@@ -45,6 +45,7 @@
 #include "..\..\include\suspend_interface.h"
 #include "log.h"
 #include "xeniface_ioctls.h"
+#include <version.h>
 
 __drv_raisesIRQL(APC_LEVEL)
 __drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock) 
@@ -759,10 +760,10 @@ void FireSuspendEvent(PXENIFACE_FDO fdoData) {
     if (fdoData->WmiReady) {
         XenIfaceDebugPrint(TRACE,"Fire Suspend Event\n");
         WmiFireEvent(fdoData->Dx->DeviceObject,
-                (LPGUID)&CitrixXenStoreUnsuspendedEvent_GUID,
-                0,
-                0,
-                NULL);
+                     (LPGUID)&OBJECT_GUID(XenStoreUnsuspendedEvent),
+                     0,
+                     0,
+                     NULL);
     }
 } 
 void FireWatch(XenStoreWatch* watch) {
@@ -788,10 +789,10 @@ void FireWatch(XenStoreWatch* watch) {
     if (eventdata !=NULL) {
         XenIfaceDebugPrint(TRACE,"Fire Watch Event\n");
         WmiFireEvent(watch->fdoData->Dx->DeviceObject, 
-                        (LPGUID)&CitrixXenStoreWatchEvent_GUID,
-                        0,
-                        RequiredSize, 
-                        eventdata);
+                     (LPGUID)&OBJECT_GUID(XenStoreWatchEvent),
+                     0,
+                     RequiredSize, 
+                     eventdata);
     } 
 }
 
@@ -2560,12 +2561,14 @@ WmiExecuteMethod(
     OUT ULONG_PTR *byteswritten
    )
 {
-    if (IsEqualGUID(stack->Parameters.WMI.DataPath, &CitrixXenStoreBase_GUID)) {
+    if (IsEqualGUID(stack->Parameters.WMI.DataPath,
+                    &OBJECT_GUID(XenStoreBase))) {
         return BaseExecuteMethod(stack->Parameters.WMI.Buffer,
                                     stack->Parameters.WMI.BufferSize,  
                                     fdoData,  byteswritten);
     }
-    else if (IsEqualGUID(stack->Parameters.WMI.DataPath, &CitrixXenStoreSession_GUID)) {
+    else if (IsEqualGUID(stack->Parameters.WMI.DataPath,
+                         &OBJECT_GUID(XenStoreSession))) {
         return SessionExecuteMethod(stack->Parameters.WMI.Buffer,
                                     stack->Parameters.WMI.BufferSize,  
                                     fdoData,  byteswritten);
@@ -2845,14 +2848,14 @@ WmiQueryAllData(
 {
   
     if (IsEqualGUID(stack->Parameters.WMI.DataPath, 
-                    &CitrixXenStoreBase_GUID)) {
+                    &OBJECT_GUID(XenStoreBase))) {
         return GenerateBaseBlock(   fdoData,
                                     stack->Parameters.WMI.Buffer, 
                                     stack->Parameters.WMI.BufferSize,
                                     byteswritten);
     }
     else if (IsEqualGUID(stack->Parameters.WMI.DataPath, 
-                            &CitrixXenStoreSession_GUID)) {
+                         &OBJECT_GUID(XenStoreSession))) {
         return GenerateSessionBlock(stack->Parameters.WMI.Buffer, 
                                     stack->Parameters.WMI.BufferSize,
                                     fdoData,
@@ -2871,13 +2874,15 @@ WmiQuerySingleInstance(
     OUT ULONG_PTR *byteswritten
     )
 {
-    if (IsEqualGUID(stack->Parameters.WMI.DataPath, &CitrixXenStoreBase_GUID)) {
+    if (IsEqualGUID(stack->Parameters.WMI.DataPath,
+                    &OBJECT_GUID(XenStoreBase))) {
         return GenerateBaseInstance(fdoData,
                                     stack->Parameters.WMI.Buffer, 
                                     stack->Parameters.WMI.BufferSize,
                                     byteswritten);
     }
-    else if (IsEqualGUID(stack->Parameters.WMI.DataPath, &CitrixXenStoreSession_GUID)) {
+    else if (IsEqualGUID(stack->Parameters.WMI.DataPath,
+                         &OBJECT_GUID(XenStoreSession))) {
         return GenerateSessionInstance(stack->Parameters.WMI.Buffer, 
                                     stack->Parameters.WMI.BufferSize,
                                     fdoData,
@@ -2943,18 +2948,18 @@ WmiRegInfo(
 
     guid = &reginfo->WmiRegGuid[0];
     guid->InstanceCount = 1;
-    guid->Guid = CitrixXenStoreBase_GUID;
+    guid->Guid = OBJECT_GUID(XenStoreBase);
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO;
     guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
 	ObReferenceObject(fdoData->PhysicalDeviceObject);
     
     guid = &reginfo->WmiRegGuid[1];
-    guid->Guid = CitrixXenStoreSession_GUID;
+    guid->Guid = OBJECT_GUID(XenStoreSession);
     guid->Flags =0;
     
     guid = &reginfo->WmiRegGuid[2];
     guid->InstanceCount = 1;
-    guid->Guid = CitrixXenStoreWatchEvent_GUID;
+    guid->Guid = OBJECT_GUID(XenStoreWatchEvent);
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO |
                 WMIREG_FLAG_EVENT_ONLY_GUID ;
     guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
@@ -2962,7 +2967,7 @@ WmiRegInfo(
 
     guid = &reginfo->WmiRegGuid[3];
     guid->InstanceCount = 1;
-    guid->Guid = CitrixXenStoreUnsuspendedEvent_GUID;
+    guid->Guid = OBJECT_GUID(XenStoreUnsuspendedEvent);
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO |
                 WMIREG_FLAG_EVENT_ONLY_GUID ;
 	guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 

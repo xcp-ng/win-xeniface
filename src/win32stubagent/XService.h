@@ -32,8 +32,10 @@
 #ifndef _XSERVICE_H
 #define _XSERVICE_H
 
+#include <version.h>
+
 #define SVC_NAME "xensvc"
-#define SVC_DISPLAYNAME "Citrix Tools for Virtual Machines Service"
+#define SVC_DISPLAYNAME PRODUCT_NAME_STR ## "Interface Service"
 #define SVC_DESC "Monitors and provides various metrics to XenStore"
 
 void PrintError(const char *func);

@@ -61,6 +61,9 @@ def make_header():
     file.write('#define DAY_STR\t"' + str(now.day) + '"\n')
     file.write('\n')
 
+    file.write('#define OBJECT_PREFIX_STR\t"' + os.environ['OBJECT_PREFIX'] + '"\n')
+    file.write('#define OBJECT_GUID(_Name)\t' + os.environ['OBJECT_PREFIX'] + ' ## _Name ## _GUID\n')
+
     file.close()
 
 
@@ -75,6 +78,18 @@ def copy_inf(name):
         line = re.sub('@BUILD_NUMBER@', os.environ['BUILD_NUMBER'], line)
         line = re.sub('@COMPANY_NAME@', os.environ['COMPANY_NAME'], line)
         line = re.sub('@PRODUCT_NAME@', os.environ['PRODUCT_NAME'], line)
+        dst.write(line)
+
+    dst.close()
+    src.close()
+
+
+def copy_mof(name):
+    src = open('src\\%s.mof' % name, 'r')
+    dst = open('src\\%s\\wmi.mof' % name, 'w')
+
+    for line in src:
+        line = re.sub('@OBJECT_PREFIX@', os.environ['OBJECT_PREFIX'], line)
         dst.write(line)
 
     dst.close()
@@ -377,6 +392,9 @@ if __name__ == '__main__':
     if 'PRODUCT_NAME' not in os.environ.keys():
         os.environ['PRODUCT_NAME'] = 'Xen'
 
+    if 'OBJECT_PREFIX' not in os.environ.keys():
+        os.environ['OBJECT_PREFIX'] = 'XenProject'
+
     os.environ['MAJOR_VERSION'] = '8'
     os.environ['MINOR_VERSION'] = '0'
     os.environ['MICRO_VERSION'] = '0'
@@ -392,6 +410,8 @@ if __name__ == '__main__':
         revision.close()
 
     make_header()
+
+    copy_mof(driver)
 
     copy_inf(driver)
 

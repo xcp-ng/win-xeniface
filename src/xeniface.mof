@@ -3,7 +3,7 @@
  Description("Xenstore Node"),
  guid("{1D80EB99-A1D6-4492-B62F-8B4549FF0B5E}"),
  locale("MS\\0x409")]
-class CitrixXenStoreNodes
+class @OBJECT_PREFIX@XenStoreNodes
 {
     [key, read]
      string InstanceName;
@@ -28,7 +28,7 @@ class CitrixXenStoreNodes
  guid("{12138A69-97B2-49DD-B9DE-54749AABC789}"),
  locale("MS\\0x409")]
 
-class CitrixXenStoreSession
+class @OBJECT_PREFIX@XenStoreSession
 {
     [key, read]
      string InstanceName;
@@ -43,7 +43,7 @@ class CitrixXenStoreSession
         void GetValue([In, IDQualifier(0)]string Pathname, [Out, IDQualifier(1)]string value);
     
     [Implemented, WmiMethodId(2), Description("Get Children")]
-        void GetChildren([In, IDQualifier(0)]string Pathname, [Out, IDQualifier(1)]CitrixXenStoreNodes children);
+        void GetChildren([In, IDQualifier(0)]string Pathname, [Out, IDQualifier(1)]@OBJECT_PREFIX@XenStoreNodes children);
 
     [Implemented, WmiMethodId(3), Description("Set Value")]
         void SetValue([In, IDQualifier(0)]string Pathname, [In, IDQualifier(1)]string value);
@@ -83,7 +83,7 @@ class CitrixXenStoreSession
  locale("MS\\0x409"),
  WmiExpense(1),
  Description("Event notifying XenStore")]
-class CitrixXenStoreWatchEvent : WMIEvent
+class @OBJECT_PREFIX@XenStoreWatchEvent : WMIEvent
 {
     [key, read]
     string        InstanceName;
@@ -98,10 +98,10 @@ class CitrixXenStoreWatchEvent : WMIEvent
 
 [Dynamic, Provider("WMIProv"),
  WMI,
- Description("Base Citrix XenStore Object"),
+ Description("Base XenStore Object"),
  guid("{AB8136BF-8EA7-420D-ADAD-89C83E587925}"),
  locale("MS\\0x409")]
-class CitrixXenStoreBase {
+class @OBJECT_PREFIX@XenStoreBase {
    [key, read]
     string        InstanceName;
 
@@ -123,7 +123,7 @@ class CitrixXenStoreBase {
  locale("MS\\0x409"),
  WmiExpense(1),
  Description("Event notifying the VM has unsuspended")]
-class CitrixXenStoreUnsuspendedEvent : WMIEvent
+class @OBJECT_PREFIX@XenStoreUnsuspendedEvent : WMIEvent
 {
     [key, read]
     string        InstanceName;

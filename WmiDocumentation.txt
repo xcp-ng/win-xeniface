@@ -1,14 +1,28 @@
 The Windows Guest WMI Interface
+===============================
 
-The Windows Guest WMI interface is intended to replace as the mechanism of choice for communicating with xenstore (and other hypervisor interfaces).  It is provided by the device driver xeniface.sys, which forms part of the Windows PV Drivers.   Access to this interface is available to those users which have been granted to the root\wmi namespace - which is to say the device driver namespace.  By default this is administrators only.
+The Windows Guest WMI interface is intended to replace as the mechanism of
+choice for communicating with xenstore (and other hypervisor interfaces). It
+is provided by the device driver xeniface.sys, which forms part of the Windows PV
+Drivers. Access to this interface is available to those users which have been
+granted to the root\wmi namespace - which is to say the device driver namespace.
+By default this is administrators only.
 
-The WMI Interface provides a base singleton object (CitrixXenStoreBase) which can be used to generate individual session objects (CitrixXenStoreSession).  These session objects represent individual applications (or functions of an application), and are the objects used to interact with xenstore - to read write, set and unset watches.  Sessions may also take advantage of the transaction semantics to ensure atomicity of xenstore operations.
+The WMI Interface provides a base singleton object which can be used to generate
+individual session objects. These session objects represent individual applications
+(or functions of an application), and are the objects used to interact with
+xenstore - to read write, set and unset watches. Sessions may also take advantage
+of the transaction semantics to ensure atomicity of xenstore operations.
 
-The lifetime of watches and transactions are limited by the lifetime of the session object which creates them 
+The lifetime of watches and transactions are limited by the lifetime of the session
+object which creates them.
 
-On driverload, one object is made available via WMI
+For branding purposes an object name PREFIX can be set at build time using the
+OBJECT_PREFIX environment variable.
 
-CitrixXenStoreBase
+On driverload, one object is made available via WMI:
+
+<PREFIX>XenStoreBase
 
 A singleton object representing xenstore
 
@@ -18,13 +32,13 @@ Properties:
         Hypervisor's clock.
 Methods:
     AddSession(String Id) returns SessionId:
-        Add a CitrixXenStoreSession object to the WMI namespace
+        Add a <PREFIX>XenStoreSession object to the WMI namespace
         The returned value (session id) is a unique value whcih can be used to
         identify the session which has been created (in case multiple sessions
         have the same string identifier)
 
 
-CitrixXenStoreSession
+<PREFIX>XenStoreSession
 
 Each instance represents a single session of communication with xenstore
 
@@ -78,13 +92,13 @@ Methods:
 
 About events:
 
-CitrixXenStoreWatchEvent:
+<PREFIX>XenStoreWatchEvent:
 
-Event emitted when a particular xenstore entry has changed.  Registering your interest in receiving such an event can be done by calling CitrixXenStoreSession.SetWatch(pathname)
+Event emitted when a particular xenstore entry has changed.  Registering your interest in receiving such an event can be done by calling <PREFIX>XenStoreSession.SetWatch(pathname)
 
     string EventId : The pathname of the xen store value which has changed
 
-CitrixXenStoreUnsuspendedEvent:
+<PREFIX>XenStoreUnsuspendedEvent:
 
     Event emitted whenever a vm resumes from being suspended.
 
@@ -96,13 +110,13 @@ Use:
 
     Locate the base object
 
-    $base = gwmi -n root\wmi -cl CitrixXenStoreBase
+    $base = gwmi -n root\wmi -cl <PREFIX>XenStoreBase
 
     Create a session
 
     $sid = $base.AddSession("MyNewSession")
 
-    $session = gwmi -n root\wmi -q "select * from CitrixXenStoreSession where SessionId=$($sid.SessionId)"
+    $session = gwmi -n root\wmi -q "select * from <PREFIX>XenStoreSession where SessionId=$($sid.SessionId)"
 
     Write a value
 
@@ -122,7 +136,7 @@ Use:
 
     Set Watch
 
-    $watch = Register-WMiEvent -n root\wmi -q "select * from CitrixXenStoreWatchEvent where EventId='data/TempValue'" -action {write $session.getvalue("data/TempValue") }
+    $watch = Register-WMiEvent -n root\wmi -q "select * from <PREFIX>XenStoreWatchEvent where EventId='data/TempValue'" -action {write $session.getvalue("data/TempValue") }
 
     $session.setvalue("data/TempValue","HELLO")
     $session.setvalue("data/TempValue","WORLD")
