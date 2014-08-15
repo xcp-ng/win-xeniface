@@ -55,14 +55,15 @@ void LockSessions(
     ExAcquireFastMutex(&fdoData->SessionLock);
 }
 
+
 __drv_requiresIRQL(APC_LEVEL)
 __drv_restoresIRQLGlobal(OldIrql, fdoData->SessionLock)
 void UnlockSessions(
         XENIFACE_FDO* fdoData)
 {
     ASSERT(KeGetCurrentIrql() == APC_LEVEL);
+#pragma prefast (suppress:26110)
     ExReleaseFastMutex(&fdoData->SessionLock);
-    
 }
 
 void GetUnicodeString(UNICODE_STRING *unicode, USHORT maxlength, LPWSTR location)
@@ -1528,6 +1529,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
     else {
         XenIfaceDebugPrint(WARNING, "No Watch\n"); 
     }
+#pragma prefast (suppress:26110)
     ExReleaseFastMutex(&session->WatchMapLock);
     UnlockSessions(fdoData);
 

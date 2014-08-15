@@ -242,7 +242,7 @@ static string wstring2string(const wstring& wstr)
                               wstr.c_str(),
                               -1,
                               &str[0],
-                              str.length(),
+                              (int)str.length(),
                               NULL,
                               NULL);
 
@@ -609,13 +609,13 @@ QueryVariant(WMIAccessor *wmi, PWCHAR field, PWCHAR table, VARIANT *vt)
 {
     IEnumWbemClassObject *pEnum;
     BSTR query;
-    unsigned query_len;
+    size_t query_len;
     IWbemClassObject *pclsObj;
     HRESULT hr;
     ULONG uReturn;
 
     query_len = strlen("SELECT  FROM ") + wcslen(field) + wcslen(table) + 1;
-    query = SysAllocStringLen(NULL, query_len);
+    query = SysAllocStringLen(NULL, (UINT)query_len);
     if (query == NULL) {
         hr = E_OUTOFMEMORY;
         goto err;
@@ -868,9 +868,9 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
     if (FAILED(outMethodInst->Get(L"SessionId", 0, &var, NULL, NULL)))
         goto outmethodgetfailed;
 
-    ULONG query_len;
+    size_t query_len;
     query_len = strlen("SELECT * FROM CitrixXenStoreSession WHERE SessionId=")+10;
-    query = SysAllocStringLen(NULL, query_len);
+    query = SysAllocStringLen(NULL, (UINT)query_len);
 
     if (query == NULL)
         goto allocqueryfailed;
@@ -1160,7 +1160,6 @@ sessionstart:
     OutputDebugString(__FUNCTION__ " SessionStartFailed");
     VariantClear(&vpath);
 
-sessionExec:
     OutputDebugString(__FUNCTION__ " SessionExecFailed");
 setvpath:
     OutputDebugString(__FUNCTION__ " SetVpathFailed");

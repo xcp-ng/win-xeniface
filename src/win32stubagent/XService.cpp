@@ -681,7 +681,9 @@ static bool hosttimeIsUTC()
         utc=true;
     }
 
+#ifdef _WIN64
 done:
+#endif 
     RegCloseKey(InstallRegKey);
     return utc;
 
