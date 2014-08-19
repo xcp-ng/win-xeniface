@@ -1026,7 +1026,7 @@ char* WmiSessionGetEntry(WMIAccessor** wmi, void **sessionhandle,
     if (setVariantString(&vpath, path))
         goto setvpath;
 
-    IWbemClassObject *outMethodInst;
+    IWbemClassObject *outMethodInst = NULL;
 
     IWbemClassObject *inMethodInst = sessionMethodStart( wmi, L"GetValue");
     if (inMethodInst == NULL) 
