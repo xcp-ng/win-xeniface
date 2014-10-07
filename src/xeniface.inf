@@ -90,7 +90,7 @@ liteagent.exe = 1,,
 SPSVCINST_ASSOCSERVICE= 0x00000002
 Company= "@COMPANY_NAME@" 
 DiskId1 = "@PRODUCT_NAME@ Interface Package"
-XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME Interface"
+XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME@ Interface"
 LITESVC_FLAGS= 0x00000800
-xenlite.SVCDESC= "@PRODUCT_NAME Interface Service"
+xenlite.SVCDESC= "@PRODUCT_NAME@ Interface Service"
 

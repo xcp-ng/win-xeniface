@@ -53,6 +53,6 @@
 #define DAY	@DAY@
 #define DAY_STR	"@DAY@"
 
-#define OBJECT_PREFIX_STR   "@OBJECT_PREFIX"
+#define OBJECT_PREFIX_STR   "@OBJECT_PREFIX@"
 #define OBJECT_GUID(_Name)  @OBJECT_PREFIX@ ## _Name ## _GUID
 
