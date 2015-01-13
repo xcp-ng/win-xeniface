@@ -64,13 +64,11 @@
       <CustomBuildStep>
             <Command>echo "Build Inf"
                  powershell -Command "(Get-Content ..\..\src\xeniface.inf) -replace '@MAJOR_VERSION@', '$(MAJOR_VERSION)' -replace '@MINOR_VERSION@', '$(MINOR_VERSION)' -replace '@MICRO_VERSION@','$(MICRO_VERSION)' -replace '@BUILD_NUMBER@','$(BUILD_NUMBER)' -replace '@COMPANY_NAME@','$(COMPANY_NAME)' -replace '@PRODUCT_NAME@','$(PRODUCT_NAME)' | Set-Content ..\..\vs2013\xeniface.inf"
-                echo "Build version header"
-                powershell -Command "(Get-Content ..\..\include\version.hx) -replace '@MAJOR_VERSION@', '$(MAJOR_VERSION)' -replace '@MINOR_VERSION@', '$(MINOR_VERSION)' -replace '@MICRO_VERSION@','$(MICRO_VERSION)' -replace '@BUILD_NUMBER@','$(BUILD_NUMBER)' -replace '@COMPANY_NAME@','$(COMPANY_NAME)' -replace '@PRODUCT_NAME@','$(PRODUCT_NAME)' -replace '@DAY@',%24(Get-Date -format %25%25d) -replace '@MONTH@',%24(Get-Date -format %25%25M) -replace '@YEAR@',%24(Get-Date -format yyyy) -replace '@OBJECT_PREFIX@','$(OBJECT_PREFIX)' | Set-Content ..\..\include\version.h"
                 echo "Modify mof"
                 powershell -Command "(Get-Content ..\..\src\xeniface.mof)  -replace '@OBJECT_PREFIX@','$(OBJECT_PREFIX)' | Set-Content ..\..\src\xeniface\wmi.mof"
             </Command>
-            <Outputs>..\..\vs2013\xeniface.inf;..\..\include\version.h;..\..\src\xeniface\wmi.mof</Outputs>
-            <Inputs>..\..\src\xeniface.inf;..\..\include\version.hx;..\..\src\xeniface.mof</Inputs>
+            <Outputs>..\..\vs2013\xeniface.inf;..\..\src\xeniface\wmi.mof</Outputs>
+            <Inputs>..\..\src\xeniface.inf;..\..\src\xeniface.mof</Inputs>
         </CustomBuildStep>
     <ClCompile>
       <PreprocessorDefinitions>__MODULE__="XENIFACE";POOL_NX_OPTIN=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
