@@ -1159,7 +1159,13 @@ CreateNewSession(XENIFACE_FDO *fdoData,
     fdoData->Sessions++;
     UnlockSessions(fdoData);
     InitializeObjectAttributes(&oa, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);
-    (VOID) PsCreateSystemThread(&hthread, THREAD_ALL_ACCESS, &oa, NULL, NULL, WatchCallbackThread, session);
+
+    status = PsCreateSystemThread(&hthread, THREAD_ALL_ACCESS, &oa, NULL, NULL, WatchCallbackThread, session);
+    if (!NT_SUCCESS(status)) {
+            RtlFreeAnsiString(&ansi); 
+            ExFreePool(session);
+            return status;
+    }
     ObReferenceObjectByHandle(hthread, THREAD_ALL_ACCESS, NULL, KernelMode,  &session->WatchThread, NULL);
     RtlFreeAnsiString(&ansi);
     return STATUS_SUCCESS;

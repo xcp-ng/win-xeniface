@@ -37,7 +37,7 @@
 #include "log.h"
 
 static FORCEINLINE VOID
-__BugCheck(
+__Bug(
     IN  ULONG       Code,
     IN  ULONG_PTR   Parameter1,
     IN  ULONG_PTR   Parameter2,
@@ -62,11 +62,11 @@ __BugCheck(
             ULONG       _Line = __LINE__;                       \
                                                                 \
             Error("BUG: " _TEXT "\n");                          \
-            __BugCheck(ASSERTION_FAILURE,                       \
-                       (ULONG_PTR)_Text,                        \
-                       (ULONG_PTR)_File,                        \
-                       (ULONG_PTR)_Line,                        \
-                       0);                                      \
+            __Bug(ASSERTION_FAILURE,                            \
+                  (ULONG_PTR)_Text,                             \
+                  (ULONG_PTR)_File,                             \
+                  (ULONG_PTR)_Line,                             \
+                  0);                                           \
         } while (FALSE)
 
 #define BUG_ON(_EXP)                \
@@ -98,7 +98,7 @@ __BugCheck(
             if (!(_Lval _OP _Rval)) {               \
                 Error("%s = %llu\n", #_X, _Lval);   \
                 Error("%s = %llu\n", #_Y, _Rval);   \
-                ASSERT(_X _OP _Y);                  \
+                ASSERT((_X) _OP (_Y));              \
             }                                       \
         } while (FALSE)
 
@@ -109,7 +109,7 @@ __BugCheck(
             if (!(_Lval _OP _Rval)) {               \
                 Error("%s = %lld\n", #_X, _Lval);   \
                 Error("%s = %lld\n", #_Y, _Rval);   \
-                ASSERT(_X _OP _Y);                  \
+                ASSERT((_X) _OP (_Y));              \
             }                                       \
         } while (FALSE)
 
@@ -120,16 +120,34 @@ __BugCheck(
             if (!(_Lval _OP _Rval)) {               \
                 Error("%s = %p\n", #_X, _Lval);     \
                 Error("%s = %p\n", #_Y, _Rval);     \
-                ASSERT(_X _OP _Y);                  \
+                ASSERT((_X) _OP (_Y));              \
             }                                       \
         } while (FALSE)
 
 #else   // DBG
 
-#define ASSERT(_EXP)
-#define ASSERT3U(_X, _OP, _Y)
-#define ASSERT3S(_X, _OP, _Y)
-#define ASSERT3P(_X, _OP, _Y)
+static FORCEINLINE VOID
+_IgnoreAssertion(
+    IN  BOOLEAN Value
+    )
+{
+    UNREFERENCED_PARAMETER(Value);
+}
+
+#define ASSERT(_EXP)                        \
+        do {                                \
+            _IgnoreAssertion(_EXP);         \
+            __analysis_assume(_EXP);        \
+        } while (FALSE)
+
+#define ASSERT3U(_X, _OP, _Y)           \
+        ASSERT((_X) _OP (_Y))
+
+#define ASSERT3S(_X, _OP, _Y)           \
+        ASSERT((_X) _OP (_Y))
+
+#define ASSERT3P(_X, _OP, _Y)           \
+        ASSERT((_X) _OP (_Y))
 
 #endif  // DBG
 
@@ -161,17 +179,30 @@ _IsZeroMemory(
     return TRUE;
 }
 
-#define IsZeroMemory(_Buffer, _Length) \
-        _IsZeroMemory(__FUNCTION__, #_Buffer, (_Buffer), (_Length))
-
 #else   // TEST_MEMORY
 
-#define IsZeroMemory(_Buffer, _Length)  TRUE
+static __inline BOOLEAN
+_IsZeroMemory(
+    IN  const PCHAR Caller,
+    IN  const PCHAR Name,
+    IN  PVOID       Buffer,
+    IN  ULONG       Length
+    )
+{
+    UNREFERENCED_PARAMETER(Caller);
+    UNREFERENCED_PARAMETER(Name);
+    UNREFERENCED_PARAMETER(Buffer);
+    UNREFERENCED_PARAMETER(Length);
+
+    return TRUE;
+}
 
 #endif  // TEST_MEMORY
+
+#define IsZeroMemory(_Buffer, _Length) \
+        _IsZeroMemory(__FUNCTION__, #_Buffer, (_Buffer), (_Length))
 
 #define IMPLY(_X, _Y)   (!(_X) || (_Y))
 #define EQUIV(_X, _Y)   (IMPLY((_X), (_Y)) && IMPLY((_Y), (_X)))
 
 #endif  // _XENIFACE_ASSERT_H
-
