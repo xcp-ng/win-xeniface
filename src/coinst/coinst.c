@@ -50,21 +50,6 @@ __user_code;
 
 #define MAXIMUM_BUFFER_SIZE 1024
 
-#define SERVICES_KEY "SYSTEM\\CurrentControlSet\\Services"
-
-#define SERVICE_KEY(_Driver)    \
-        SERVICES_KEY ## "\\" ## #_Driver
-
-#define PARAMETERS_KEY(_Driver) \
-        SERVICE_KEY(_Driver) ## "\\Parameters"
-
-#define CONTROL_KEY "SYSTEM\\CurrentControlSet\\Control"
-
-#define CLASS_KEY   \
-        CONTROL_KEY ## "\\Class"
-
-#define ENUM_KEY    "SYSTEM\\CurrentControlSet\\Enum"
-
 static VOID
 #pragma prefast(suppress:6262) // Function uses '1036' bytes of stack: exceeds /analyze:stacksize'1024'
 __Log(
@@ -193,176 +178,6 @@ FunctionName(
 #undef  _NAME
 }
 
-static HKEY
-OpenInterfacesKey(
-    IN  PTCHAR  ProviderName
-    )
-{
-    HRESULT     Result;
-    TCHAR       KeyName[MAX_PATH];
-    HKEY        Key;
-    HRESULT     Error;
-
-    Result = StringCbPrintf(KeyName,
-                            MAX_PATH,
-                            "%s\\%s\\Interfaces",
-                            SERVICES_KEY,
-                            ProviderName);
-    if (!SUCCEEDED(Result)) {
-        SetLastError(ERROR_BUFFER_OVERFLOW);
-        goto fail1;
-    }
-
-    Error = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                         KeyName,
-                         0,
-                         KEY_ALL_ACCESS,
-                         &Key);
-    if (Error != ERROR_SUCCESS) {
-        SetLastError(Error);
-        goto fail2;
-    }
-
-    return Key;
-
-fail2:
-    Log("fail2");
-
-fail1:
-    Error = GetLastError();
-
-    {
-        PTCHAR  Message;
-        Message = GetErrorMessage(Error);
-        Log("fail1 (%s)", Message);
-        LocalFree(Message);
-    }
-
-    return NULL;
-}
-
-static BOOLEAN
-SubscribeInterface(
-    IN  PTCHAR  ProviderName,
-    IN  PTCHAR  SubscriberName,
-    IN  PTCHAR  InterfaceName,
-    IN  DWORD   InterfaceVersion
-    )
-{
-    HKEY        Key;
-    HKEY        InterfacesKey;
-    HRESULT     Error;
-
-    InterfacesKey = OpenInterfacesKey(ProviderName);
-    if (InterfacesKey == NULL)
-        goto fail1;
-
-    Error = RegCreateKeyEx(InterfacesKey,
-                           SubscriberName,
-                           0,
-                           NULL,
-                           REG_OPTION_NON_VOLATILE,
-                           KEY_ALL_ACCESS,
-                           NULL,
-                           &Key,
-                           NULL);
-    if (Error != ERROR_SUCCESS) {
-        SetLastError(Error);
-        goto fail2;
-    }
-
-    Error = RegSetValueEx(Key,
-                          InterfaceName,
-                          0,
-                          REG_DWORD,
-                          (const BYTE *)&InterfaceVersion,
-                          sizeof(DWORD));
-    if (Error != ERROR_SUCCESS) {
-        SetLastError(Error);
-        goto fail3;
-    }
-
-    Log("%s: %s_%s_INTERFACE_VERSION %u",
-        SubscriberName,
-        ProviderName,
-        InterfaceName,
-        InterfaceVersion);
-
-    RegCloseKey(Key);
-    RegCloseKey(InterfacesKey);
-
-    return TRUE;
-
-fail3:
-    RegCloseKey(Key);
-
-fail2:
-    RegCloseKey(InterfacesKey);
-
-fail1:
-    Error = GetLastError();
-
-    {
-        PTCHAR  Message;
-        Message = GetErrorMessage(Error);
-        Log("fail1 (%s)", Message);
-        LocalFree(Message);
-    }
-
-    return FALSE;
-}
-
-#define SUBSCRIBE_INTERFACE(_ProviderName, _SubscriberName, _InterfaceName)                        \
-    do {                                                                                           \
-        (VOID) SubscribeInterface(#_ProviderName,                                                  \
-                                  #_SubscriberName,                                                \
-                                  #_InterfaceName,                                                 \
-                                  _ProviderName ## _ ## _InterfaceName ## _INTERFACE_VERSION_MAX); \
-    } while (FALSE);
-
-static BOOLEAN
-UnsubscribeInterfaces(
-    IN  PTCHAR  ProviderName,
-    IN  PTCHAR  SubscriberName
-    )
-{
-    HKEY        InterfacesKey;
-    HRESULT     Error;
-
-    Log("%s: %s", SubscriberName, ProviderName);
-
-    InterfacesKey = OpenInterfacesKey(ProviderName);
-    if (InterfacesKey == NULL) {
-        goto fail1;
-    }
-
-    Error = RegDeleteTree(InterfacesKey,
-                          SubscriberName);
-    if (Error != ERROR_SUCCESS) {
-        SetLastError(Error);
-        goto fail2;
-    }
-
-    RegCloseKey(InterfacesKey);
-
-    return TRUE;
-
-fail2:
-    RegCloseKey(InterfacesKey);
-
-fail1:
-    Error = GetLastError();
-
-    {
-        PTCHAR  Message;
-        Message = GetErrorMessage(Error);
-        Log("fail1 (%s)", Message);
-        LocalFree(Message);
-    }
-
-    return FALSE;
-}
-
 static HRESULT
 DifInstallPreProcess(
     IN  HDEVINFO                    DeviceInfoSet,
@@ -390,13 +205,7 @@ DifInstallPostProcess(
     UNREFERENCED_PARAMETER(DeviceInfoData);
     UNREFERENCED_PARAMETER(Context);
 
-    Log("====>");
-
-    SUBSCRIBE_INTERFACE(XENBUS, XENIFACE, SUSPEND);
-    SUBSCRIBE_INTERFACE(XENBUS, XENIFACE, SHARED_INFO);
-    SUBSCRIBE_INTERFACE(XENBUS, XENIFACE, STORE);
-
-    Log("<====");
+    Log("<===>");
 
     return NO_ERROR;
 }
@@ -468,11 +277,7 @@ DifRemovePreProcess(
     UNREFERENCED_PARAMETER(DeviceInfoData);
     UNREFERENCED_PARAMETER(Context);
 
-    Log("====>");
-
-    UnsubscribeInterfaces("XENBUS", "XENIFACE");
-
-    Log("<====");
+    Log("<===>");
 
     return NO_ERROR;
 }
