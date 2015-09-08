@@ -32,7 +32,7 @@
 Signature="$WINDOWS NT$"
 Class=System
 ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318} 
-Provider=%Company%
+Provider=%Vendor%
 DriverVer=01/01/1900,0.0.0.0
 CatalogFile=xeniface.cat
 
@@ -42,15 +42,15 @@ Coinst.NT.Copy = 11
 ServiceDestDir.NT.Copy = 11
 
 [Manufacturer]
-%Company%=Inst,NT$ARCH$
+%Vendor%=Inst,NT$ARCH$
 
 [Inst.NT$ARCH$]
 ; DisplayName		    Section	      DeviceID
 ; -----------		    -------	      --------
 
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_XSC000&DEV_IFACE&REV_08000009
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_XS0001&DEV_IFACE&REV_08000009
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_XS0002&DEV_IFACE&REV_08000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_08000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_08000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_08000009
 
 [XenIface_Device.NT$ARCH$]
 CopyFiles=XenIface_Device.NT.Copy, ServiceDestDir.NT.Copy
@@ -104,7 +104,7 @@ xeniface_coinst.dll=1,,
 
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
-Company= "@COMPANY_NAME@" 
+Vendor= "@VENDOR_NAME@" 
 DiskId1 = "@PRODUCT_NAME@ Interface Package"
 XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME@ Interface"
 LITESVC_FLAGS= 0x00000800

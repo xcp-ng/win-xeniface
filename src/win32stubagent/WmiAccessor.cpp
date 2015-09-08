@@ -862,7 +862,7 @@ IWbemClassObject *openSession(WMIAccessor** wmi, const char *sessionname)
 
     VARIANT var;
     var.vt = VT_BSTR;
-    var.bstrVal=formatBstr(COMPANY_NAME_STR " Xen Win32 Service : %s", sessionname);
+    var.bstrVal=formatBstr(VENDOR_NAME_STR " " PRODUCT_NAME_STR " Win32 Service : %s", sessionname);
 
     if (var.bstrVal == NULL)
         goto formatnamebstrfailed;
