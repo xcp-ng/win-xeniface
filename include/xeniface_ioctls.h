@@ -1,4 +1,5 @@
 /* Copyright (c) Citrix Systems Inc.
+ * Copyright (c) Rafal Wojdyla <omeg@invisiblethingslab.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, 

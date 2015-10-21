@@ -36,7 +36,8 @@
 #include <stdlib.h>
 
 #include <store_interface.h>
-
+#include <evtchn_interface.h>
+#include <gnttab_interface.h>
 #include <suspend_interface.h>
 
 
@@ -52,6 +53,7 @@
 #include "ioctls.h"
 #include "wmi.h"
 #include "xeniface_ioctls.h"
+#include "irp_queue.h"
 
 #define FDO_POOL 'ODF'
 
@@ -664,6 +666,25 @@ __FdoD3ToD0(
     if (!NT_SUCCESS(status))
         goto fail1;
 
+    status = XENBUS_EVTCHN(Acquire, &Fdo->EvtchnInterface);
+    if (!NT_SUCCESS(status))
+        goto fail2;
+
+    status = XENBUS_GNTTAB(Acquire, &Fdo->GnttabInterface);
+    if (!NT_SUCCESS(status))
+        goto fail3;
+
+    status = XENBUS_GNTTAB(CreateCache,
+                           &Fdo->GnttabInterface,
+                           "xeniface-gnttab",
+                           0,
+                           GnttabAcquireLock,
+                           GnttabReleaseLock,
+                           Fdo,
+                           &Fdo->GnttabCache);
+    if (!NT_SUCCESS(status))
+        goto fail4;
+
     __FdoSetDevicePowerState(Fdo, PowerDeviceD0);
 
     PowerState.DeviceState = PowerDeviceD0;
@@ -674,6 +695,18 @@ __FdoD3ToD0(
     Trace("<====\n");
 
     return STATUS_SUCCESS;
+
+fail4:
+    Error("fail4\n");
+    XENBUS_GNTTAB(Release, &Fdo->GnttabInterface);
+
+fail3:
+    Error("fail3\n");
+    XENBUS_EVTCHN(Release, &Fdo->EvtchnInterface);
+
+fail2:
+    Error("fail2\n");
+    XENBUS_STORE(Release, &Fdo->StoreInterface);
 
 fail1:
     Error("fail1 (%08x)\n", status);
@@ -700,6 +733,9 @@ __FdoD0ToD3(
 
     __FdoSetDevicePowerState(Fdo, PowerDeviceD3);
 
+    XENBUS_GNTTAB(DestroyCache, &Fdo->GnttabInterface, Fdo->GnttabCache);
+    XENBUS_GNTTAB(Release, &Fdo->GnttabInterface);
+    XENBUS_EVTCHN(Release, &Fdo->EvtchnInterface);
     XENBUS_STORE(Release, &Fdo->StoreInterface);
 
     Trace("<====\n");
@@ -1991,27 +2027,25 @@ FdoDispatchDefault(
 
 NTSTATUS
 FdoCreateFile (
-    __in PXENIFACE_FDO fdoData,
-    __inout PIRP Irp
+    __in PXENIFACE_FDO  Fdo,
+    __inout PIRP        Irp
     )
 {
-    NTSTATUS     status;
+    PIO_STACK_LOCATION  Stack = IoGetCurrentIrpStackLocation(Irp);
+    NTSTATUS            status;
 
+    XenIfaceDebugPrint(TRACE, "FO %p, Process %p\n", Stack->FileObject, PsGetCurrentProcess());
 
-    XenIfaceDebugPrint(TRACE, "Create \n");
-
-    if (Deleted == fdoData->Dx->DevicePnpState)
-    {
+    if (Deleted == Fdo->Dx->DevicePnpState) {
         Irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
-        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
         return STATUS_NO_SUCH_DEVICE;
     }
-
 
     status = STATUS_SUCCESS;
     Irp->IoStatus.Information = 0;
     Irp->IoStatus.Status = status;
-    IoCompleteRequest (Irp, IO_NO_INCREMENT);
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
     return status;
 }
@@ -2019,20 +2053,22 @@ FdoCreateFile (
 
 NTSTATUS
 FdoClose (
-    __in PXENIFACE_FDO fdoData,
-    __inout PIRP Irp
+    __in PXENIFACE_FDO  Fdo,
+    __inout PIRP        Irp
     )
 
 {
+    PIO_STACK_LOCATION  Stack = IoGetCurrentIrpStackLocation(Irp);
+    NTSTATUS            status;
 
-    NTSTATUS     status;
+    XenIfaceDebugPrint(TRACE, "FO %p, Process %p\n", Stack->FileObject, PsGetCurrentProcess());
 
-    XenIfaceDebugPrint(TRACE, "Close \n");
+    XenIfaceCleanup(Fdo, Stack->FileObject);
 
     status = STATUS_SUCCESS;
     Irp->IoStatus.Information = 0;
     Irp->IoStatus.Status = status;
-    IoCompleteRequest (Irp, IO_NO_INCREMENT);
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
     return status;
 }
@@ -2081,7 +2117,7 @@ FdoDispatch(
         break;
 
     case IRP_MJ_DEVICE_CONTROL:
-        status = XenIFaceIoctl(Fdo, Irp);
+        status = XenIfaceIoctl(Fdo, Irp);
         break;
 
     case IRP_MJ_SYSTEM_CONTROL:
@@ -2206,6 +2242,8 @@ FdoCreate(
     WCHAR               Name[MAXNAMELEN * sizeof (WCHAR)];
     ULONG               Size;
     NTSTATUS            status;
+    ULONG               ProcessorCount;
+    ULONG               Index;
 
 #pragma prefast(suppress:28197) // Possibly leaking memory 'FunctionDeviceObject'
     status = IoCreateDevice(DriverObject,
@@ -2296,6 +2334,24 @@ FdoCreate(
     if (!NT_SUCCESS(status))
         goto fail10;
 
+    status = FDO_QUERY_INTERFACE(Fdo,
+                                 XENBUS,
+                                 EVTCHN,
+                                 (PINTERFACE)&Fdo->EvtchnInterface,
+                                 sizeof (Fdo->EvtchnInterface),
+                                 FALSE);
+    if (!NT_SUCCESS(status))
+        goto fail11;
+
+    status = FDO_QUERY_INTERFACE(Fdo,
+                                 XENBUS,
+                                 GNTTAB,
+                                 (PINTERFACE)&Fdo->GnttabInterface,
+                                 sizeof (Fdo->GnttabInterface),
+                                 FALSE);
+    if (!NT_SUCCESS(status))
+        goto fail12;
+
     InitializeMutex(&Fdo->Mutex);
     InitializeListHead(&Dx->ListEntry);
     Fdo->References = 1;
@@ -2306,7 +2362,46 @@ FdoCreate(
 
     status = ThreadCreate(FdoRegistryThreadHandler, Fdo, &Fdo->registryThread);
     if (!NT_SUCCESS(status))
-        goto fail11;
+        goto fail13;
+
+    KeInitializeSpinLock(&Fdo->StoreWatchLock);
+    InitializeListHead(&Fdo->StoreWatchList);
+
+    KeInitializeSpinLock(&Fdo->EvtchnLock);
+    InitializeListHead(&Fdo->EvtchnList);
+
+    KeInitializeSpinLock(&Fdo->IrpQueueLock);
+    InitializeListHead(&Fdo->IrpList);
+
+    KeInitializeSpinLock(&Fdo->GnttabCacheLock);
+
+    status = IoCsqInitializeEx(&Fdo->IrpQueue,
+                               CsqInsertIrpEx,
+                               CsqRemoveIrp,
+                               CsqPeekNextIrp,
+                               CsqAcquireLock,
+                               CsqReleaseLock,
+                               CsqCompleteCanceledIrp);
+    if (!NT_SUCCESS(status))
+        goto fail14;
+
+    ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
+
+    status = STATUS_NO_MEMORY;
+    Fdo->EvtchnDpc = __FdoAllocate(sizeof (KDPC) * ProcessorCount);
+    if (Fdo->EvtchnDpc == NULL)
+        goto fail15;
+
+    for (Index = 0; Index < ProcessorCount; Index++) {
+        PROCESSOR_NUMBER ProcNumber;
+
+        status = KeGetProcessorNumberFromIndex(Index, &ProcNumber);
+        ASSERT(NT_SUCCESS(status));
+
+        KeInitializeDpc(&Fdo->EvtchnDpc[Index], EvtchnNotificationDpc, NULL);
+        status = KeSetTargetProcessorDpcEx(&Fdo->EvtchnDpc[Index], &ProcNumber);
+        ASSERT(NT_SUCCESS(status));
+    }
 
     Info("%p (%s)\n",
          FunctionDeviceObject,
@@ -2317,6 +2412,27 @@ FdoCreate(
 
     return STATUS_SUCCESS;
 
+fail15:
+    Error("fail15\n");
+
+fail14:
+    Error("fail14\n");
+
+    ThreadAlert(Fdo->registryThread);
+    ThreadJoin(Fdo->registryThread);
+    Fdo->registryThread = NULL;
+
+fail13:
+    Error("fail13\n");
+
+    RtlZeroMemory(&Fdo->GnttabInterface,
+                  sizeof (XENBUS_GNTTAB_INTERFACE));
+
+fail12:
+    Error("fail12\n");
+
+    RtlZeroMemory(&Fdo->EvtchnInterface,
+                  sizeof (XENBUS_EVTCHN_INTERFACE));
 
 fail11:
     Error("fail11\n");
@@ -2394,7 +2510,8 @@ FdoDestroy(
     )
 {
     PXENIFACE_DX          Dx = Fdo->Dx;
-    PDEVICE_OBJECT      FunctionDeviceObject = Dx->DeviceObject;
+    PDEVICE_OBJECT        FunctionDeviceObject = Dx->DeviceObject;
+    ULONG                 ProcessorCount;
 
     ASSERT(IsListEmpty(&Dx->ListEntry));
     ASSERT3U(Fdo->References, ==, 0);
@@ -2408,9 +2525,33 @@ FdoDestroy(
 
     Dx->Fdo = NULL;
 
+    ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
+    RtlZeroMemory(Fdo->EvtchnDpc, sizeof (KDPC) * ProcessorCount);
+    __FdoFree(Fdo->EvtchnDpc);
+
+    RtlZeroMemory(&Fdo->GnttabCacheLock, sizeof (KSPIN_LOCK));
+    ASSERT(IsListEmpty(&Fdo->IrpList));
+    RtlZeroMemory(&Fdo->IrpList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->IrpQueueLock, sizeof (KSPIN_LOCK));
+    RtlZeroMemory(&Fdo->IrpQueue, sizeof (IO_CSQ));
+
+    ASSERT(IsListEmpty(&Fdo->EvtchnList));
+    RtlZeroMemory(&Fdo->EvtchnList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->EvtchnLock, sizeof (KSPIN_LOCK));
+
+    ASSERT(IsListEmpty(&Fdo->StoreWatchList));
+    RtlZeroMemory(&Fdo->StoreWatchList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->StoreWatchLock, sizeof (KSPIN_LOCK));
+
     RtlZeroMemory(&Fdo->Mutex, sizeof (XENIFACE_MUTEX));
 
     Fdo->InterfacesAcquired = FALSE;
+
+    RtlZeroMemory(&Fdo->GnttabInterface,
+                  sizeof (XENBUS_GNTTAB_INTERFACE));
+
+    RtlZeroMemory(&Fdo->EvtchnInterface,
+                  sizeof (XENBUS_EVTCHN_INTERFACE));
 
     RtlZeroMemory(&Fdo->StoreInterface,
                   sizeof (XENBUS_STORE_INTERFACE));

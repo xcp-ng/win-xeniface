@@ -1,4 +1,5 @@
 /* Copyright (c) Citrix Systems Inc.
+ * Copyright (c) Rafal Wojdyla <omeg@invisiblethingslab.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, 
@@ -29,266 +30,123 @@
  * SUCH DAMAGE.
  */
 
-
 #include "driver.h"
 #include "ioctls.h"
-#include "..\..\include\xeniface_ioctls.h"
+#include "xeniface_ioctls.h"
 #include "log.h"
 
-static FORCEINLINE BOOLEAN
-__IsValidStr(
-    __in  PCHAR             Str,
-    __in  ULONG             Len
+NTSTATUS
+__CaptureUserBuffer(
+    __in  PVOID Buffer,
+    __in  ULONG Length,
+    __out PVOID *CapturedBuffer
     )
 {
-    for ( ; Len--; ++Str) {
-        if (*Str == '\0')
-            return TRUE;
-        if (!isprint((unsigned char)*Str))
-            break;
+    NTSTATUS Status;
+    PVOID TempBuffer = NULL;
+
+    if (Length == 0) {
+        *CapturedBuffer = NULL;
+        return STATUS_SUCCESS;
     }
-    return FALSE;
-}
-static FORCEINLINE ULONG
-__MultiSzLen(
-    __in  PCHAR             Str,
-    __out PULONG            Count
-    )
-{
-    ULONG Length = 0;
-    if (Count)  *Count = 0;
-    do {
-        for ( ; *Str; ++Str, ++Length) ;
-        ++Str; ++Length;
-        if (*Count) ++(*Count);
-    } while (*Str);
-    return Length;
-}
-static FORCEINLINE VOID
-__DisplayMultiSz(
-    __in PCHAR              Caller,
-    __in PCHAR              Str
-    )
-{
-    PCHAR   Ptr;
-    ULONG   Idx;
-    ULONG   Len;
 
-    for (Ptr = Str, Idx = 0; *Ptr; ++Idx) {
-        Len = (ULONG)strlen(Ptr);
-        XenIfaceDebugPrint(INFO, "|%s: [%d]=(%d)->\"%s\"\n", Caller, Idx, Len, Ptr);
-        Ptr += (Len + 1);
+    Status = STATUS_NO_MEMORY;
+    TempBuffer = ExAllocatePoolWithTag(NonPagedPool, Length, XENIFACE_POOL_TAG);
+    if (TempBuffer == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    Status = STATUS_SUCCESS;
+
+#pragma prefast(suppress: 6320) // we want to catch all exceptions
+    try {
+        ProbeForRead(Buffer, Length, 1);
+        RtlCopyMemory(TempBuffer, Buffer, Length);
+    } except(EXCEPTION_EXECUTE_HANDLER) {
+        XenIfaceDebugPrint(ERROR, "Exception while probing/reading buffer at %p, size 0x%lx\n", Buffer, Length);
+        ExFreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
+        TempBuffer = NULL;
+        Status = GetExceptionCode();
+    }
+
+    *CapturedBuffer = TempBuffer;
+
+    return Status;
+}
+
+VOID
+__FreeCapturedBuffer(
+    __in  PVOID CapturedBuffer
+    )
+{
+    if (CapturedBuffer != NULL) {
+        ExFreePoolWithTag(CapturedBuffer, XENIFACE_POOL_TAG);
     }
 }
 
-
-static DECLSPEC_NOINLINE NTSTATUS
-IoctlRead(
-    __in  PXENIFACE_FDO         Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+// Cleanup store watches and event channels, called on file object close.
+_IRQL_requires_(PASSIVE_LEVEL) // EvtchnFree calls KeFlushQueuedDpcs
+VOID
+XenIfaceCleanup(
+    __in  PXENIFACE_FDO Fdo,
+    __in  PFILE_OBJECT  FileObject
     )
 {
-    NTSTATUS    status;
-    PCHAR       Value;
-    ULONG       Length;
+    PLIST_ENTRY Node;
+    PXENIFACE_STORE_CONTEXT StoreContext;
+    PXENIFACE_EVTCHN_CONTEXT EvtchnContext;
+    KIRQL Irql;
+    LIST_ENTRY ToFree;
 
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen == 0)
-        goto fail1;
+    XenIfaceDebugPrint(TRACE, "FO %p, IRQL %d, Cpu %lu\n", FileObject, KeGetCurrentIrql(), KeGetCurrentProcessorNumber());
 
-    status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
-        goto fail2;
+    // store watches
+    KeAcquireSpinLock(&Fdo->StoreWatchLock, &Irql);
+    Node = Fdo->StoreWatchList.Flink;
+    while (Node->Flink != Fdo->StoreWatchList.Flink) {
+        StoreContext = CONTAINING_RECORD(Node, XENIFACE_STORE_CONTEXT, Entry);
 
-    status = XENBUS_STORE(Read, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
-    if (!NT_SUCCESS(status))
-        goto fail3;
+        Node = Node->Flink;
+        if (StoreContext->FileObject != FileObject)
+            continue;
 
-    Length = (ULONG)strlen(Value) + 1;
+        XenIfaceDebugPrint(TRACE, "Store context %p\n", StoreContext);
+        RemoveEntryList(&StoreContext->Entry);
+        StoreFreeWatch(Fdo, StoreContext);
+    }
+    KeReleaseSpinLock(&Fdo->StoreWatchLock, Irql);
 
-    status = STATUS_BUFFER_OVERFLOW;
-    if (OutLen == 0) {
-        XenIfaceDebugPrint(INFO, "|%s: (\"%s\")=(%d)\n", __FUNCTION__, Buffer, Length);
-        goto done;
-    } 
-    
-    status = STATUS_INVALID_PARAMETER;
-    if (OutLen < Length)
-        goto fail4;
+    // event channels
+    InitializeListHead(&ToFree);
+    KeAcquireSpinLock(&Fdo->EvtchnLock, &Irql);
+    Node = Fdo->EvtchnList.Flink;
+    while (Node->Flink != Fdo->EvtchnList.Flink) {
+        EvtchnContext = CONTAINING_RECORD(Node, XENIFACE_EVTCHN_CONTEXT, Entry);
 
-    XenIfaceDebugPrint(INFO, "|%s: (\"%s\")=(%d)->\"%s\"\n", __FUNCTION__, Buffer, Length, Value);
+        Node = Node->Flink;
+        if (EvtchnContext->FileObject != FileObject)
+            continue;
 
-    RtlCopyMemory(Buffer, Value, Length);
-    Buffer[Length - 1] = 0;
-    status = STATUS_SUCCESS;
+        XenIfaceDebugPrint(TRACE, "Evtchn context %p\n", EvtchnContext);
+        RemoveEntryList(&EvtchnContext->Entry);
+        // EvtchnFree requires PASSIVE_LEVEL and we're inside a lock
+        InsertTailList(&ToFree, &EvtchnContext->Entry);
+    }
+    KeReleaseSpinLock(&Fdo->EvtchnLock, Irql);
 
-done:
-    *Info = (ULONG_PTR)Length;
-    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
-    return status;
+    Node = ToFree.Flink;
+    while (Node->Flink != ToFree.Flink) {
+        EvtchnContext = CONTAINING_RECORD(Node, XENIFACE_EVTCHN_CONTEXT, Entry);
+        Node = Node->Flink;
 
-fail4:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail4 (\"%s\")=(%d < %d)\n", __FUNCTION__, Buffer, OutLen, Length);
-    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
-fail3:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail3 (\"%s\")\n", __FUNCTION__, Buffer);
-fail2:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail2\n", __FUNCTION__);
-fail1:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail1 (%08x)\n", __FUNCTION__, status);
-    return status;
-}
-
-static DECLSPEC_NOINLINE NTSTATUS
-IoctlWrite(
-    __in  PXENIFACE_FDO         Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
-    )
-{
-    NTSTATUS    status;
-    PCHAR       Value;
-    ULONG       Length;
-
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen == 0 || OutLen != 0)
-        goto fail1;
-
-    status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
-        goto fail2;
-
-    Length = (ULONG)strlen(Buffer) + 1;
-    Value = Buffer + Length;
-
-    if (!__IsValidStr(Value, InLen - Length))
-        goto fail3;
-
-    status = XENBUS_STORE(Printf, &Fdo->StoreInterface, NULL, NULL, Buffer, Value);
-    if (!NT_SUCCESS(status))
-        goto fail4;
-
-    XenIfaceDebugPrint(INFO, "|%s: (\"%s\"=\"%s\")\n", __FUNCTION__, Buffer, Value);
-    return status;
-
-fail4:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail4 (\"%s\")\n", __FUNCTION__, Value);
-fail3:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail3 (\"%s\")\n", __FUNCTION__, Buffer);
-fail2:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail2\n", __FUNCTION__);
-fail1:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail1 (%08x)\n", __FUNCTION__, status);
-    return status;
-}
-
-static DECLSPEC_NOINLINE NTSTATUS
-IoctlDirectory(
-    __in  PXENIFACE_FDO         Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
-    )
-{
-    NTSTATUS    status;
-    PCHAR       Value;
-    ULONG       Length;
-    ULONG       Count;
-
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen == 0)
-        goto fail1;
-
-    status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
-        goto fail2;
-
-    status = XENBUS_STORE(Directory, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
-    if (!NT_SUCCESS(status))
-        goto fail3;
-
-    Length = __MultiSzLen(Value, &Count) + 1;
-
-    status = STATUS_BUFFER_OVERFLOW;
-    if (OutLen == 0) {
-        XenIfaceDebugPrint(INFO, "|%s: (\"%s\")=(%d)(%d)\n", __FUNCTION__, Buffer, Length, Count);
-        goto done;
-    } 
-
-    status = STATUS_INVALID_PARAMETER;
-    if (OutLen < Length)
-        goto fail4;
-
-    XenIfaceDebugPrint(INFO, "|%s: (\"%s\")=(%d)(%d)\n", __FUNCTION__, Buffer, Length, Count);
-#if DBG
-    __DisplayMultiSz(__FUNCTION__, Value);
-#endif
-
-    RtlCopyMemory(Buffer, Value, Length);
-    Buffer[Length - 2] = 0;
-    Buffer[Length - 1] = 0;
-    status = STATUS_SUCCESS;
-
-done:
-    *Info = (ULONG_PTR)Length;
-    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
-    return status;
-
-fail4:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail4 (\"%s\")=(%d < %d)\n", __FUNCTION__, Buffer, OutLen, Length);
-    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
-fail3:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail3 (\"%s\")\n", __FUNCTION__, Buffer);
-fail2:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail2\n", __FUNCTION__);
-fail1:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail1 (%08x)\n", __FUNCTION__, status);
-    return status;
-}
-
-static DECLSPEC_NOINLINE NTSTATUS
-IoctlRemove(
-    __in  PXENIFACE_FDO         Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
-    )
-{
-    NTSTATUS    status;
-
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen == 0 || OutLen != 0)
-        goto fail1;
-
-    status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
-        goto fail2;
-
-    status = XENBUS_STORE(Remove, &Fdo->StoreInterface, NULL, NULL, Buffer);
-    if (!NT_SUCCESS(status))
-        goto fail3;
-
-    XenIfaceDebugPrint(INFO, "|%s: (\"%s\")\n", __FUNCTION__, Buffer);
-    return status;
-
-fail3:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail3 (\"%s\")\n", __FUNCTION__, Buffer);
-fail2:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail2\n", __FUNCTION__);
-fail1:
-    XenIfaceDebugPrint(ERROR, "|%s: Fail1 (%08x)\n", __FUNCTION__, status);
-    return status;
+        RemoveEntryList(&EvtchnContext->Entry);
+        EvtchnFree(Fdo, EvtchnContext);
+    }
 }
 
 NTSTATUS
-XenIFaceIoctl(
-    __in  PXENIFACE_FDO         Fdo,
-    __in  PIRP              Irp
+XenIfaceIoctl(
+    __in     PXENIFACE_FDO     Fdo,
+    __inout  PIRP              Irp
     )
 {
     NTSTATUS            status;
@@ -302,20 +160,71 @@ XenIFaceIoctl(
         goto done;
 
     switch (Stack->Parameters.DeviceIoControl.IoControlCode) {
+        // store
     case IOCTL_XENIFACE_STORE_READ:
-        status = IoctlRead(Fdo, (PCHAR)Buffer, InLen, OutLen, &Irp->IoStatus.Information);
+        status = IoctlStoreRead(Fdo, (PCHAR)Buffer, InLen, OutLen, &Irp->IoStatus.Information);
         break;
 
     case IOCTL_XENIFACE_STORE_WRITE:
-        status = IoctlWrite(Fdo, (PCHAR)Buffer, InLen, OutLen);
+        status = IoctlStoreWrite(Fdo, (PCHAR)Buffer, InLen, OutLen);
         break;
 
     case IOCTL_XENIFACE_STORE_DIRECTORY:
-        status = IoctlDirectory(Fdo, (PCHAR)Buffer, InLen, OutLen, &Irp->IoStatus.Information);
+        status = IoctlStoreDirectory(Fdo, (PCHAR)Buffer, InLen, OutLen, &Irp->IoStatus.Information);
         break;
 
     case IOCTL_XENIFACE_STORE_REMOVE:
-        status = IoctlRemove(Fdo, (PCHAR)Buffer, InLen, OutLen);
+        status = IoctlStoreRemove(Fdo, (PCHAR)Buffer, InLen, OutLen);
+        break;
+
+    case IOCTL_XENIFACE_STORE_SET_PERMISSIONS:
+        status = IoctlStoreSetPermissions(Fdo, Buffer, InLen, OutLen);
+        break;
+
+    case IOCTL_XENIFACE_STORE_ADD_WATCH:
+        status = IoctlStoreAddWatch(Fdo, Buffer, InLen, OutLen, Stack->FileObject, &Irp->IoStatus.Information);
+        break;
+
+    case IOCTL_XENIFACE_STORE_REMOVE_WATCH:
+        status = IoctlStoreRemoveWatch(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
+        break;
+
+        // evtchn
+    case IOCTL_XENIFACE_EVTCHN_BIND_UNBOUND:
+        status = IoctlEvtchnBindUnbound(Fdo, Buffer, InLen, OutLen, Stack->FileObject, &Irp->IoStatus.Information);
+        break;
+
+    case IOCTL_XENIFACE_EVTCHN_BIND_INTERDOMAIN:
+        status = IoctlEvtchnBindInterdomain(Fdo, Buffer, InLen, OutLen, Stack->FileObject, &Irp->IoStatus.Information);
+        break;
+
+    case IOCTL_XENIFACE_EVTCHN_CLOSE:
+        status = IoctlEvtchnClose(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
+        break;
+
+    case IOCTL_XENIFACE_EVTCHN_NOTIFY:
+        status = IoctlEvtchnNotify(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
+        break;
+
+    case IOCTL_XENIFACE_EVTCHN_UNMASK:
+        status = IoctlEvtchnUnmask(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
+        break;
+
+        // gnttab
+    case IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS: // this is a METHOD_NEITHER IOCTL
+        status = IoctlGnttabPermitForeignAccess(Fdo, Stack->Parameters.DeviceIoControl.Type3InputBuffer, InLen, OutLen, Irp);
+        break;
+
+    case IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS:
+        status = IoctlGnttabRevokeForeignAccess(Fdo, Buffer, InLen, OutLen);
+        break;
+
+    case IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES: // this is a METHOD_NEITHER IOCTL
+        status = IoctlGnttabMapForeignPages(Fdo, Stack->Parameters.DeviceIoControl.Type3InputBuffer, InLen, OutLen, Irp);
+        break;
+
+    case IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES:
+        status = IoctlGnttabUnmapForeignPages(Fdo, Buffer, InLen, OutLen);
         break;
 
     default:
@@ -327,7 +236,8 @@ done:
 
     Irp->IoStatus.Status = status;
 
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    if (status != STATUS_PENDING)
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
     return status;
 }
