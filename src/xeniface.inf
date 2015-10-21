@@ -48,9 +48,9 @@ ServiceDestDir.NT.Copy = 11
 ; DisplayName		    Section	      DeviceID
 ; -----------		    -------	      --------
 
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_08000009
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_08000009
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_08000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_0800000B
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_0800000B
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_0800000B
 
 [XenIface_Device.NT$ARCH$]
 CopyFiles=XenIface_Device.NT.Copy, ServiceDestDir.NT.Copy
