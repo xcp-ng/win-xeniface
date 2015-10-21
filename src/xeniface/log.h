@@ -142,11 +142,11 @@ __Info(
 
 
 #define XenIfaceDebugPrint(LEVEL, ...) \
-	__XenIfaceDebugPrint(__MODULE__ "|" __FUNCTION__ ": ",LEVEL, __VA_ARGS__)
+    __XenIfaceDebugPrint(__MODULE__ "|" __FUNCTION__ ": ",LEVEL, __VA_ARGS__)
 
 static __inline VOID
 __XenIfaceDebugPrint    (
-	__in const CHAR *Prefix,
+    __in const CHAR *Prefix,
     __in ULONG   DebugPrintLevel,
     __in PCCHAR  DebugMessage,
     ...

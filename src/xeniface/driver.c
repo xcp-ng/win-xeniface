@@ -58,9 +58,9 @@ DriverUnload(
         goto done;
 
 
-	if (DriverParameters.RegistryPath.Buffer != NULL) {
-		ExFreePool(DriverParameters.RegistryPath.Buffer);
-	}
+    if (DriverParameters.RegistryPath.Buffer != NULL) {
+        ExFreePool(DriverParameters.RegistryPath.Buffer);
+    }
 
 done:
     DriverObject = NULL;
@@ -145,7 +145,7 @@ DriverEntry(
     )
 {
     ULONG               Index;
-	NTSTATUS status = STATUS_UNSUCCESSFUL;
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
     ASSERT3P(DriverObject, ==, NULL);
 
     ExInitializeDriverRuntime(DrvRtPoolNxOptIn);
@@ -156,16 +156,16 @@ DriverEntry(
          MAJOR_VERSION_STR "." MINOR_VERSION_STR "." MICRO_VERSION_STR "." BUILD_NUMBER_STR,
          DAY_STR "/" MONTH_STR "/" YEAR_STR);
 
-	DriverParameters.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
-	DriverParameters.RegistryPath.Length = RegistryPath->Length;
-	DriverParameters.RegistryPath.Buffer = ExAllocatePoolWithTag (PagedPool, 
-												DriverParameters.RegistryPath.MaximumLength,
-												XENIFACE_POOL_TAG);
-	if (NULL == DriverParameters.RegistryPath.Buffer) {
-		status = STATUS_INSUFFICIENT_RESOURCES;
-		goto fail1;
-	}
-	RtlCopyUnicodeString(&DriverParameters.RegistryPath, RegistryPath);
+    DriverParameters.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
+    DriverParameters.RegistryPath.Length = RegistryPath->Length;
+    DriverParameters.RegistryPath.Buffer = ExAllocatePoolWithTag (PagedPool,
+                                                DriverParameters.RegistryPath.MaximumLength,
+                                                XENIFACE_POOL_TAG);
+    if (NULL == DriverParameters.RegistryPath.Buffer) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto fail1;
+    }
+    RtlCopyUnicodeString(&DriverParameters.RegistryPath, RegistryPath);
 
 
     DriverObject = _DriverObject;
@@ -187,6 +187,6 @@ done:
 
     return STATUS_SUCCESS;
 fail1:
-	Error("fail1 (%08x)\n", status);
-	return status;
+    Error("fail1 (%08x)\n", status);
+    return status;
 }

@@ -51,7 +51,7 @@ extern PDRIVER_OBJECT   DriverObject;
 #define MAX_DEVICE_ID_LEN   200
 
 typedef struct _XENIFACE_PARAMETERS {
-	UNICODE_STRING RegistryPath;
+    UNICODE_STRING RegistryPath;
 
 } XENIFACE_PARAMETERS, *PXENIFACE_PARAMETERS;
 

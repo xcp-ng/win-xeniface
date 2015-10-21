@@ -1,31 +1,31 @@
 /* Copyright (c) Citrix Systems Inc.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, 
- * with or without modification, are permitted provided 
+ * Redistribution and use in source and binary forms,
+ * with or without modification, are permitted provided
  * that the following conditions are met:
  *
- * *   Redistributions of source code must retain the above 
- *     copyright notice, this list of conditions and the 
+ * *   Redistributions of source code must retain the above
+ *     copyright notice, this list of conditions and the
  *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above 
- *     copyright notice, this list of conditions and the 
- *     following disclaimer in the documentation and/or other 
+ * *   Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the
+ *     following disclaimer in the documentation and/or other
  *     materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
 
@@ -47,7 +47,7 @@
 #include <version.h>
 
 __drv_raisesIRQL(APC_LEVEL)
-__drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock) 
+__drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock)
 void LockSessions(
         XENIFACE_FDO* fdoData)
 {
@@ -93,7 +93,7 @@ NTSTATUS GetAnsiString(ANSI_STRING *ansi, USHORT maxlength, LPWSTR location) {
 
 // Rather inconveniently, xenstore needs UTF8 data, WMI works in UTF16
 // and windows doesn't provide conversion functions in any version
-// prior to Windows 7.  
+// prior to Windows 7.
 
 USHORT Utf32FromUtf16(ULONG *utf32, const WCHAR* utf16) {
     ULONG w;
@@ -132,22 +132,22 @@ USHORT Utf32FromUtf8(ULONG *utf32, const CHAR *utf8) {
     else if ((utf8[0] & 0xE0) == 0xC0) {
         y = utf8[0] & 0x1F;
         x = utf8[1] & 0x3F;
-        *utf32 = (y<<6) | x; 
+        *utf32 = (y<<6) | x;
         return 2;
     }
     else if ((utf8[0] & 0xF0) == 0xE0) {
         z = utf8[0] & 0x0F;
         y = utf8[1] & 0x3F;
         x = utf8[2] & 0x3F;
-       *utf32 = (z <<12) | (y<<6) | x; 
+       *utf32 = (z <<12) | (y<<6) | x;
        return 3;
-    } 
+    }
     else {
         ua = utf8[0] & 0x7;
         ub = (utf8[1] & 0x30) >> 4;
         u = (ua << 2) | ub;
         z = utf8[1] & 0x0f;
-        y = utf8[2] & 0x3f; 
+        y = utf8[2] & 0x3f;
         x = utf8[3] & 0x3f;
         *utf32 = (u<<16) | (z <<12) | (y <<6) | x;
         return 4;
@@ -277,7 +277,7 @@ NTSTATUS GetUTF8String(UTF8_STRING** utf8, USHORT bufsize, LPWSTR ustring)
 
     (*utf8)->Length = bytecount;
     (*utf8)->Buffer[bytecount]=0;
-    
+
     bytecount = 0;
     i=0;
     while (i < bufsize/sizeof(WCHAR)) {
@@ -305,7 +305,7 @@ void GetCountedUnicodeString(UNICODE_STRING *unicode, UCHAR *location)
     USHORT bufsize = *(USHORT*)location;
     LPWSTR ustring = (LPWSTR)(location+sizeof(USHORT));
     GetUnicodeString(unicode, bufsize, ustring);
-} 
+}
 
 NTSTATUS GetCountedAnsiString(ANSI_STRING *ansi, UCHAR *location)
 {
@@ -332,7 +332,7 @@ typedef enum {
     WMI_STRINGOFFSET
 } WMI_TYPE;
 
-int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize, 
+int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
                     size_t BufferSize, ...) {
     va_list vl;
     ULONG_PTR offset;
@@ -405,7 +405,7 @@ int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
                         UCHAR *bufferpos = Buffer + inpos;
                         ULONG insize = va_arg(vl, ULONG);
                         UCHAR **writebuf = va_arg(vl, UCHAR**);
-                        *writebuf = NULL; 
+                        *writebuf = NULL;
                         if (bufferpos+ insize > endbuffer) {;
                             overflow = TRUE;
                         }
@@ -460,12 +460,12 @@ int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
                         LPWSTR *val;
                         offset = (2-((ULONG_PTR)position%2))%2;
                         position += offset;
-                        if (position + sizeof(WCHAR)*25 > endbuffer) 
+                        if (position + sizeof(WCHAR)*25 > endbuffer)
                             overflow = TRUE;
-                        val = va_arg(vl, LPWSTR*); 
-                        *val = NULL; 
-                        if (!overflow) 
-                            *val = (LPWSTR )position; 
+                        val = va_arg(vl, LPWSTR*);
+                        *val = NULL;
+                        if (!overflow)
+                            *val = (LPWSTR )position;
                         position += sizeof(WCHAR)*25;
                     }
                     break;
@@ -477,7 +477,7 @@ int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
             break;
         }
     }
-    *RequiredSize = (ULONG)(position - Buffer); 
+    *RequiredSize = (ULONG)(position - Buffer);
     va_end(vl);
     if (overflow)
         return FALSE;
@@ -485,9 +485,9 @@ int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
 }
 
 
-NTSTATUS 
+NTSTATUS
 WriteCountedUnicodeString(
-    const UNICODE_STRING *ustr, 
+    const UNICODE_STRING *ustr,
     UCHAR *location
     )
 {
@@ -516,7 +516,7 @@ WriteCountedUTF8String(const char * string, UCHAR *location) {
     }
     buffer[bytesize/sizeof(WCHAR)] = 0;
 
-    i=0; 
+    i=0;
     b=0;
     while (string[i] != 0) {
         i += Utf32FromUtf8(&utf32, &string[i]);
@@ -533,7 +533,7 @@ NTSTATUS
 WriteCountedString(
     const char * string,
     UCHAR * location
-    ) 
+    )
 {
     ANSI_STRING ansi;
     UNICODE_STRING unicode;
@@ -542,7 +542,7 @@ WriteCountedString(
     RtlInitAnsiString(&ansi, string);
 
     status = RtlAnsiStringToUnicodeString(&unicode, &ansi, TRUE);
-    if (NT_SUCCESS(status)) { 
+    if (NT_SUCCESS(status)) {
 
         status = WriteCountedUnicodeString(&unicode, location);
         RtlFreeUnicodeString(&unicode);
@@ -583,7 +583,7 @@ CloneUnicodeString(UNICODE_STRING *dest, UNICODE_STRING *src) {
     return status;
 }
 
-NTSTATUS 
+NTSTATUS
 StringToUnicode(UNICODE_STRING *ustr, const char * str) {
     ANSI_STRING ansi;
     RtlInitAnsiString(&ansi, str);
@@ -632,7 +632,7 @@ GetInstanceName(UNICODE_STRING *dest, XENIFACE_FDO* FdoData, const char *string)
         return status;
     }
     destsz = FdoData->SuggestedInstanceName.Length +
-                sizeof(WCHAR) + 
+                sizeof(WCHAR) +
                 unicode.Length;
 
     AllocUnicodeStringBuffer(dest, (USHORT)destsz);
@@ -640,8 +640,8 @@ GetInstanceName(UNICODE_STRING *dest, XENIFACE_FDO* FdoData, const char *string)
         RtlFreeUnicodeString(&unicode);
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-    status = RtlUnicodeStringPrintf(dest, L"%s\\%s", 
-                FdoData->SuggestedInstanceName.Buffer, 
+    status = RtlUnicodeStringPrintf(dest, L"%s\\%s",
+                FdoData->SuggestedInstanceName.Buffer,
                 unicode.Buffer);
     if (!NT_SUCCESS(status)) {
         RtlFreeUnicodeString(&unicode);
@@ -701,14 +701,14 @@ void UnicodeShallowCopy(UNICODE_STRING *dest, UNICODE_STRING *src) {
     dest->Buffer = src->Buffer;
     dest->Length = src->Length;
     dest->MaximumLength = src->MaximumLength;
-} 
+}
 
 
 XenStoreSession*
-FindSessionLocked(XENIFACE_FDO *fdoData, 
+FindSessionLocked(XENIFACE_FDO *fdoData,
                                 LONG id) {
     XenStoreSession *session;
-     
+
     session = (XenStoreSession *)fdoData->SessionHead.Flink;
     while (session != (XenStoreSession *)&fdoData->SessionHead){
         if (session->id == id) {
@@ -735,7 +735,7 @@ XenStoreWatch *
 SessionFindWatchLocked(XenStoreSession *session,
                         UNICODE_STRING *path) {
     XenStoreWatch * watch;
-    
+
     XenIfaceDebugPrint(TRACE,"Wait for session watch lock\n");
     ExAcquireFastMutex(&session->WatchMapLock);
     XenIfaceDebugPrint(TRACE,"got session watch lock\n");
@@ -751,11 +751,11 @@ SessionFindWatchLocked(XenStoreSession *session,
     XenIfaceDebugPrint(WARNING,"couldn't find watch\n");
     return NULL;
 
-} 
+}
 
 void FireSuspendEvent(PXENIFACE_FDO fdoData) {
-	XenIfaceDebugPrint(ERROR,"Ready to unsuspend Event\n");
-	KeSetEvent(&fdoData->registryWriteEvent, IO_NO_INCREMENT, FALSE);
+    XenIfaceDebugPrint(ERROR,"Ready to unsuspend Event\n");
+    KeSetEvent(&fdoData->registryWriteEvent, IO_NO_INCREMENT, FALSE);
     if (fdoData->WmiReady) {
         XenIfaceDebugPrint(TRACE,"Fire Suspend Event\n");
         WmiFireEvent(fdoData->Dx->DeviceObject,
@@ -764,7 +764,7 @@ void FireSuspendEvent(PXENIFACE_FDO fdoData) {
                      0,
                      NULL);
     }
-} 
+}
 void FireWatch(XenStoreWatch* watch) {
     UCHAR * eventdata;
     ULONG RequiredSize;
@@ -774,7 +774,7 @@ void FireWatch(XenStoreWatch* watch) {
             WMI_STRING, GetCountedUnicodeStringSize(&watch->path),
                 &sesbuf,
             WMI_DONE);
-    
+
     eventdata = ExAllocatePoolWithTag(NonPagedPool, RequiredSize,'XIEV');
     if (eventdata!=NULL) {
         AccessWmiBuffer(eventdata, FALSE, &RequiredSize, RequiredSize,
@@ -782,17 +782,17 @@ void FireWatch(XenStoreWatch* watch) {
                 &sesbuf,
             WMI_DONE);
 
-        WriteCountedUnicodeString(&watch->path, sesbuf); 
+        WriteCountedUnicodeString(&watch->path, sesbuf);
     }
 
     if (eventdata !=NULL) {
         XenIfaceDebugPrint(TRACE,"Fire Watch Event\n");
-        WmiFireEvent(watch->fdoData->Dx->DeviceObject, 
+        WmiFireEvent(watch->fdoData->Dx->DeviceObject,
                      (LPGUID)&OBJECT_GUID(XenStoreWatchEvent),
                      0,
-                     RequiredSize, 
+                     RequiredSize,
                      eventdata);
-    } 
+    }
 }
 
 
@@ -800,7 +800,7 @@ KSTART_ROUTINE WatchCallbackThread;
 NTSTATUS
 StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
 {
-    char *tmppath; 
+    char *tmppath;
     ANSI_STRING ansipath;
     NTSTATUS status;
     status = RtlUnicodeStringToAnsiString(&ansipath, &watch->path, TRUE);
@@ -814,7 +814,7 @@ StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
     }
     RtlZeroMemory(tmppath, ansipath.Length+1);
     RtlCopyBytes(tmppath,ansipath.Buffer, ansipath.Length);
-    
+
     status = XENBUS_STORE(WatchAdd, &fdoData->StoreInterface, NULL, tmppath, &watch->watchevent, &watch->watchhandle );
     if (!NT_SUCCESS(status)) {
         ExFreePool(tmppath);
@@ -848,7 +848,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                 watch = (XenStoreWatch *)watch->listentry.Flink;
             }
             session->mapchanged = FALSE;
-            session->watchevents[i] = &session->SessionChangedEvent; 
+            session->watchevents[i] = &session->SessionChangedEvent;
         }
         ExReleaseFastMutex(&session->WatchMapLock);
         XenIfaceDebugPrint(TRACE,"Wait for new event\n");
@@ -875,7 +875,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                     if (watch->suspendcount !=XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface)) {
                         watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
                         XenIfaceDebugPrint(WARNING,"SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
-                        
+
                         XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
                         StartWatch(watch->fdoData, watch);
                     }
@@ -886,13 +886,13 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
         }
         else if ( status == STATUS_WAIT_0 + i) {
             ExAcquireFastMutex(&session->WatchMapLock);
-            KeClearEvent(&session->SessionChangedEvent); 
+            KeClearEvent(&session->SessionChangedEvent);
             if (session->closing==TRUE) {
                 XenIfaceDebugPrint(TRACE,"Trying to end session thread\n");
                 if (session->watchcount != 0) {
                     XenStoreWatch *watch;
-                    for (watch = (XenStoreWatch *)session->watches.Flink; 
-                        watch!=(XenStoreWatch *)&session->watches; 
+                    for (watch = (XenStoreWatch *)session->watches.Flink;
+                        watch!=(XenStoreWatch *)&session->watches;
                         watch=(XenStoreWatch *)session->watches.Flink) {
                             FreeUnicodeStringBuffer(&watch->path);
                             RemoveEntryList((LIST_ENTRY*)watch);
@@ -907,7 +907,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                 //ExReleaseFastMutex(&session->WatchMapLock);
             }
             else {
-                
+
                 ExReleaseFastMutex(&session->WatchMapLock);
             }
         }
@@ -916,12 +916,12 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
 }
 
 NTSTATUS
-SessionAddWatchLocked(XenStoreSession *session, 
-                        XENIFACE_FDO* fdoData, 
+SessionAddWatchLocked(XenStoreSession *session,
+                        XENIFACE_FDO* fdoData,
                         UNICODE_STRING *path,
                         XenStoreWatch **watch) {
 
-    
+
     NTSTATUS status;
     XenStoreWatch *pwatch;
 
@@ -934,18 +934,18 @@ SessionAddWatchLocked(XenStoreSession *session,
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    (*watch)->finished = FALSE; 
+    (*watch)->finished = FALSE;
     (*watch)->fdoData = fdoData;
     UnicodeShallowCopy(&(*watch)->path, path);
 
 
-   
+
     (*watch)->suspendcount = XENBUS_SUSPEND(GetCount, &fdoData->SuspendInterface);
-    
+
 
     KeInitializeEvent(&(*watch)->watchevent, NotificationEvent, FALSE);
 
-    
+
     status = StartWatch(fdoData, *watch);
     if ((!NT_SUCCESS(status)) || ((*watch)->watchhandle == NULL)) {
         ExFreePool(*watch);
@@ -1001,8 +1001,8 @@ void SessionRemoveWatchesLocked(XenStoreSession *session) {
 
     XenIfaceDebugPrint(TRACE, "wait remove mutex\n");
     ExAcquireFastMutex(&session->WatchMapLock);
-    for (watch = (XenStoreWatch *)session->watches.Flink; 
-         watch!=(XenStoreWatch *)&session->watches; 
+    for (watch = (XenStoreWatch *)session->watches.Flink;
+         watch!=(XenStoreWatch *)&session->watches;
          watch=(XenStoreWatch *)watch->listentry.Flink) {
 
         XenIfaceDebugPrint(TRACE, "try remove %p\n",session->watches.Flink );
@@ -1017,7 +1017,7 @@ XenStoreSession*
 FindSessionByInstanceLocked(XENIFACE_FDO *fdoData,
                             UNICODE_STRING *instance) {
     XenStoreSession *session;
-     
+
     session = (XenStoreSession *)fdoData->SessionHead.Flink;
     while (session != (XenStoreSession *)&fdoData->SessionHead) {
         if (CompareUnicodeStrings(instance, &session->instancename)==0) {
@@ -1059,7 +1059,7 @@ PSTR Xmasprintf(const char *fmt, ...) {
         out =  ExAllocatePoolWithTag(NonPagedPool, basesize, 'XenP');
         if (out == NULL)
             return NULL;
-        
+
         status = RtlStringCbVPrintfExA(out, basesize, NULL, &unused,0, fmt, argv);
 
         ExFreePool(out);
@@ -1075,9 +1075,9 @@ PSTR Xmasprintf(const char *fmt, ...) {
     return out;
 }
 
-NTSTATUS 
-CreateNewSession(XENIFACE_FDO *fdoData, 
-                    UNICODE_STRING *stringid, 
+NTSTATUS
+CreateNewSession(XENIFACE_FDO *fdoData,
+                    UNICODE_STRING *stringid,
                     ULONG *sessionid) {
     XenStoreSession *session;
     PSTR iname;
@@ -1093,7 +1093,7 @@ CreateNewSession(XENIFACE_FDO *fdoData,
     if (session == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
     RtlZeroMemory(session, sizeof(XenStoreSession));
-    
+
     ExInitializeFastMutex(&session->WatchMapLock);
     session->mapchanged = TRUE;
     status = RtlUnicodeStringToAnsiString(&ansi, stringid, TRUE);
@@ -1109,7 +1109,7 @@ CreateNewSession(XENIFACE_FDO *fdoData,
         status = STATUS_NO_MEMORY;
         if (iname == NULL) {
             UnlockSessions(fdoData);
-            RtlFreeAnsiString(&ansi); 
+            RtlFreeAnsiString(&ansi);
             ExFreePool(session);
             return status;
         }
@@ -1118,18 +1118,18 @@ CreateNewSession(XENIFACE_FDO *fdoData,
         ExFreePool(iname);
         if (!NT_SUCCESS(status)) {
             UnlockSessions(fdoData);
-            RtlFreeAnsiString(&ansi); 
+            RtlFreeAnsiString(&ansi);
             ExFreePool(session);
             return status;
         }
         count++;
-        
+
     } while (FindSessionByInstanceLocked(fdoData, &session->instancename) != NULL);
 
-    
-    
-    
-    
+
+
+
+
     if (fdoData->SessionHead.Flink==&fdoData->SessionHead) {
         session->id=0;
     }
@@ -1142,12 +1142,12 @@ CreateNewSession(XENIFACE_FDO *fdoData,
     InsertHeadList((PLIST_ENTRY)&fdoData->SessionHead, (PLIST_ENTRY)session);
     *sessionid = session->id;
     UnicodeShallowCopy(&session->stringid, stringid);
-    
+
     InitializeListHead((PLIST_ENTRY)&session->watches);
-    
+
     KeInitializeEvent(&session->SessionChangedEvent, NotificationEvent, FALSE);
     session->closing = FALSE;
-    if (fdoData->InterfacesAcquired){ 
+    if (fdoData->InterfacesAcquired){
         XenIfaceDebugPrint(TRACE,"Add session unsuspended\n");
         session->suspended=FALSE;
     }
@@ -1161,7 +1161,7 @@ CreateNewSession(XENIFACE_FDO *fdoData,
 
     status = PsCreateSystemThread(&hthread, THREAD_ALL_ACCESS, &oa, NULL, NULL, WatchCallbackThread, session);
     if (!NT_SUCCESS(status)) {
-            RtlFreeAnsiString(&ansi); 
+            RtlFreeAnsiString(&ansi);
             ExFreePool(session);
             return status;
     }
@@ -1170,17 +1170,17 @@ CreateNewSession(XENIFACE_FDO *fdoData,
     return STATUS_SUCCESS;
 }
 
-void 
-RemoveSessionLocked(XENIFACE_FDO *fdoData, 
+void
+RemoveSessionLocked(XENIFACE_FDO *fdoData,
                     XenStoreSession *session) {
-     
+
     XenIfaceDebugPrint(TRACE,"RemoveSessionLocked\n");
     RemoveEntryList((LIST_ENTRY*)session);
     fdoData->Sessions--;
     SessionRemoveWatchesLocked(session);
     if (session->transaction != NULL) {
-        XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);  
-    }  
+        XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);
+    }
     session->closing = TRUE;
     KeSetEvent(&session->SessionChangedEvent, IO_NO_INCREMENT, FALSE);
     KeWaitForSingleObject(session->WatchThread, Executive, KernelMode, FALSE, NULL);
@@ -1191,7 +1191,7 @@ RemoveSessionLocked(XENIFACE_FDO *fdoData,
 }
 
 void
-RemoveSession(XENIFACE_FDO *fdoData, 
+RemoveSession(XENIFACE_FDO *fdoData,
                     XenStoreSession *session) {
     XenIfaceDebugPrint(TRACE,"RemoveSession\n");
     LockSessions(fdoData);
@@ -1200,15 +1200,15 @@ RemoveSession(XENIFACE_FDO *fdoData,
 }
 
 void SessionsRemoveAll(XENIFACE_FDO *fdoData) {
-	XenIfaceDebugPrint(TRACE,"lock");
+    XenIfaceDebugPrint(TRACE,"lock");
     LockSessions(fdoData);
-	XenIfaceDebugPrint(TRACE,"in lock");
+    XenIfaceDebugPrint(TRACE,"in lock");
     while (fdoData->SessionHead.Flink != &fdoData->SessionHead) {
         RemoveSessionLocked(fdoData, (XenStoreSession *)fdoData->SessionHead.Flink);
     }
-	XenIfaceDebugPrint(TRACE,"unlock");
+    XenIfaceDebugPrint(TRACE,"unlock");
     UnlockSessions(fdoData);
-	XenIfaceDebugPrint(TRACE,"unlocked");
+    XenIfaceDebugPrint(TRACE,"unlocked");
 }
 
 
@@ -1237,15 +1237,15 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
     ExReleaseFastMutex(&session->WatchMapLock);
 }
 
-void SuspendSessionLocked(XENIFACE_FDO *fdoData, 
+void SuspendSessionLocked(XENIFACE_FDO *fdoData,
                          XenStoreSession *session) {
     SessionUnwatchWatchesLocked(session);
     if (session->transaction != NULL) {
         XenIfaceDebugPrint(TRACE, "End transaction %p\n",session->transaction);
-        
-        XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);  
+
+        XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);
         session->transaction = NULL;
-    }  
+    }
 }
 
 
@@ -1288,7 +1288,7 @@ void SessionRenewWatchesLocked(XenStoreSession *session) {
     ExReleaseFastMutex(&session->WatchMapLock);
 }
 
-void ResumeSessionLocked(XENIFACE_FDO *fdoData, 
+void ResumeSessionLocked(XENIFACE_FDO *fdoData,
                          XenStoreSession *session) {
     SessionRenewWatchesLocked(session);
 }
@@ -1310,40 +1310,40 @@ void SessionsResumeAll(XENIFACE_FDO *fdoData) {
 NTSTATUS
 WmiInit(
         PXENIFACE_FDO FdoData
-    ) 
+    )
 {
     NTSTATUS status = STATUS_SUCCESS;
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Initialisation\n");
-   
-    
 
 
-	IoWMISuggestInstanceName(FdoData->PhysicalDeviceObject, NULL, FALSE, 
-                                &FdoData->SuggestedInstanceName);
+
+
+    IoWMISuggestInstanceName(FdoData->PhysicalDeviceObject, NULL, FALSE,
+                             &FdoData->SuggestedInstanceName);
     InitializeListHead(&FdoData->SessionHead);
     FdoData->Sessions = 0;
     ExInitializeFastMutex(&FdoData->SessionLock);
-    
+
     status = IoWMIRegistrationControl(FdoData->Dx->DeviceObject, WMIREG_ACTION_REGISTER);
     FdoData->WmiReady = 1;
     return status;
 }
 
 NTSTATUS
-WmiFinalise(       
+WmiFinalise(
     PXENIFACE_FDO FdoData
-    ) 
+    )
 {
     NTSTATUS status = STATUS_SUCCESS;
-    if (FdoData->WmiReady) { 
+    if (FdoData->WmiReady) {
         XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Finalisation\n");
         XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
         SessionsRemoveAll(FdoData);
 
         status =IoWMIRegistrationControl(FdoData->Dx->DeviceObject, WMIREG_ACTION_DEREGISTER);
-		RtlFreeUnicodeString(&FdoData->SuggestedInstanceName);
-		RtlZeroBytes(&FdoData->SuggestedInstanceName, sizeof(UNICODE_STRING));
+        RtlFreeUnicodeString(&FdoData->SuggestedInstanceName);
+        RtlZeroBytes(&FdoData->SuggestedInstanceName, sizeof(UNICODE_STRING));
 
         FdoData->WmiReady = 0;
     }
@@ -1468,7 +1468,7 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
     }
 
     status = GetCountedUTF8String(&pathname, upathname);
-    if (!NT_SUCCESS(status)) 
+    if (!NT_SUCCESS(status))
         return status;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1478,7 +1478,7 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
     }
     RtlZeroMemory(tmpbuffer, pathname->Length+1);
     RtlCopyBytes(tmpbuffer,pathname->Buffer, pathname->Length);
-    
+
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
             NULL){
@@ -1524,7 +1524,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
     }
 
 
-    XenIfaceDebugPrint(TRACE, "Find Watch\n"); 
+    XenIfaceDebugPrint(TRACE, "Find Watch\n");
 
     watch = SessionFindWatchLocked(session, &unicpath_notbacked);
 
@@ -1533,7 +1533,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
         SessionRemoveWatchLocked(session, watch);
     }
     else {
-        XenIfaceDebugPrint(WARNING, "No Watch\n"); 
+        XenIfaceDebugPrint(WARNING, "No Watch\n");
     }
 #pragma prefast (suppress:26110)
     ExReleaseFastMutex(&session->WatchMapLock);
@@ -1541,7 +1541,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
 
     *byteswritten=0;
 
- 
+
 
     return STATUS_SUCCESS;
 
@@ -1586,11 +1586,11 @@ SessionExecuteSetWatch(UCHAR *InBuffer,
         FreeUnicodeStringBuffer(&unicpath_backed);
         return status;
     }
-    
+
 
     *byteswritten=0;
 
- 
+
 
     return STATUS_SUCCESS;
 
@@ -1604,7 +1604,7 @@ SessionExecuteEndSession(UCHAR *InBuffer,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     XenStoreSession *session;
-    XenIfaceDebugPrint(TRACE, "ExecuteEndSession\n"); 
+    XenIfaceDebugPrint(TRACE, "ExecuteEndSession\n");
     *byteswritten = 0;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
             NULL){
@@ -1633,7 +1633,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
     char *tmppath;
     char* tmpvalue;
 
-    XenIfaceDebugPrint(TRACE, " Try to write\n"); 
+    XenIfaceDebugPrint(TRACE, " Try to write\n");
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
                             WMI_STRING, &upathname,
                             WMI_STRING, &uvalue,
@@ -1643,10 +1643,10 @@ SessionExecuteSetValue(UCHAR *InBuffer,
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     status = GetCountedUTF8String(&pathname, upathname);
-    if (!NT_SUCCESS(status)) 
+    if (!NT_SUCCESS(status))
         return status;
 
-	status = STATUS_INSUFFICIENT_RESOURCES;
+    status = STATUS_INSUFFICIENT_RESOURCES;
     tmppath = ExAllocatePoolWithTag(NonPagedPool, pathname->Length+1, 'XenP');
     if (!tmppath) {
         goto fail1;
@@ -1654,7 +1654,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
     RtlZeroMemory(tmppath, pathname->Length+1);
     RtlCopyBytes(tmppath,pathname->Buffer, pathname->Length);
     status = GetCountedUTF8String(&value, uvalue);
-    if (!NT_SUCCESS(status)){ 
+    if (!NT_SUCCESS(status)){
         goto fail2;
     }
     status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1664,14 +1664,14 @@ SessionExecuteSetValue(UCHAR *InBuffer,
     }
     RtlZeroMemory(tmpvalue, value->Length+1);
     RtlCopyBytes(tmpvalue,value->Buffer, value->Length);
-	
+
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
             NULL){
         goto fail4;
     }
     status = XENBUS_STORE(Printf, &fdoData->StoreInterface, session->transaction, NULL, tmppath, tmpvalue);
-    XenIfaceDebugPrint(TRACE, " Write %s to %s (%p)\n", tmpvalue, tmppath, status); 
+    XenIfaceDebugPrint(TRACE, " Write %s to %s (%p)\n", tmpvalue, tmppath, status);
     UnlockSessions(fdoData);
 
 fail4:
@@ -1685,10 +1685,10 @@ fail2:
 
 fail1:
     FreeUTF8String(pathname);
-  
+
     *byteswritten = 0;
     return status;
-    
+
 }
 NTSTATUS
 SessionExecuteGetFirstChild(UCHAR *InBuffer,
@@ -1708,16 +1708,16 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     XenStoreSession *session;
     char *tmppath;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
-                            WMI_STRING, &uloc, 
+                            WMI_STRING, &uloc,
                             WMI_DONE)){
         return  STATUS_INVALID_DEVICE_REQUEST;
     }
     if (!fdoData->InterfacesAcquired) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-        
+
     status = GetCountedUTF8String(&path, uloc);
-                
+
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -1737,7 +1737,7 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     }
     status = XENBUS_STORE(Directory,&fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
     UnlockSessions(fdoData);
-                        
+
     if (!NT_SUCCESS(status)) {
         goto fail2;
     }
@@ -1755,14 +1755,14 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     else {
         stringarraysize+=GetCountedUtf8Size("");
     }
-    
+
     status = STATUS_BUFFER_TOO_SMALL;
     if (!AccessWmiBuffer(InBuffer, FALSE, &RequiredSize, OutBufferSize,
                             WMI_STRING, stringarraysize, &valuepos,
                             WMI_DONE)){
         goto fail3;
     }
-    
+
     status = STATUS_SUCCESS;
     if ((listresults != NULL) && (listresults[0] != 0)) {
         PSTR fullpath;
@@ -1770,8 +1770,8 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
             fullpath = Xmasprintf("/%s", listresults);
         }
         else {
-            fullpath = Xmasprintf("%s/%s", 
-                                    path->Buffer, listresults); 
+            fullpath = Xmasprintf("%s/%s",
+                                    path->Buffer, listresults);
         }
 
         if (fullpath == NULL) {
@@ -1826,16 +1826,16 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     int leafoffset;
     char *attemptstring;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
-                            WMI_STRING, &uloc, 
+                            WMI_STRING, &uloc,
                             WMI_DONE)){
         return  STATUS_INVALID_DEVICE_REQUEST;
     }
     if (!fdoData->InterfacesAcquired) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-        
+
     status = GetCountedUTF8String(&path, uloc);
-                
+
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -1858,7 +1858,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
             NULL){
         goto fail3;
     }
-    
+
     leafoffset = 0;
     if (path->Length>1) {
         leafoffset = path->Length;
@@ -1884,14 +1884,14 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
 
     status = XENBUS_STORE(Directory,&fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
     UnlockSessions(fdoData);
-                        
+
     if (!NT_SUCCESS(status)) {
         goto fail3;
     }
 
     stringarraysize = 0;
     RtlInitAnsiString(&checkleaf, tmpleaf);
-    
+
     nextresult = listresults;
 
     while (*nextresult != 0) {
@@ -1928,14 +1928,14 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     else {
         stringarraysize+=GetCountedUtf8Size("");
     }
-    
+
     status = STATUS_BUFFER_TOO_SMALL;
     if (!AccessWmiBuffer(InBuffer, FALSE, &RequiredSize, OutBufferSize,
                             WMI_STRING, stringarraysize, &valuepos,
                             WMI_DONE)){
         goto fail4;
     }
-    
+
     status = STATUS_SUCCESS;
     if (attemptstring != NULL) {
         PSTR fullpath;
@@ -1943,8 +1943,8 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
             fullpath = Xmasprintf("/%s", attemptstring);
         }
         else {
-            fullpath = Xmasprintf("%s/%s", 
-                                    tmppath, attemptstring); 
+            fullpath = Xmasprintf("%s/%s",
+                                    tmppath, attemptstring);
         }
 
         if (fullpath == NULL) {
@@ -1969,7 +1969,7 @@ fail3:
     ExFreePool(tmpleaf);
 
 fail2:
-	ExFreePool(tmppath);
+    ExFreePool(tmppath);
 
 fail1:
     FreeUTF8String(path);
@@ -1999,16 +1999,16 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
     XenStoreSession *session;
     char *tmppath;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
-                            WMI_STRING, &uloc, 
+                            WMI_STRING, &uloc,
                             WMI_DONE)){
         return  STATUS_INVALID_DEVICE_REQUEST;
     }
     if (!fdoData->InterfacesAcquired) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-        
+
     status = GetCountedUTF8String(&path, uloc);
-                
+
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -2028,7 +2028,7 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
     }
     status = XENBUS_STORE(Directory,&fdoData->StoreInterface,session->transaction,NULL, tmppath, &listresults);
     UnlockSessions(fdoData);
-                        
+
     if (!NT_SUCCESS(status)) {
         goto fail2;
     }
@@ -2046,8 +2046,8 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
         stringarraysize+=GetCountedUtf8Size(nextresults);
         for (;*nextresults!=0;nextresults++);
         nextresults++;
-    } 
-                
+    }
+
     status = STATUS_BUFFER_TOO_SMALL;
     if (!AccessWmiBuffer(InBuffer, FALSE, &RequiredSize, OutBufferSize,
                             WMI_UINT32, &noofnodes,
@@ -2065,8 +2065,8 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
             fullpath = Xmasprintf("/%s", nextresults);
         }
         else {
-            fullpath = Xmasprintf("%s/%s", 
-                                    path->Buffer, nextresults); 
+            fullpath = Xmasprintf("%s/%s",
+                                    path->Buffer, nextresults);
         }
 
         if (fullpath == NULL) {
@@ -2113,13 +2113,13 @@ SessionExecuteLog(UCHAR *InBuffer,
     NTSTATUS status;
     ANSI_STRING message;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
-                                            WMI_STRING, &uloc, 
+                                            WMI_STRING, &uloc,
                                             WMI_DONE))
         return STATUS_INVALID_DEVICE_REQUEST;
 
     status = GetCountedAnsiString(&message, uloc);
 
-    if (!NT_SUCCESS(status)) 
+    if (!NT_SUCCESS(status))
         return status;
 
     XenIfaceDebugPrint(INFO,"USER: %s\n", message.Buffer);
@@ -2141,7 +2141,7 @@ SessionExecuteStartTransaction(UCHAR *InBuffer,
 
     NTSTATUS status = STATUS_SUCCESS;
     XenStoreSession *session;
-    
+
     if (!fdoData->InterfacesAcquired) {
         status= STATUS_INSUFFICIENT_RESOURCES;
         goto failnotinitialised;
@@ -2158,7 +2158,7 @@ SessionExecuteStartTransaction(UCHAR *InBuffer,
     }
 
     XENBUS_STORE(TransactionStart, &fdoData->StoreInterface, &session->transaction);
-    
+
 
 failtransactionactive:
     UnlockSessions(fdoData);
@@ -2180,7 +2180,7 @@ SessionExecuteCommitTransaction(UCHAR *InBuffer,
 
     NTSTATUS status = STATUS_SUCCESS;
     XenStoreSession *session;
-    
+
     if (!fdoData->InterfacesAcquired) {
         status= STATUS_INSUFFICIENT_RESOURCES;
         goto failnotinitialised;
@@ -2197,7 +2197,7 @@ SessionExecuteCommitTransaction(UCHAR *InBuffer,
     }
 
     status = XENBUS_STORE(TransactionEnd,&fdoData->StoreInterface, session->transaction, TRUE);
-    
+
     session->transaction = NULL;
 
 failtransactionnotactive:
@@ -2220,7 +2220,7 @@ SessionExecuteAbortTransaction(UCHAR *InBuffer,
 
     NTSTATUS status = STATUS_SUCCESS;
     XenStoreSession *session;
-    
+
     if (!fdoData->InterfacesAcquired) {
         status= STATUS_INSUFFICIENT_RESOURCES;
         goto failnotinitialised;
@@ -2237,7 +2237,7 @@ SessionExecuteAbortTransaction(UCHAR *InBuffer,
     }
 
     status = XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);
-    
+
     session->transaction = NULL;
 
 failtransactionnotactive:
@@ -2269,18 +2269,18 @@ SessionExecuteGetValue(UCHAR *InBuffer,
 
     *byteswritten = 0;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
-                                            WMI_STRING, &uloc, 
+                                            WMI_STRING, &uloc,
                                             WMI_DONE))
         return STATUS_INVALID_DEVICE_REQUEST;
     if (!fdoData->InterfacesAcquired) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-        
+
     status = GetCountedUTF8String(&path, uloc);
-                
-    if (!NT_SUCCESS(status)) 
+
+    if (!NT_SUCCESS(status))
         return status;;
-    
+
     status = STATUS_INSUFFICIENT_RESOURCES;
     tmppath = ExAllocatePoolWithTag(NonPagedPool,path->Length+1,'XenP');
     if (!tmppath) {
@@ -2288,7 +2288,7 @@ SessionExecuteGetValue(UCHAR *InBuffer,
     }
     RtlZeroMemory(tmppath, path->Length+1);
     RtlCopyBytes(tmppath,path->Buffer, path->Length);
-    
+
 
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
@@ -2297,10 +2297,10 @@ SessionExecuteGetValue(UCHAR *InBuffer,
     }
     status = XENBUS_STORE(Read, &fdoData->StoreInterface, session->transaction, NULL, tmppath, &value);
     UnlockSessions(fdoData);
-                
-    if (!NT_SUCCESS(status)) 
+
+    if (!NT_SUCCESS(status))
         goto fail2;
-   
+
     status = STATUS_BUFFER_TOO_SMALL;
     if (!AccessWmiBuffer(OutBuffer, FALSE, &RequiredSize, OutBufferSize,
                             WMI_STRING, GetCountedUtf8Size(value), &valuepos,
@@ -2335,7 +2335,7 @@ BaseExecuteAddSession(UCHAR *InBuffer,
     NTSTATUS status;
     *byteswritten = 0;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
-                            WMI_STRING, &stringid, 
+                            WMI_STRING, &stringid,
                             WMI_DONE)){
         return STATUS_INVALID_DEVICE_REQUEST;
     }
@@ -2345,12 +2345,12 @@ BaseExecuteAddSession(UCHAR *InBuffer,
         *byteswritten = RequiredSize;
         return STATUS_BUFFER_TOO_SMALL;
     }
-    
+
     AllocUnicodeStringBuffer(&ustring, *(USHORT*)(stringid));
     if (ustring.Buffer == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
     status = RtlUnicodeStringCbCopyStringN(&ustring,
-                                            (LPCWSTR)(stringid+sizeof(USHORT)), 
+                                            (LPCWSTR)(stringid+sizeof(USHORT)),
                                             *(USHORT*)(stringid));
     if (!NT_SUCCESS(status)) {
         FreeUnicodeStringBuffer(&ustring);
@@ -2368,7 +2368,7 @@ BaseExecuteAddSession(UCHAR *InBuffer,
 }
 
 
-NTSTATUS 
+NTSTATUS
 SessionExecuteMethod(UCHAR *Buffer,
                     ULONG BufferSize,
                     XENIFACE_FDO* fdoData,
@@ -2397,115 +2397,115 @@ SessionExecuteMethod(UCHAR *Buffer,
         return STATUS_INVALID_DEVICE_REQUEST;
     }
 
-    InBuffer = Buffer + Method->DataBlockOffset; 
+    InBuffer = Buffer + Method->DataBlockOffset;
 
     GetCountedUnicodeString(&instance, InstStr);
 
-    
+
     XenIfaceDebugPrint(TRACE,"Method Id %d\n", Method->MethodId);
     switch (Method->MethodId) {
-        case GetValue: 
-            status = SessionExecuteGetValue(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case GetValue:
+            status = SessionExecuteGetValue(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
-        case SetValue: 
-            status = SessionExecuteSetValue(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case SetValue:
+            status = SessionExecuteSetValue(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
-        case GetChildren: 
-            status = SessionExecuteGetChildren(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case GetChildren:
+            status = SessionExecuteGetChildren(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
-        case SetWatch: 
-            status = SessionExecuteSetWatch(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case SetWatch:
+            status = SessionExecuteSetWatch(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
         case EndSession:
-            status = SessionExecuteEndSession(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+            status = SessionExecuteEndSession(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
-        case RemoveWatch: 
-            status = SessionExecuteRemoveWatch(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case RemoveWatch:
+            status = SessionExecuteRemoveWatch(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
-        case RemoveValue: 
-            status = SessionExecuteRemoveValue(InBuffer, Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case RemoveValue:
+            status = SessionExecuteRemoveValue(InBuffer, Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
         case Log:
-            status = SessionExecuteLog(InBuffer,  Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+            status = SessionExecuteLog(InBuffer,  Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
-        case StartTransaction: 
-            status = SessionExecuteStartTransaction(InBuffer,  Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+        case StartTransaction:
+            status = SessionExecuteStartTransaction(InBuffer,  Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
         case CommitTransaction:
-            status = SessionExecuteCommitTransaction(InBuffer,  Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+            status = SessionExecuteCommitTransaction(InBuffer,  Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
         case AbortTransaction:
-            status = SessionExecuteAbortTransaction(InBuffer,  Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+            status = SessionExecuteAbortTransaction(InBuffer,  Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
         case GetFirstChild:
-            status = SessionExecuteGetFirstChild(InBuffer,  Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+            status = SessionExecuteGetFirstChild(InBuffer,  Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
         case GetNextSibling:
-            status = SessionExecuteGetNextSibling(InBuffer,  Method->SizeDataBlock,  
-                                              Buffer+Method->DataBlockOffset, 
-                                              BufferSize-Method->DataBlockOffset, 
+            status = SessionExecuteGetNextSibling(InBuffer,  Method->SizeDataBlock,
+                                              Buffer+Method->DataBlockOffset,
+                                              BufferSize-Method->DataBlockOffset,
                                               fdoData,
-                                              &instance, 
+                                              &instance,
                                               byteswritten);
             break;
 
@@ -2519,11 +2519,11 @@ SessionExecuteMethod(UCHAR *Buffer,
     if (status == STATUS_BUFFER_TOO_SMALL) {
         return NodeTooSmall(Buffer, BufferSize, (ULONG)*byteswritten, byteswritten);
     }
-            
+
     Method->WnodeHeader.BufferSize = (ULONG)*byteswritten;
      return status;
 }
-NTSTATUS 
+NTSTATUS
 BaseExecuteMethod(UCHAR *Buffer,
                     ULONG BufferSize,
                     XENIFACE_FDO* fdoData,
@@ -2540,14 +2540,14 @@ BaseExecuteMethod(UCHAR *Buffer,
         return STATUS_INVALID_DEVICE_REQUEST;
     }
 
-    InBuffer = Buffer + Method->DataBlockOffset; 
+    InBuffer = Buffer + Method->DataBlockOffset;
 
     switch (Method->MethodId) {
-        case AddSession: 
-            status = BaseExecuteAddSession(InBuffer, Method->SizeDataBlock,  
-                                             Buffer+Method->DataBlockOffset, 
-                                             BufferSize-Method->DataBlockOffset, 
-                                             fdoData, 
+        case AddSession:
+            status = BaseExecuteAddSession(InBuffer, Method->SizeDataBlock,
+                                             Buffer+Method->DataBlockOffset,
+                                             BufferSize-Method->DataBlockOffset,
+                                             fdoData,
                                              byteswritten);
             Method->SizeDataBlock = (ULONG)*byteswritten;
             *byteswritten+=Method->DataBlockOffset;
@@ -2569,16 +2569,16 @@ WmiExecuteMethod(
     if (IsEqualGUID(stack->Parameters.WMI.DataPath,
                     &OBJECT_GUID(XenStoreBase))) {
         return BaseExecuteMethod(stack->Parameters.WMI.Buffer,
-                                    stack->Parameters.WMI.BufferSize,  
+                                    stack->Parameters.WMI.BufferSize,
                                     fdoData,  byteswritten);
     }
     else if (IsEqualGUID(stack->Parameters.WMI.DataPath,
                          &OBJECT_GUID(XenStoreSession))) {
         return SessionExecuteMethod(stack->Parameters.WMI.Buffer,
-                                    stack->Parameters.WMI.BufferSize,  
+                                    stack->Parameters.WMI.BufferSize,
                                     fdoData,  byteswritten);
     }
-    
+
     else
         return STATUS_NOT_SUPPORTED;
 }
@@ -2598,7 +2598,7 @@ GenerateSessionBlock(UCHAR *Buffer,
     ULONG* nameoffsets;
     UCHAR *data;
     UCHAR *names;
-    
+
 
     LockSessions(fdoData);
 
@@ -2615,14 +2615,14 @@ GenerateSessionBlock(UCHAR *Buffer,
 
         AccessWmiBuffer((PUCHAR)nodesizerequired, FALSE, &RequiredSize, 0,
                         WMI_UINT32, &id,
-                        WMI_STRING, 
-                            GetCountedUnicodeStringSize(&session->stringid), 
+                        WMI_STRING,
+                            GetCountedUnicodeStringSize(&session->stringid),
                             &sesbuf,
                         WMI_DONE);
         nodesizerequired += RequiredSize;
-        
+
         AccessWmiBuffer((PUCHAR)namesizerequired, FALSE, &RequiredSize, 0,
-                        WMI_STRING, 
+                        WMI_STRING,
                             GetCountedUnicodeStringSize(&session->instancename),
                             &inamebuf,
                         WMI_DONE);
@@ -2630,7 +2630,7 @@ GenerateSessionBlock(UCHAR *Buffer,
         entries++;
         session = (XenStoreSession *)session->listentry.Flink;
     }
-    
+
     //perform the access check
     if (!AccessWmiBuffer(Buffer, FALSE, &RequiredSize, BufferSize,
                             WMI_BUFFER, sizeof(WNODE_ALL_DATA), &node,
@@ -2665,21 +2665,21 @@ GenerateSessionBlock(UCHAR *Buffer,
 
             AccessWmiBuffer(datapos, FALSE, &RequiredSize, BufferSize+Buffer-datapos,
                             WMI_UINT32, &id,
-                            WMI_STRING, 
-                                GetCountedUnicodeStringSize(&session->stringid), 
+                            WMI_STRING,
+                                GetCountedUnicodeStringSize(&session->stringid),
                                 &sesbuf,
                             WMI_DONE);
 
-            node->OffsetInstanceDataAndLength[entrynum].OffsetInstanceData = 
+            node->OffsetInstanceDataAndLength[entrynum].OffsetInstanceData =
                 (ULONG)((UCHAR *)id - Buffer);
-            node->OffsetInstanceDataAndLength[entrynum].LengthInstanceData = 
+            node->OffsetInstanceDataAndLength[entrynum].LengthInstanceData =
                 RequiredSize;
             *id = session->id;
             WriteCountedUnicodeString(&session->stringid, sesbuf);
             datapos+=RequiredSize;
 
             AccessWmiBuffer(namepos, FALSE, &RequiredSize, BufferSize+Buffer-namepos,
-                            WMI_STRING, 
+                            WMI_STRING,
                                 GetCountedUnicodeStringSize(&session->instancename),
                                 &inamebuf,
                             WMI_DONE);
@@ -2773,8 +2773,8 @@ GenerateBaseInstance(
     else {
         *time = 0;
     }
-   
-    
+
+
     node->WnodeHeader.BufferSize = node->DataBlockOffset+RequiredSize;
     node->SizeDataBlock = RequiredSize;
 
@@ -2796,7 +2796,7 @@ GenerateSessionInstance(UCHAR *Buffer,
     ULONG* id;
     XenStoreSession *session;
     UCHAR *sesbuf;
-    
+
     if (!AccessWmiBuffer(Buffer, TRUE, &RequiredSize, BufferSize,
                             WMI_BUFFER, sizeof(WNODE_SINGLE_INSTANCE), &node,
                             WMI_DONE))
@@ -2805,7 +2805,7 @@ GenerateSessionInstance(UCHAR *Buffer,
     }
     if (!AccessWmiBuffer(Buffer, TRUE, &RequiredSize, BufferSize,
                             WMI_BUFFER, sizeof(WNODE_SINGLE_INSTANCE), &node,
-                            WMI_STRINGOFFSET, node->OffsetInstanceName, &InstStr, 
+                            WMI_STRINGOFFSET, node->OffsetInstanceName, &InstStr,
                             WMI_OFFSET, node->DataBlockOffset, 0, &dbo,
                             WMI_DONE))
     {
@@ -2818,10 +2818,10 @@ GenerateSessionInstance(UCHAR *Buffer,
         UnlockSessions(fdoData);
         return STATUS_WMI_INSTANCE_NOT_FOUND;
     }
-    
+
     if (!AccessWmiBuffer(dbo, FALSE, &RequiredSize, BufferSize-node->DataBlockOffset,
                             WMI_UINT32, &id,
-                            WMI_STRING, 
+                            WMI_STRING,
                                 GetCountedUnicodeStringSize(&session->stringid),
                                 &sesbuf,
                             WMI_DONE)) {
@@ -2837,7 +2837,7 @@ GenerateSessionInstance(UCHAR *Buffer,
     node->WnodeHeader.BufferSize = node->DataBlockOffset + RequiredSize;
     *byteswritten = node->DataBlockOffset + RequiredSize;
 
-    
+
 
 
     return STATUS_SUCCESS;
@@ -2851,17 +2851,17 @@ WmiQueryAllData(
     OUT ULONG_PTR *byteswritten
    )
 {
-  
-    if (IsEqualGUID(stack->Parameters.WMI.DataPath, 
+
+    if (IsEqualGUID(stack->Parameters.WMI.DataPath,
                     &OBJECT_GUID(XenStoreBase))) {
         return GenerateBaseBlock(   fdoData,
-                                    stack->Parameters.WMI.Buffer, 
+                                    stack->Parameters.WMI.Buffer,
                                     stack->Parameters.WMI.BufferSize,
                                     byteswritten);
     }
-    else if (IsEqualGUID(stack->Parameters.WMI.DataPath, 
+    else if (IsEqualGUID(stack->Parameters.WMI.DataPath,
                          &OBJECT_GUID(XenStoreSession))) {
-        return GenerateSessionBlock(stack->Parameters.WMI.Buffer, 
+        return GenerateSessionBlock(stack->Parameters.WMI.Buffer,
                                     stack->Parameters.WMI.BufferSize,
                                     fdoData,
                                     byteswritten);
@@ -2882,13 +2882,13 @@ WmiQuerySingleInstance(
     if (IsEqualGUID(stack->Parameters.WMI.DataPath,
                     &OBJECT_GUID(XenStoreBase))) {
         return GenerateBaseInstance(fdoData,
-                                    stack->Parameters.WMI.Buffer, 
+                                    stack->Parameters.WMI.Buffer,
                                     stack->Parameters.WMI.BufferSize,
                                     byteswritten);
     }
     else if (IsEqualGUID(stack->Parameters.WMI.DataPath,
                          &OBJECT_GUID(XenStoreSession))) {
-        return GenerateSessionInstance(stack->Parameters.WMI.Buffer, 
+        return GenerateSessionInstance(stack->Parameters.WMI.Buffer,
                                     stack->Parameters.WMI.BufferSize,
                                     fdoData,
                                     byteswritten);
@@ -2913,7 +2913,7 @@ WmiRegInfo(
     ULONG RequiredSize;
     int entries = 4;
     const static UNICODE_STRING mofname = RTL_CONSTANT_STRING(L"XENIFACEMOF");
-    
+
     size_t mofnamesz;
 
 
@@ -2927,12 +2927,12 @@ WmiRegInfo(
         mofnamesz = 0;
     }
     if(!AccessWmiBuffer(stack->Parameters.WMI.Buffer, FALSE,
-                        &RequiredSize, 
+                        &RequiredSize,
                         stack->Parameters.WMI.BufferSize,
                         WMI_BUFFER, sizeof(WMIREGINFO), (UCHAR **)&reginfo,
                         WMI_BUFFER, entries * sizeof(WMIREGGUID), (UCHAR **)&guiddata,
                         WMI_STRING, mofnamesz, &mofnameptr,
-                        WMI_STRING, DriverParameters.RegistryPath.Length+sizeof(USHORT), 
+                        WMI_STRING, DriverParameters.RegistryPath.Length+sizeof(USHORT),
                                     &regpath,
                         WMI_DONE)){
         reginfo->BufferSize = RequiredSize;
@@ -2940,7 +2940,7 @@ WmiRegInfo(
         return STATUS_BUFFER_TOO_SMALL;
 
     }
-    if (stack->Parameters.WMI.DataPath == WMIREGISTER) {    
+    if (stack->Parameters.WMI.DataPath == WMIREGISTER) {
         reginfo->MofResourceName = (ULONG)((ULONG_PTR)mofnameptr - (ULONG_PTR)reginfo);
         WriteCountedUnicodeString(&mofname, mofnameptr);
         reginfo->RegistryPath = (ULONG)((ULONG_PTR)regpath - (ULONG_PTR)reginfo);
@@ -2955,28 +2955,28 @@ WmiRegInfo(
     guid->InstanceCount = 1;
     guid->Guid = OBJECT_GUID(XenStoreBase);
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO;
-    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
-	ObReferenceObject(fdoData->PhysicalDeviceObject);
-    
+    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject;
+    ObReferenceObject(fdoData->PhysicalDeviceObject);
+
     guid = &reginfo->WmiRegGuid[1];
     guid->Guid = OBJECT_GUID(XenStoreSession);
     guid->Flags =0;
-    
+
     guid = &reginfo->WmiRegGuid[2];
     guid->InstanceCount = 1;
     guid->Guid = OBJECT_GUID(XenStoreWatchEvent);
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO |
                 WMIREG_FLAG_EVENT_ONLY_GUID ;
-    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
-	ObReferenceObject(fdoData->PhysicalDeviceObject);
+    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject;
+    ObReferenceObject(fdoData->PhysicalDeviceObject);
 
     guid = &reginfo->WmiRegGuid[3];
     guid->InstanceCount = 1;
     guid->Guid = OBJECT_GUID(XenStoreUnsuspendedEvent);
     guid->Flags = WMIREG_FLAG_INSTANCE_PDO |
                 WMIREG_FLAG_EVENT_ONLY_GUID ;
-	guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject; 
-	ObReferenceObject(fdoData->PhysicalDeviceObject);
+    guid->Pdo = (ULONG_PTR)fdoData->PhysicalDeviceObject;
+    ObReferenceObject(fdoData->PhysicalDeviceObject);
 
 
     *byteswritten = RequiredSize;
@@ -2990,7 +2990,7 @@ WmiRegInfoEx(
     OUT ULONG_PTR *byteswritten
    )
 {
-   
+
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     return WmiRegInfo(fdoData, stack, byteswritten);
 }
@@ -3006,17 +3006,17 @@ WmiProcessMinorFunction(
     PIO_STACK_LOCATION stack;
     UCHAR MinorFunction;
 
-	
+
 
     stack = IoGetCurrentIrpStackLocation(Irp);
 
-	if (stack->Parameters.WMI.ProviderId != (ULONG_PTR)fdoData->Dx->DeviceObject) {
-		XenIfaceDebugPrint(TRACE,"ProviderID %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
-		return STATUS_NOT_SUPPORTED;
-	}
-	else {
-		XenIfaceDebugPrint(TRACE,"ProviderID Match %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
-	}
+    if (stack->Parameters.WMI.ProviderId != (ULONG_PTR)fdoData->Dx->DeviceObject) {
+        XenIfaceDebugPrint(TRACE,"ProviderID %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
+        return STATUS_NOT_SUPPORTED;
+    }
+    else {
+        XenIfaceDebugPrint(TRACE,"ProviderID Match %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
+    }
     MinorFunction = stack->MinorFunction;
 
     switch (MinorFunction)
@@ -3060,9 +3060,9 @@ NTSTATUS XenIfaceSystemControl(
     status = WmiProcessMinorFunction(fdoData, Irp);
 
     if (status != STATUS_NOT_SUPPORTED) {
-		Irp->IoStatus.Status = status;
+        Irp->IoStatus.Status = status;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        
+
     }
     else {
         IoSkipCurrentIrpStackLocation(Irp);

@@ -325,9 +325,9 @@ XenIFaceIoctl(
 
 done:
 
-	Irp->IoStatus.Status = status;
+    Irp->IoStatus.Status = status;
 
-	IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
     return status;
 }

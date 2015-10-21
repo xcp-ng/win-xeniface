@@ -1,31 +1,31 @@
 /* Copyright (c) Citrix Systems Inc.
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, 
- * with or without modification, are permitted provided 
+ *
+ * Redistribution and use in source and binary forms,
+ * with or without modification, are permitted provided
  * that the following conditions are met:
- * 
- * *   Redistributions of source code must retain the above 
- *     copyright notice, this list of conditions and the 
+ *
+ * *   Redistributions of source code must retain the above
+ *     copyright notice, this list of conditions and the
  *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above 
- *     copyright notice, this list of conditions and the 
- *     following disclaimer in the documentation and/or other 
+ * *   Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the
+ *     following disclaimer in the documentation and/or other
  *     materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
 
@@ -70,7 +70,7 @@ FdoInitialiseXSRegistryEntries(
     ANSI_STRING AnsiValue;
     char *value;
     NTSTATUS status;
-	NT_ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
+    NT_ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
     status = XENBUS_STORE(Read,
                           &Fdo->StoreInterface,
                           NULL,
@@ -113,7 +113,7 @@ FdoInitialiseXSRegistryEntries(
     }
 
     ZwClose(RegHandle);
-    
+
     RtlFreeUnicodeString(&UnicodeValue);
     XENBUS_STORE(Free, &Fdo->StoreInterface, value);
 
@@ -140,40 +140,40 @@ failXS:
 #define REGISTRY_THREAD_END_EVENT 1
 #define REGISTRY_EVENTS 2
 
-static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self, 
-								  IN PVOID StartContext) {
-	KEVENT* threadevents[REGISTRY_EVENTS];
-	PXENIFACE_FDO Fdo = (PXENIFACE_FDO)StartContext;
-	NTSTATUS status;
+static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
+                                         IN  PVOID StartContext) {
+    KEVENT* threadevents[REGISTRY_EVENTS];
+    PXENIFACE_FDO Fdo = (PXENIFACE_FDO)StartContext;
+    NTSTATUS status;
 
-	PKEVENT             Event;
+    PKEVENT             Event;
 
     Event = ThreadGetEvent(Self);
 
-	threadevents[REGISTRY_WRITE_EVENT] = &Fdo->registryWriteEvent;
-	threadevents[REGISTRY_THREAD_END_EVENT] = Event;
+    threadevents[REGISTRY_WRITE_EVENT] = &Fdo->registryWriteEvent;
+    threadevents[REGISTRY_THREAD_END_EVENT] = Event;
 
-	for(;;) {
-		
-		status = KeWaitForMultipleObjects(REGISTRY_EVENTS, (PVOID *)threadevents, WaitAny, Executive, KernelMode, TRUE, NULL, NULL);
-		if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
-			if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
+    for(;;) {
+
+        status = KeWaitForMultipleObjects(REGISTRY_EVENTS, (PVOID *)threadevents, WaitAny, Executive, KernelMode, TRUE, NULL, NULL);
+        if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
+            if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
                 XenIfaceDebugPrint(ERROR,"WriteRegistry\n");
                 FdoInitialiseXSRegistryEntries(Fdo);
                 KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
-			}
-			if (status == STATUS_WAIT_0+REGISTRY_THREAD_END_EVENT) {
-				if (ThreadIsAlerted(Self))
-					return STATUS_SUCCESS;
-				KeClearEvent(threadevents[REGISTRY_THREAD_END_EVENT]);
-			}
-			
-		}
-		else if (!NT_SUCCESS(status)) {
-			XenIfaceDebugPrint(ERROR, "Registry handler thread failed %x\n", status);
-			return status;
-		}
-	}
+            }
+            if (status == STATUS_WAIT_0+REGISTRY_THREAD_END_EVENT) {
+                if (ThreadIsAlerted(Self))
+                    return STATUS_SUCCESS;
+                KeClearEvent(threadevents[REGISTRY_THREAD_END_EVENT]);
+            }
+
+        }
+        else if (!NT_SUCCESS(status)) {
+            XenIfaceDebugPrint(ERROR, "Registry handler thread failed %x\n", status);
+            return status;
+        }
+    }
 
 }
 
@@ -311,7 +311,7 @@ __FdoSetName(
     status = RtlUnicodeStringToAnsiString(&Ansi, &Unicode, FALSE);
     if (!NT_SUCCESS(status))
         goto fail1;
-    
+
     for (Index = 0; Dx->Name[Index] != '\0'; Index++) {
         if (!isalnum((UCHAR)Dx->Name[Index]))
             Dx->Name[Index] = '_';
@@ -437,7 +437,7 @@ __FdoForwardIrpSynchronously(
     IN  PVOID           Context
     )
 {
-	PKEVENT             Event = (PKEVENT)Context;
+    PKEVENT             Event = (PKEVENT)Context;
 
     UNREFERENCED_PARAMETER(DeviceObject);
     UNREFERENCED_PARAMETER(Irp);
@@ -595,7 +595,7 @@ __FdoFreeAnsi(
 
     for (Index = 0; Ansi[Index].Buffer != NULL; Index++)
         __FdoFree(Ansi[Index].Buffer);
-        
+
     __FdoFree(Ansi);
 }
 
@@ -752,7 +752,7 @@ FdoD3ToD0(
     if (!NT_SUCCESS(status))
         goto fail4;
 
-	Fdo->InterfacesAcquired = TRUE;
+    Fdo->InterfacesAcquired = TRUE;
     KeLowerIrql(Irql);
 
     return STATUS_SUCCESS;
@@ -760,7 +760,7 @@ FdoD3ToD0(
 fail4:
     Error("fail4\n");
 
-	XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+    XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
 
 fail3:
     Error("fail3\n");
@@ -788,7 +788,7 @@ FdoD0ToD3(
     KIRQL           Irql;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-	Fdo->InterfacesAcquired = FALSE;
+    Fdo->InterfacesAcquired = FALSE;
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
 
     XENBUS_SUSPEND(Deregister,
@@ -796,12 +796,12 @@ FdoD0ToD3(
                    Fdo->SuspendCallbackLate);
     Fdo->SuspendCallbackLate = NULL;
 
-	XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+    XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
 
     XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
 
     __FdoD0ToD3(Fdo);
-	
+
     KeLowerIrql(Irql);
 }
 
@@ -854,16 +854,16 @@ FdoStartDevice(
     if (!NT_SUCCESS(status))
         goto fail3;
 
-	status =  IoSetDeviceInterfaceState(&Fdo->InterfaceName, TRUE);
-	if (!NT_SUCCESS(status))
-		goto fail4;
+    status =  IoSetDeviceInterfaceState(&Fdo->InterfaceName, TRUE);
+    if (!NT_SUCCESS(status))
+        goto fail4;
 
 
-	if (__FdoGetDevicePnpState(Fdo) != Stopped) {
-		status = WmiInit(Fdo);
-		if (!NT_SUCCESS(status))
-			goto fail5;
-	}
+    if (__FdoGetDevicePnpState(Fdo) != Stopped) {
+        status = WmiInit(Fdo);
+        if (!NT_SUCCESS(status))
+            goto fail5;
+    }
 
     __FdoSetDevicePnpState(Fdo, Started);
 
@@ -874,13 +874,13 @@ FdoStartDevice(
     return status;
 
 fail5:
-	Error("fail5\n");
+    Error("fail5\n");
 #pragma warning(suppress : 6031)
-	IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
+    IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
 
 fail4:
-	Error("fail4\n");
-	FdoD0ToD3(Fdo);
+    Error("fail4\n");
+    FdoD0ToD3(Fdo);
 
 fail3:
     Error("fail3\n");
@@ -1008,7 +1008,7 @@ FdoSurpriseRemoval(
     __FdoSetDevicePnpState(Fdo, SurpriseRemovePending);
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
-#pragma warning(suppress : 6031) 
+#pragma warning(suppress : 6031)
     IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
     WmiFinalise(Fdo);
 
@@ -1031,7 +1031,7 @@ FdoRemoveDevice(
     if (__FdoGetDevicePowerState(Fdo) != PowerDeviceD0)
         goto done;
 
-	FdoD0ToD3(Fdo);
+    FdoD0ToD3(Fdo);
 
     __FdoSetSystemPowerState(Fdo, PowerSystemSleeping3);
     FdoS3ToS4(Fdo);
@@ -1043,7 +1043,7 @@ done:
     __FdoSetDevicePnpState(Fdo, Deleted);
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
-#pragma warning(suppress : 6031) 
+#pragma warning(suppress : 6031)
     IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
     WmiFinalise(Fdo);
 
@@ -1139,7 +1139,7 @@ FdoDeviceUsageNotification(
     if (!NT_SUCCESS(status))
         goto fail1;
 
-    NotDisableable = FALSE;    
+    NotDisableable = FALSE;
     for (Type = (DEVICE_USAGE_NOTIFICATION_TYPE)0; Type <= DeviceUsageTypeDumpFile; Type++) {
         if (Fdo->Usage[Type] != 0) {
             NotDisableable = TRUE;
@@ -1151,7 +1151,7 @@ FdoDeviceUsageNotification(
 
     if (Fdo->NotDisableable != NotDisableable) {
         Fdo->NotDisableable = NotDisableable;
-    
+
         IoInvalidateDeviceState(__FdoGetPhysicalDeviceObject(Fdo));
     }
 
@@ -1210,8 +1210,8 @@ FdoDispatchPnp(
     MinorFunction = StackLocation->MinorFunction;
 
     Trace("====> (%02x:%s)\n",
-          MinorFunction, 
-          PnpMinorFunctionName(MinorFunction)); 
+          MinorFunction,
+          PnpMinorFunctionName(MinorFunction));
 
     switch (StackLocation->MinorFunction) {
     case IRP_MN_START_DEVICE:
@@ -1265,9 +1265,9 @@ FdoDispatchPnp(
     }
 
     Trace("<==== (%02x:%s)(%08x)\n",
-          MinorFunction, 
+          MinorFunction,
           PnpMinorFunctionName(MinorFunction),
-          status); 
+          status);
 
     return status;
 }
@@ -1299,7 +1299,7 @@ __FdoSetDevicePowerUp(
 
     ASSERT3U(DeviceState, ==, PowerDeviceD0);
     status = FdoD3ToD0(Fdo);
-	SessionsResumeAll(Fdo);
+    SessionsResumeAll(Fdo);
     ASSERT(NT_SUCCESS(status));
 
 done:
@@ -1332,9 +1332,9 @@ __FdoSetDevicePowerDown(
     ASSERT3U(DeviceState, ==, PowerDeviceD3);
 
     if (__FdoGetDevicePowerState(Fdo) == PowerDeviceD0){
-		SessionsSuspendAll(Fdo);
+        SessionsSuspendAll(Fdo);
         FdoD0ToD3(Fdo);
-	}
+    }
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
@@ -1358,7 +1358,7 @@ __FdoSetDevicePower(
     PowerAction = StackLocation->Parameters.Power.ShutdownType;
 
     Trace("====> (%s:%s)\n",
-          PowerDeviceStateName(DeviceState), 
+          PowerDeviceStateName(DeviceState),
           PowerActionName(PowerAction));
 
     ASSERT3U(PowerAction, <, PowerActionShutdown);
@@ -1376,7 +1376,7 @@ __FdoSetDevicePower(
 
 done:
     Trace("<==== (%s:%s)(%08x)\n",
-          PowerDeviceStateName(DeviceState), 
+          PowerDeviceStateName(DeviceState),
           PowerActionName(PowerAction),
           status);
     return status;
@@ -1532,7 +1532,7 @@ __FdoSetSystemPower(
     PowerAction = StackLocation->Parameters.Power.ShutdownType;
 
     Trace("====> (%s:%s)\n",
-          PowerSystemStateName(SystemState), 
+          PowerSystemStateName(SystemState),
           PowerActionName(PowerAction));
 
     ASSERT3U(PowerAction, <, PowerActionShutdown);
@@ -1550,7 +1550,7 @@ __FdoSetSystemPower(
 
 done:
     Trace("<==== (%s:%s)(%08x)\n",
-          PowerSystemStateName(SystemState), 
+          PowerSystemStateName(SystemState),
           PowerActionName(PowerAction),
           status);
     return status;
@@ -1616,7 +1616,7 @@ __FdoQueryDevicePower(
     PowerAction = StackLocation->Parameters.Power.ShutdownType;
 
     Trace("====> (%s:%s)\n",
-          PowerDeviceStateName(DeviceState), 
+          PowerDeviceStateName(DeviceState),
           PowerActionName(PowerAction));
 
     ASSERT3U(PowerAction, <, PowerActionShutdown);
@@ -1634,7 +1634,7 @@ __FdoQueryDevicePower(
 
 done:
     Trace("<==== (%s:%s)(%08x)\n",
-          PowerDeviceStateName(DeviceState), 
+          PowerDeviceStateName(DeviceState),
           PowerActionName(PowerAction),
           status);
     return status;
@@ -1768,7 +1768,7 @@ __FdoQuerySystemPower(
     PowerAction = StackLocation->Parameters.Power.ShutdownType;
 
     Trace("====> (%s:%s)\n",
-          PowerSystemStateName(SystemState), 
+          PowerSystemStateName(SystemState),
           PowerActionName(PowerAction));
 
     ASSERT3U(PowerAction, <, PowerActionShutdown);
@@ -1786,7 +1786,7 @@ __FdoQuerySystemPower(
 
 done:
     Trace("<==== (%s:%s)(%08x)\n",
-          PowerSystemStateName(SystemState), 
+          PowerSystemStateName(SystemState),
           PowerActionName(PowerAction),
           status);
 
@@ -2080,26 +2080,26 @@ FdoDispatch(
         status = FdoDispatchPower(Fdo, Irp);
         break;
 
-	case IRP_MJ_DEVICE_CONTROL:
-		status = XenIFaceIoctl(Fdo, Irp);
-		break;
+    case IRP_MJ_DEVICE_CONTROL:
+        status = XenIFaceIoctl(Fdo, Irp);
+        break;
 
-	case IRP_MJ_SYSTEM_CONTROL:
-		status = XenIfaceSystemControl(Fdo, Irp);
-		break;
+    case IRP_MJ_SYSTEM_CONTROL:
+        status = XenIfaceSystemControl(Fdo, Irp);
+        break;
 
-	case IRP_MJ_READ:
-	case IRP_MJ_WRITE:
-		status = FdoReadWrite(Fdo, Irp);
-		break;
+    case IRP_MJ_READ:
+    case IRP_MJ_WRITE:
+        status = FdoReadWrite(Fdo, Irp);
+        break;
 
-	case IRP_MJ_CREATE:
-		status = FdoCreateFile(Fdo, Irp);
-		break;
+    case IRP_MJ_CREATE:
+        status = FdoCreateFile(Fdo, Irp);
+        break;
 
-	case IRP_MJ_CLOSE:
-		status = FdoClose(Fdo, Irp);
-		break;
+    case IRP_MJ_CLOSE:
+        status = FdoClose(Fdo, Irp);
+        break;
 
     default:
         status = FdoDispatchDefault(Fdo, Irp);
@@ -2149,7 +2149,7 @@ FdoQueryInterface(
     StackLocation->Parameters.QueryInterface.Size = (USHORT)Size;
     StackLocation->Parameters.QueryInterface.Version = (USHORT)Version;
     StackLocation->Parameters.QueryInterface.Interface = Interface;
-    
+
     Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
 
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
@@ -2227,7 +2227,7 @@ FdoCreate(
     Dx->SystemPowerState = PowerSystemShutdown;
     Dx->DevicePowerState = PowerDeviceD3;
 
-	FunctionDeviceObject->Flags |= DO_POWER_PAGABLE;
+    FunctionDeviceObject->Flags |= DO_POWER_PAGABLE;
     FunctionDeviceObject->Flags |= DO_BUFFERED_IO;
 
     Fdo = (PXENIFACE_FDO)__FdoAllocate(sizeof (XENIFACE_FDO));
@@ -2258,12 +2258,12 @@ FdoCreate(
         goto fail5;
 
 #pragma prefast(suppress:6014) // Possibly leaking Fdo->InterfaceName
-	status = IoRegisterDeviceInterface(PhysicalDeviceObject,
-										(LPGUID)&GUID_INTERFACE_XENIFACE,
-										NULL,
-										&Fdo->InterfaceName);
-	if (!NT_SUCCESS(status))
-		goto fail6;
+    status = IoRegisterDeviceInterface(PhysicalDeviceObject,
+                                       (LPGUID)&GUID_INTERFACE_XENIFACE,
+                                       NULL,
+                                       &Fdo->InterfaceName);
+    if (!NT_SUCCESS(status))
+        goto fail6;
 
     status = __FdoSetName(Fdo, Name);
     if (!NT_SUCCESS(status))
@@ -2300,13 +2300,13 @@ FdoCreate(
     InitializeListHead(&Dx->ListEntry);
     Fdo->References = 1;
 
-	FdoInitialiseXSRegistryEntries(Fdo);
+    FdoInitialiseXSRegistryEntries(Fdo);
 
-	KeInitializeEvent(&Fdo->registryWriteEvent, NotificationEvent, FALSE);
+    KeInitializeEvent(&Fdo->registryWriteEvent, NotificationEvent, FALSE);
 
-	status = ThreadCreate(FdoRegistryThreadHandler, Fdo, &Fdo->registryThread);
-	if (!NT_SUCCESS(status))
-		goto fail11;
+    status = ThreadCreate(FdoRegistryThreadHandler, Fdo, &Fdo->registryThread);
+    if (!NT_SUCCESS(status))
+        goto fail11;
 
     Info("%p (%s)\n",
          FunctionDeviceObject,
@@ -2317,15 +2317,15 @@ FdoCreate(
 
     return STATUS_SUCCESS;
 
-	
+
 fail11:
-	Error("fail11\n");
+    Error("fail11\n");
 
     RtlZeroMemory(&Fdo->StoreInterface,
                   sizeof (XENBUS_STORE_INTERFACE));
 
 fail10:
-	Error("fail10\n");
+    Error("fail10\n");
 
     RtlZeroMemory(&Fdo->SharedInfoInterface,
                   sizeof (XENBUS_SHARED_INFO_INTERFACE));
@@ -2341,8 +2341,8 @@ fail8:
 
 fail7:
     Error("fail7\n");
-	RtlFreeUnicodeString(&Fdo->InterfaceName);
-	RtlZeroMemory(&Fdo->InterfaceName,sizeof(UNICODE_STRING));
+    RtlFreeUnicodeString(&Fdo->InterfaceName);
+    RtlZeroMemory(&Fdo->InterfaceName,sizeof(UNICODE_STRING));
 
 fail6:
     Error("fail6\n");
@@ -2353,14 +2353,14 @@ fail5:
     ThreadAlert(Fdo->DevicePowerThread);
     ThreadJoin(Fdo->DevicePowerThread);
     Fdo->DevicePowerThread = NULL;
-    
+
 fail4:
     Error("fail4\n");
 
     ThreadAlert(Fdo->SystemPowerThread);
     ThreadJoin(Fdo->SystemPowerThread);
     Fdo->SystemPowerThread = NULL;
-    
+
 fail3:
     Error("fail3\n");
 
@@ -2410,7 +2410,7 @@ FdoDestroy(
 
     RtlZeroMemory(&Fdo->Mutex, sizeof (XENIFACE_MUTEX));
 
-	Fdo->InterfacesAcquired = FALSE;
+    Fdo->InterfacesAcquired = FALSE;
 
     RtlZeroMemory(&Fdo->StoreInterface,
                   sizeof (XENBUS_STORE_INTERFACE));
@@ -2421,7 +2421,7 @@ FdoDestroy(
     RtlZeroMemory(&Fdo->SuspendInterface,
                   sizeof (XENBUS_SUSPEND_INTERFACE));
 
-	ThreadAlert(Fdo->registryThread);
+    ThreadAlert(Fdo->registryThread);
     ThreadJoin(Fdo->registryThread);
     Fdo->registryThread = NULL;
 
@@ -2440,12 +2440,12 @@ FdoDestroy(
     Fdo->PhysicalDeviceObject = NULL;
     Fdo->Dx = NULL;
 
-	RtlZeroMemory(&Fdo->SessionLock, sizeof(FAST_MUTEX));
-	RtlZeroMemory(&Fdo->SessionHead, sizeof(LIST_ENTRY));
-	RtlZeroMemory(&Fdo->registryWriteEvent, sizeof(KEVENT));
+    RtlZeroMemory(&Fdo->SessionLock, sizeof(FAST_MUTEX));
+    RtlZeroMemory(&Fdo->SessionHead, sizeof(LIST_ENTRY));
+    RtlZeroMemory(&Fdo->registryWriteEvent, sizeof(KEVENT));
 
-	RtlFreeUnicodeString(&Fdo->InterfaceName);
-	RtlZeroMemory(&Fdo->InterfaceName,sizeof(UNICODE_STRING));
+    RtlFreeUnicodeString(&Fdo->InterfaceName);
+    RtlZeroMemory(&Fdo->InterfaceName,sizeof(UNICODE_STRING));
 
     ASSERT(IsZeroMemory(Fdo, sizeof (XENIFACE_FDO)));
     __FdoFree(Fdo);

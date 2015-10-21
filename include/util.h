@@ -232,10 +232,10 @@ __AllocatePage(
 
     MdlMappedSystemVa = MmMapLockedPagesSpecifyCache(Mdl,
                                                      KernelMode,
-						                             MmCached,   
-						                             NULL,
-						                             FALSE,
-						                             NormalPagePriority);
+                                                     MmCached,
+                                                     NULL,
+                                                     FALSE,
+                                                     NormalPagePriority);
 
     status = STATUS_UNSUCCESSFUL;
     if (MdlMappedSystemVa == NULL)

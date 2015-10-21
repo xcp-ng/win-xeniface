@@ -60,15 +60,15 @@ NTSTATUS XenIfaceSystemControl(
     );
 
 void FireSuspendEvent(
-	IN OUT PXENIFACE_FDO fdoData
-	);
+    IN OUT PXENIFACE_FDO fdoData
+    );
 
 void SessionsResumeAll(
-	XENIFACE_FDO *fdoData
+    XENIFACE_FDO *fdoData
 );
 
 void SessionsSuspendAll(
-	XENIFACE_FDO *fdoData
+    XENIFACE_FDO *fdoData
 );
 
 #endif

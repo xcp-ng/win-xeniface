@@ -78,13 +78,13 @@ typedef struct _XENIFACE_FDO {
 
     XENBUS_SUSPEND_INTERFACE        SuspendInterface;
 
-	XENBUS_SHARED_INFO_INTERFACE    SharedInfoInterface;
+    XENBUS_SHARED_INFO_INTERFACE    SharedInfoInterface;
 
     PXENBUS_SUSPEND_CALLBACK        SuspendCallbackLate;
 
-	BOOLEAN						    InterfacesAcquired;
+    BOOLEAN						    InterfacesAcquired;
 
-	#define MAX_SESSIONS    (65536)
+    #define MAX_SESSIONS    (65536)
 
     int							    WmiReady;
 
@@ -92,13 +92,13 @@ typedef struct _XENIFACE_FDO {
     FAST_MUTEX					    SessionLock;
     LIST_ENTRY					    SessionHead;
 
-	PXENIFACE_THREAD			    registryThread;
-	KEVENT						    registryWriteEvent;
+    PXENIFACE_THREAD			    registryThread;
+    KEVENT						    registryWriteEvent;
 
 
-	UNICODE_STRING				    SuggestedInstanceName;
+    UNICODE_STRING				    SuggestedInstanceName;
 
-	UNICODE_STRING				    InterfaceName;
+    UNICODE_STRING				    InterfaceName;
 
 } XENIFACE_FDO, *PXENIFACE_FDO;
 
