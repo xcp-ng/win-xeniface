@@ -33,7 +33,7 @@
 #ifndef _XEVTCHN_WMI_H
 #define _XEVTCHN_WMI_H
 
-#include <ntddk.h>
+#include <ntifs.h>
 #include "driver.h"
 #include "wmi_generated.h"
 

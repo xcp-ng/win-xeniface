@@ -44,7 +44,7 @@
 #pragma warning(disable:4100 4057)
 
 #include <wmilib.h>
-#include <ntddk.h>
+#include <ntifs.h>
 extern PDRIVER_OBJECT   DriverObject;
 
 

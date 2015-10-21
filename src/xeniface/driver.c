@@ -29,8 +29,7 @@
  * SUCH DAMAGE.
  */
 
-#include <ntddk.h>
-//#include <util.h>
+#include <ntifs.h>
 #include <version.h>
 
 #include "fdo.h"

@@ -30,7 +30,7 @@
  */
 
 
-#include <ntddk.h>
+#include <ntifs.h>
 #include <wdmguid.h>
 #include <ntstrsafe.h>
 #include <stdlib.h>

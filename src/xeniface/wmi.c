@@ -30,12 +30,11 @@
  */
 
 
-#include <ntddk.h>
+#include <ntifs.h>
 #include <initguid.h>
 #include <wmistr.h>
 #include <wmilib.h>
 #include <stdio.h>
-#include <ntddk.h>
 #include <guiddef.h>
 #define NTSTRSAFE_LIB
 #include<ntstrsafe.h>
