@@ -50,6 +50,11 @@ __user_code;
 
 #define MAXIMUM_BUFFER_SIZE 1024
 
+#define SERVICES_KEY "SYSTEM\\CurrentControlSet\\Services"
+
+#define SERVICE_KEY(_Driver)    \
+        SERVICES_KEY ## "\\" ## #_Driver
+
 static VOID
 #pragma prefast(suppress:6262) // Function uses '1036' bytes of stack: exceeds /analyze:stacksize'1024'
 __Log(
@@ -178,6 +183,130 @@ FunctionName(
 #undef  _NAME
 }
 
+static BOOLEAN
+AllowUpdate(
+    IN  PTCHAR      DriverName,
+    OUT PBOOLEAN    Allow
+    )
+{
+    TCHAR           ServiceKeyName[MAX_PATH];
+    HKEY            ServiceKey;
+    HRESULT         Error;
+    DWORD           ValueLength;
+    DWORD           Value;
+    DWORD           Type;
+
+    Log("====> (%s)", DriverName);
+
+    (VOID) StringCbPrintf(ServiceKeyName,
+                          MAX_PATH,
+                          SERVICES_KEY "\\%s",
+                          DriverName);
+
+    Error = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+                         ServiceKeyName,
+                         0,
+                         KEY_READ,
+                         &ServiceKey);
+    if (Error != ERROR_SUCCESS) {
+        if (Error == ERROR_FILE_NOT_FOUND) {
+            Value = 1;
+            goto done;
+        }
+
+        SetLastError(Error);
+        goto fail1;
+    }
+
+    ValueLength = sizeof (Value);
+
+    Error = RegQueryValueEx(ServiceKey,
+                            "AllowUpdate",
+                            NULL,
+                            &Type,
+                            (LPBYTE)&Value,
+                            &ValueLength);
+    if (Error != ERROR_SUCCESS) {
+        if (Error == ERROR_FILE_NOT_FOUND) {
+            Type = REG_DWORD;
+            Value = 1;
+        } else {
+            SetLastError(Error);
+            goto fail2;
+        }
+    }
+
+    if (Type != REG_DWORD) {
+        SetLastError(ERROR_BAD_FORMAT);
+        goto fail3;
+    }
+
+done:
+    if (Value == 0) {
+        Log("DISALLOWED");
+        *Allow = FALSE;
+    }
+
+    RegCloseKey(ServiceKey);
+
+    Log("<====");
+
+    return TRUE;
+
+fail3:
+    Log("fail3");
+
+fail2:
+    Log("fail2");
+
+    RegCloseKey(ServiceKey);
+
+fail1:
+    Error = GetLastError();
+
+    {
+        PTCHAR  Message;
+        Message = GetErrorMessage(Error);
+        Log("fail1 (%s)", Message);
+        LocalFree(Message);
+    }
+
+    return FALSE;
+}
+
+static BOOLEAN
+AllowInstall(
+    OUT PBOOLEAN    Allow
+    )
+{
+    BOOLEAN         Success;
+    HRESULT         Error;
+
+    Log("====>");
+
+    *Allow = TRUE;
+
+    Success = AllowUpdate("XENIFACE", Allow);
+    if (!Success)
+        goto fail1;
+
+    Log("<====");
+
+    return TRUE;
+
+fail1:
+    Error = GetLastError();
+
+    {
+        PTCHAR  Message;
+        Message = GetErrorMessage(Error);
+        Log("fail1 (%s)", Message);
+        LocalFree(Message);
+    }
+
+    return FALSE;
+}
+
 static HRESULT
 DifInstallPreProcess(
     IN  HDEVINFO                    DeviceInfoSet,
@@ -185,13 +314,44 @@ DifInstallPreProcess(
     IN  PCOINSTALLER_CONTEXT_DATA   Context
     )
 {
+    HRESULT                         Error;
+    BOOLEAN                         Success;
+    BOOLEAN                         Allow;
+
     UNREFERENCED_PARAMETER(DeviceInfoSet);
     UNREFERENCED_PARAMETER(DeviceInfoData);
     UNREFERENCED_PARAMETER(Context);
 
-    Log("<===>");
+    Log("====>");
+
+    Success = AllowInstall(&Allow);
+    if (!Success)
+        goto fail1;
+
+    if (!Allow) {
+        SetLastError(ERROR_ACCESS_DENIED);
+        goto fail2;
+    }
+
+    Log("<====");
 
     return NO_ERROR;
+
+fail2:
+    Log("fail2");
+
+fail1:
+    Error = GetLastError();
+
+    {
+        PTCHAR  Message;
+
+        Message = GetErrorMessage(Error);
+        Log("fail1 (%s)", Message);
+        LocalFree(Message);
+    }
+
+    return Error;
 }
 
 static HRESULT
