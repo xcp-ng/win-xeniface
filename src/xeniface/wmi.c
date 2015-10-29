@@ -753,18 +753,25 @@ SessionFindWatchLocked(XenStoreSession *session,
 
 }
 
-void FireSuspendEvent(PXENIFACE_FDO fdoData) {
-    XenIfaceDebugPrint(ERROR,"Ready to unsuspend Event\n");
-    KeSetEvent(&fdoData->registryWriteEvent, IO_NO_INCREMENT, FALSE);
-    if (fdoData->WmiReady) {
-        XenIfaceDebugPrint(TRACE,"Fire Suspend Event\n");
-        WmiFireEvent(fdoData->Dx->DeviceObject,
-                     (LPGUID)&OBJECT_GUID(XenStoreUnsuspendedEvent),
-                     0,
-                     0,
-                     NULL);
-    }
+VOID
+WmiFireSuspendEvent(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    XenIfaceDebugPrint(ERROR, "Ready to unsuspend Event\n");
+    KeSetEvent(&Fdo->registryWriteEvent, IO_NO_INCREMENT, FALSE);
+
+    if (!Fdo->WmiReady)
+        return;
+
+    XenIfaceDebugPrint(TRACE, "Fire Suspend Event\n");
+    WmiFireEvent(Fdo->Dx->DeviceObject,
+                 (LPGUID)&OBJECT_GUID(XenStoreUnsuspendedEvent),
+                 0,
+                 0,
+                 NULL);
 }
+
 void FireWatch(XenStoreWatch* watch) {
     UCHAR * eventdata;
     ULONG RequiredSize;

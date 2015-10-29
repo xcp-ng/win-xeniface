@@ -43,6 +43,11 @@ WmiProcessMinorFunction(
     IN  PIRP            Irp
     );
 
+extern VOID
+WmiFireSuspendEvent(
+    IN  PXENIFACE_FDO   Fdo
+    );
+
 NTSTATUS
 WmiInit(
     PXENIFACE_FDO FdoData
@@ -53,10 +58,6 @@ NTSTATUS
 WmiFinalise(       
     PXENIFACE_FDO FdoData
 ); 
-
-void FireSuspendEvent(
-    IN OUT PXENIFACE_FDO fdoData
-    );
 
 void SessionsResumeAll(
     XENIFACE_FDO *fdoData

@@ -783,7 +783,7 @@ FdoD3ToD0(
     status = XENBUS_SUSPEND(Register,
                             &Fdo->SuspendInterface,
                             SUSPEND_CALLBACK_LATE,
-                            FireSuspendEvent,
+                            WmiFireSuspendEvent,
                             Fdo,
                             &Fdo->SuspendCallbackLate);
     if (!NT_SUCCESS(status))
