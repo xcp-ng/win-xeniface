@@ -2995,84 +2995,56 @@ WmiRegInfoEx(
     return WmiRegInfo(fdoData, stack, byteswritten);
 }
 
-
-
 NTSTATUS
 WmiProcessMinorFunction(
-    IN PXENIFACE_FDO fdoData,
-    IN PIRP Irp
-)
+    IN  PXENIFACE_FDO   Fdo,
+    IN  PIRP            Irp
+    )
 {
-    PIO_STACK_LOCATION stack;
-    UCHAR MinorFunction;
+    PIO_STACK_LOCATION  Stack;
 
+    Stack = IoGetCurrentIrpStackLocation(Irp);
 
-
-    stack = IoGetCurrentIrpStackLocation(Irp);
-
-    if (stack->Parameters.WMI.ProviderId != (ULONG_PTR)fdoData->Dx->DeviceObject) {
-        XenIfaceDebugPrint(TRACE,"ProviderID %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
+    if (Stack->Parameters.WMI.ProviderId != (ULONG_PTR)Fdo->Dx->DeviceObject) {
+        XenIfaceDebugPrint(TRACE,
+                           "ProviderID %p %p",
+                           Stack->Parameters.WMI.ProviderId,
+                           Fdo->PhysicalDeviceObject);
         return STATUS_NOT_SUPPORTED;
+    } else {
+        XenIfaceDebugPrint(TRACE,
+                           "ProviderID Match %p %p",
+                           Stack->Parameters.WMI.ProviderId,
+                           Fdo->PhysicalDeviceObject);
     }
-    else {
-        XenIfaceDebugPrint(TRACE,"ProviderID Match %p %p", stack->Parameters.WMI.ProviderId, fdoData->PhysicalDeviceObject);
-    }
-    MinorFunction = stack->MinorFunction;
 
-    switch (MinorFunction)
-    {
+    switch (Stack->MinorFunction) {
     case IRP_MN_CHANGE_SINGLE_INSTANCE:
-        return WmiChangeSingleInstance(fdoData, stack);
+        return WmiChangeSingleInstance(Fdo, Stack);
     case IRP_MN_CHANGE_SINGLE_ITEM:
-        return WmiChangeSingleItem(fdoData, stack);
+        return WmiChangeSingleItem(Fdo, Stack);
     case IRP_MN_DISABLE_COLLECTION:
-        return WmiDisableCollection(fdoData, stack);
+        return WmiDisableCollection(Fdo, Stack);
     case IRP_MN_DISABLE_EVENTS:
-        return WmiDisableEvents(fdoData, stack);
+        return WmiDisableEvents(Fdo, Stack);
     case IRP_MN_ENABLE_COLLECTION:
-        return WmiEnableCollection(fdoData, stack);
+        return WmiEnableCollection(Fdo, Stack);
     case IRP_MN_ENABLE_EVENTS:
-        return WmiEnableEvents(fdoData, stack);
+        return WmiEnableEvents(Fdo, Stack);
     case IRP_MN_EXECUTE_METHOD:
-        return WmiExecuteMethod(fdoData, stack,  &Irp->IoStatus.Information);
+        return WmiExecuteMethod(Fdo, Stack,  &Irp->IoStatus.Information);
     case IRP_MN_QUERY_ALL_DATA:
-        return WmiQueryAllData(fdoData, stack, &Irp->IoStatus.Information);
+        return WmiQueryAllData(Fdo, Stack, &Irp->IoStatus.Information);
     case IRP_MN_QUERY_SINGLE_INSTANCE:
-        return WmiQuerySingleInstance(fdoData, stack, &Irp->IoStatus.Information);
+        return WmiQuerySingleInstance(Fdo, Stack, &Irp->IoStatus.Information);
     case IRP_MN_REGINFO:
-        return WmiRegInfo(fdoData, stack, &Irp->IoStatus.Information);
+        return WmiRegInfo(Fdo, Stack, &Irp->IoStatus.Information);
     case IRP_MN_REGINFO_EX:
-        return WmiRegInfoEx(fdoData, stack, &Irp->IoStatus.Information);
+        return WmiRegInfoEx(Fdo, Stack, &Irp->IoStatus.Information);
     default:
         return STATUS_NOT_SUPPORTED;
     }
 }
-
-NTSTATUS XenIfaceSystemControl(
-    __in PXENIFACE_FDO		fdoData,
-    __inout PIRP Irp
-    )
-{
-    NTSTATUS            status;
-
-
-
-    status = WmiProcessMinorFunction(fdoData, Irp);
-
-    if (status != STATUS_NOT_SUPPORTED) {
-        Irp->IoStatus.Status = status;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-    }
-    else {
-        IoSkipCurrentIrpStackLocation(Irp);
-        status = IoCallDriver(fdoData->LowerDeviceObject, Irp);
-    }
-
-    return(status);
-
-}
-
 
 PCHAR
 WMIMinorFunctionString (

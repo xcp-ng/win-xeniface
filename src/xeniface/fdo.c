@@ -1235,7 +1235,7 @@ done:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchPnp(
-    IN  PXENIFACE_FDO     Fdo,
+    IN  PXENIFACE_FDO   Fdo,
     IN  PIRP            Irp
     )
 {
@@ -1946,7 +1946,7 @@ FdoSystemPower(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchPower(
-    IN  PXENIFACE_FDO     Fdo,
+    IN  PXENIFACE_FDO   Fdo,
     IN  PIRP            Irp
     )
 {
@@ -2014,7 +2014,7 @@ done:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchDefault(
-    IN  PXENIFACE_FDO     Fdo,
+    IN  PXENIFACE_FDO   Fdo,
     IN  PIRP            Irp
     )
 {
@@ -2026,80 +2026,44 @@ FdoDispatchDefault(
     return status;
 }
 
-NTSTATUS
-FdoCreateFile (
-    __in PXENIFACE_FDO  Fdo,
-    __inout PIRP        Irp
+static DECLSPEC_NOINLINE NTSTATUS
+FdoDispatchComplete(
+    IN  PXENIFACE_FDO   Fdo,
+    IN  PIRP            Irp
     )
 {
-    PIO_STACK_LOCATION  Stack = IoGetCurrentIrpStackLocation(Irp);
-    NTSTATUS            status;
+    UNREFERENCED_PARAMETER(Fdo);
 
-    XenIfaceDebugPrint(TRACE, "FO %p, Process %p\n", Stack->FileObject, PsGetCurrentProcess());
-
-    if (Deleted == Fdo->Dx->DevicePnpState) {
-        Irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return STATUS_NO_SUCH_DEVICE;
-    }
-
-    status = STATUS_SUCCESS;
     Irp->IoStatus.Information = 0;
-    Irp->IoStatus.Status = status;
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-    return status;
-}
-
-
-NTSTATUS
-FdoClose (
-    __in PXENIFACE_FDO  Fdo,
-    __inout PIRP        Irp
-    )
-
-{
-    PIO_STACK_LOCATION  Stack = IoGetCurrentIrpStackLocation(Irp);
-    NTSTATUS            status;
-
-    XenIfaceDebugPrint(TRACE, "FO %p, Process %p\n", Stack->FileObject, PsGetCurrentProcess());
-
-    XenIfaceCleanup(Fdo, Stack->FileObject);
-
-    status = STATUS_SUCCESS;
-    Irp->IoStatus.Information = 0;
-    Irp->IoStatus.Status = status;
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-    return status;
-}
-
-
-NTSTATUS
-FdoReadWrite (
-    __in PXENIFACE_FDO fdoData,
-    __inout PIRP Irp
-    )
-
-{
-
-    NTSTATUS     status;
-
-    XenIfaceDebugPrint(TRACE, "ReadWrite called\n");
-
-    status = STATUS_SUCCESS;
-    Irp->IoStatus.Information = 0;
-    Irp->IoStatus.Status = status;
+    Irp->IoStatus.Status = STATUS_SUCCESS;
     IoCompleteRequest (Irp, IO_NO_INCREMENT);
 
-    return status;
+    return STATUS_SUCCESS;
 }
 
+static DECLSPEC_NOINLINE NTSTATUS
+FdoDispatchSystemControl(
+    IN  PXENIFACE_FDO   Fdo,
+    IN  PIRP            Irp
+    )
+{
+    NTSTATUS            status;
 
+    status = WmiProcessMinorFunction(Fdo, Irp);
+    if (status == STATUS_NOT_SUPPORTED) {
+        IoSkipCurrentIrpStackLocation(Irp);
+        status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
+    } else {
+        Irp->IoStatus.Status = status;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    }
+
+    return status;
+}
 
 NTSTATUS
 FdoDispatch(
-    IN  PXENIFACE_FDO     Fdo,
+    IN  PXENIFACE_FDO   Fdo,
     IN  PIRP            Irp
     )
 {
@@ -2122,20 +2086,14 @@ FdoDispatch(
         break;
 
     case IRP_MJ_SYSTEM_CONTROL:
-        status = XenIfaceSystemControl(Fdo, Irp);
-        break;
-
-    case IRP_MJ_READ:
-    case IRP_MJ_WRITE:
-        status = FdoReadWrite(Fdo, Irp);
+        status = FdoDispatchSystemControl(Fdo, Irp);
         break;
 
     case IRP_MJ_CREATE:
-        status = FdoCreateFile(Fdo, Irp);
-        break;
-
     case IRP_MJ_CLOSE:
-        status = FdoClose(Fdo, Irp);
+    case IRP_MJ_READ:
+    case IRP_MJ_WRITE:
+        status = FdoDispatchComplete(Fdo, Irp);
         break;
 
     default:

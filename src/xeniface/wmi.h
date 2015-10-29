@@ -37,11 +37,11 @@
 #include "driver.h"
 #include "wmi_generated.h"
 
-NTSTATUS
+extern NTSTATUS
 WmiProcessMinorFunction(
-    IN PXENIFACE_FDO Fdo,
-    IN PIRP Irp
-);
+    IN  PXENIFACE_FDO   Fdo,
+    IN  PIRP            Irp
+    );
 
 NTSTATUS
 WmiInit(
@@ -53,11 +53,6 @@ NTSTATUS
 WmiFinalise(       
     PXENIFACE_FDO FdoData
 ); 
-
-NTSTATUS XenIfaceSystemControl(
-    __in PXENIFACE_FDO		fdoData,
-    __inout PIRP Irp
-    );
 
 void FireSuspendEvent(
     IN OUT PXENIFACE_FDO fdoData
