@@ -897,7 +897,7 @@ FdoStartDevice(
 
 
     if (__FdoGetDevicePnpState(Fdo) != Stopped) {
-        status = WmiInit(Fdo);
+        status = WmiRegister(Fdo);
         if (!NT_SUCCESS(status))
             goto fail5;
     }
@@ -1047,7 +1047,7 @@ FdoSurpriseRemoval(
     Irp->IoStatus.Status = STATUS_SUCCESS;
 #pragma warning(suppress : 6031)
     IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
-    WmiFinalise(Fdo);
+    WmiDeregister(Fdo);
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
@@ -1082,7 +1082,7 @@ done:
     Irp->IoStatus.Status = STATUS_SUCCESS;
 #pragma warning(suppress : 6031)
     IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
-    WmiFinalise(Fdo);
+    WmiDeregister(Fdo);
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);
@@ -1336,7 +1336,7 @@ __FdoSetDevicePowerUp(
 
     ASSERT3U(DeviceState, ==, PowerDeviceD0);
     status = FdoD3ToD0(Fdo);
-    SessionsResumeAll(Fdo);
+    WmiSessionsResumeAll(Fdo);
     ASSERT(NT_SUCCESS(status));
 
 done:
@@ -1369,7 +1369,7 @@ __FdoSetDevicePowerDown(
     ASSERT3U(DeviceState, ==, PowerDeviceD3);
 
     if (__FdoGetDevicePowerState(Fdo) == PowerDeviceD0){
-        SessionsSuspendAll(Fdo);
+        WmiSessionsSuspendAll(Fdo);
         FdoD0ToD3(Fdo);
     }
 
@@ -2323,6 +2323,10 @@ FdoCreate(
     if (!NT_SUCCESS(status))
         goto fail13;
 
+    status = WmiInitialize(Fdo);
+    if (!NT_SUCCESS(status))
+        goto fail14;
+
     KeInitializeSpinLock(&Fdo->StoreWatchLock);
     InitializeListHead(&Fdo->StoreWatchList);
 
@@ -2342,14 +2346,14 @@ FdoCreate(
                                CsqReleaseLock,
                                CsqCompleteCanceledIrp);
     if (!NT_SUCCESS(status))
-        goto fail14;
+        goto fail15;
 
     ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
 
     status = STATUS_NO_MEMORY;
     Fdo->EvtchnDpc = __FdoAllocate(sizeof (KDPC) * ProcessorCount);
     if (Fdo->EvtchnDpc == NULL)
-        goto fail15;
+        goto fail16;
 
     for (Index = 0; Index < ProcessorCount; Index++) {
         PROCESSOR_NUMBER ProcNumber;
@@ -2371,8 +2375,28 @@ FdoCreate(
 
     return STATUS_SUCCESS;
 
+fail16:
+    Error("fail6\n");
+
+    RtlZeroMemory(&Fdo->IrpQueue, sizeof (IO_CSQ));
+
 fail15:
     Error("fail15\n");
+
+    RtlZeroMemory(&Fdo->GnttabCacheLock, sizeof (KSPIN_LOCK));
+    ASSERT(IsListEmpty(&Fdo->IrpList));
+    RtlZeroMemory(&Fdo->IrpList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->IrpQueueLock, sizeof (KSPIN_LOCK));
+
+    ASSERT(IsListEmpty(&Fdo->EvtchnList));
+    RtlZeroMemory(&Fdo->EvtchnList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->EvtchnLock, sizeof (KSPIN_LOCK));
+
+    ASSERT(IsListEmpty(&Fdo->StoreWatchList));
+    RtlZeroMemory(&Fdo->StoreWatchList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->StoreWatchLock, sizeof (KSPIN_LOCK));
+
+    WmiTeardown(Fdo);
 
 fail14:
     Error("fail14\n");
@@ -2460,9 +2484,6 @@ fail1:
     return status;
 }
 
-
-
-
 VOID
 FdoDestroy(
     IN  PXENIFACE_FDO     Fdo
@@ -2540,8 +2561,7 @@ FdoDestroy(
     Fdo->PhysicalDeviceObject = NULL;
     Fdo->Dx = NULL;
 
-    RtlZeroMemory(&Fdo->SessionLock, sizeof(FAST_MUTEX));
-    RtlZeroMemory(&Fdo->SessionHead, sizeof(LIST_ENTRY));
+    WmiTeardown(Fdo);
     RtlZeroMemory(&Fdo->registryWriteEvent, sizeof(KEVENT));
 
     RtlFreeUnicodeString(&Fdo->InterfaceName);

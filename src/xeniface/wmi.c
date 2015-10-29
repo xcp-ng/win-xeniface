@@ -1255,19 +1255,22 @@ void SuspendSessionLocked(XENIFACE_FDO *fdoData,
     }
 }
 
-
-void SessionsSuspendAll(XENIFACE_FDO *fdoData) {
+VOID
+WmiSessionsSuspendAll(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
     XenStoreSession *session;
-    LockSessions(fdoData);
+
+    LockSessions(Fdo);
     XenIfaceDebugPrint(TRACE,"Suspend all sessions\n");
-    session = (XenStoreSession *)fdoData->SessionHead.Flink;
-    while (session != (XenStoreSession *)&fdoData->SessionHead) {
-        SuspendSessionLocked(fdoData, session);
+    session = (XenStoreSession *)Fdo->SessionHead.Flink;
+    while (session != (XenStoreSession *)&Fdo->SessionHead) {
+        SuspendSessionLocked(Fdo, session);
         session = (XenStoreSession *)session->listentry.Flink;
     }
-    UnlockSessions(fdoData);
+    UnlockSessions(Fdo);
 }
-
 
 void SessionRenewWatchesLocked(XenStoreSession *session) {
     int i;
@@ -1300,61 +1303,61 @@ void ResumeSessionLocked(XENIFACE_FDO *fdoData,
     SessionRenewWatchesLocked(session);
 }
 
-void SessionsResumeAll(XENIFACE_FDO *fdoData) {
-    XenStoreSession *session;
-
-    LockSessions(fdoData);
-    XenIfaceDebugPrint(TRACE,"Resume all sessions\n");
-    session = (XenStoreSession *)fdoData->SessionHead.Flink;
-    while (session != (XenStoreSession *)&fdoData->SessionHead) {
-        ResumeSessionLocked(fdoData, session );
-        session=(XenStoreSession *)session->listentry.Flink;
-    }
-    UnlockSessions(fdoData);
-}
-
-
-NTSTATUS
-WmiInit(
-        PXENIFACE_FDO FdoData
+VOID
+WmiSessionsResumeAll(
+    IN  PXENIFACE_FDO   Fdo
     )
 {
-    NTSTATUS status = STATUS_SUCCESS;
+    XenStoreSession *session;
+
+    LockSessions(Fdo);
+    XenIfaceDebugPrint(TRACE,"Resume all sessions\n");
+    session = (XenStoreSession *)Fdo->SessionHead.Flink;
+    while (session != (XenStoreSession *)&Fdo->SessionHead) {
+        ResumeSessionLocked(Fdo, session);
+        session = (XenStoreSession *)session->listentry.Flink;
+    }
+    UnlockSessions(Fdo);
+}
+
+NTSTATUS
+WmiRegister(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    NTSTATUS            status;
+
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Initialisation\n");
 
+    status = IoWMIRegistrationControl(Fdo->Dx->DeviceObject,
+                                      WMIREG_ACTION_REGISTER);
+    if (!NT_SUCCESS(status))
+        goto fail1;
 
+    Fdo->WmiReady = 1;
+    return STATUS_SUCCESS;
 
-
-    IoWMISuggestInstanceName(FdoData->PhysicalDeviceObject, NULL, FALSE,
-                             &FdoData->SuggestedInstanceName);
-    InitializeListHead(&FdoData->SessionHead);
-    FdoData->Sessions = 0;
-    ExInitializeFastMutex(&FdoData->SessionLock);
-
-    status = IoWMIRegistrationControl(FdoData->Dx->DeviceObject, WMIREG_ACTION_REGISTER);
-    FdoData->WmiReady = 1;
+fail1:
+    Error("fail1 (%08x)\n", status);
     return status;
 }
 
-NTSTATUS
-WmiFinalise(
-    PXENIFACE_FDO FdoData
+VOID
+WmiDeregister(
+    IN  PXENIFACE_FDO   Fdo
     )
 {
-    NTSTATUS status = STATUS_SUCCESS;
-    if (FdoData->WmiReady) {
-        XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Finalisation\n");
-        XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
-        SessionsRemoveAll(FdoData);
+    if (!Fdo->WmiReady)
+        return;
 
-        status =IoWMIRegistrationControl(FdoData->Dx->DeviceObject, WMIREG_ACTION_DEREGISTER);
-        RtlFreeUnicodeString(&FdoData->SuggestedInstanceName);
-        RtlZeroBytes(&FdoData->SuggestedInstanceName, sizeof(UNICODE_STRING));
+    XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Finalisation\n");
+    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
 
-        FdoData->WmiReady = 0;
-    }
-    return status;
+    SessionsRemoveAll(Fdo);
+    (VOID) IoWMIRegistrationControl(Fdo->Dx->DeviceObject,
+                                    WMIREG_ACTION_DEREGISTER);
+    Fdo->WmiReady = 0;
 }
 
 NTSTATUS
@@ -3090,4 +3093,41 @@ Updated Routine Description:
     }
 }
 
+NTSTATUS
+WmiInitialize(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    NTSTATUS            status;
 
+    status = IoWMISuggestInstanceName(Fdo->PhysicalDeviceObject,
+                                      NULL,
+                                      FALSE,
+                                      &Fdo->SuggestedInstanceName);
+    if (!NT_SUCCESS(status))
+        goto fail1;
+
+    Fdo->Sessions = 0;
+    InitializeListHead(&Fdo->SessionHead);
+    ExInitializeFastMutex(&Fdo->SessionLock);
+
+    return STATUS_SUCCESS;
+
+fail1:
+    Error("fail1 (%08x)\n", status);
+    return status;
+}
+
+VOID
+WmiTeardown(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    ASSERT(Fdo->Sessions == 0);
+
+    RtlZeroMemory(&Fdo->SessionLock, sizeof(FAST_MUTEX));
+    RtlZeroMemory(&Fdo->SessionHead, sizeof(LIST_ENTRY));
+
+    RtlFreeUnicodeString(&Fdo->SuggestedInstanceName);
+    RtlZeroMemory(&Fdo->SuggestedInstanceName, sizeof(UNICODE_STRING));
+}
