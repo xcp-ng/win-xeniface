@@ -742,20 +742,6 @@ __FdoD0ToD3(
     Trace("<====\n");
 }
 
-static DECLSPEC_NOINLINE VOID
-FdoSuspendCallbackLate(
-    IN  PVOID   Argument
-    )
-{
-    PXENIFACE_FDO Fdo = (PXENIFACE_FDO) Argument;
-    NTSTATUS    status;
-
-    __FdoD0ToD3(Fdo);
-
-    status = __FdoD3ToD0(Fdo);
-    ASSERT(NT_SUCCESS(status));
-}
-
 static DECLSPEC_NOINLINE NTSTATUS
 FdoD3ToD0(
     IN  PXENIFACE_FDO Fdo
@@ -792,6 +778,8 @@ FdoD3ToD0(
     Fdo->InterfacesAcquired = TRUE;
     KeLowerIrql(Irql);
 
+    WmiSessionsResumeAll(Fdo);
+
     return STATUS_SUCCESS;
 
 fail4:
@@ -825,8 +813,11 @@ FdoD0ToD3(
     KIRQL           Irql;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-    Fdo->InterfacesAcquired = FALSE;
+
+    WmiSessionsSuspendAll(Fdo);
+
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
+    Fdo->InterfacesAcquired = FALSE;
 
     XENBUS_SUSPEND(Deregister,
                    &Fdo->SuspendInterface,
@@ -887,23 +878,19 @@ FdoStartDevice(
      FdoS4ToS3(Fdo);
     __FdoSetSystemPowerState(Fdo, PowerSystemWorking);
 
-    status = FdoD3ToD0(Fdo);
+    status = WmiRegister(Fdo);
     if (!NT_SUCCESS(status))
         goto fail3;
 
-    status =  IoSetDeviceInterfaceState(&Fdo->InterfaceName, TRUE);
+    status = FdoD3ToD0(Fdo);
     if (!NT_SUCCESS(status))
         goto fail4;
 
-
-    if (__FdoGetDevicePnpState(Fdo) != Stopped) {
-        status = WmiRegister(Fdo);
-        if (!NT_SUCCESS(status))
-            goto fail5;
-    }
+    status =  IoSetDeviceInterfaceState(&Fdo->InterfaceName, TRUE);
+    if (!NT_SUCCESS(status))
+        goto fail5;
 
     __FdoSetDevicePnpState(Fdo, Started);
-
 
     status = Irp->IoStatus.Status;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -912,12 +899,12 @@ FdoStartDevice(
 
 fail5:
     Error("fail5\n");
-#pragma warning(suppress : 6031)
-    IoSetDeviceInterfaceState(&Fdo->InterfaceName, FALSE);
+    FdoD0ToD3(Fdo);
 
 fail4:
     Error("fail4\n");
-    FdoD0ToD3(Fdo);
+
+    WmiDeregister(Fdo);
 
 fail3:
     Error("fail3\n");
@@ -982,6 +969,7 @@ FdoStopDevice(
     NTSTATUS        status;
 
     FdoD0ToD3(Fdo);
+    WmiDeregister(Fdo);
 
     __FdoSetSystemPowerState(Fdo, PowerSystemSleeping3);
     FdoS3ToS4(Fdo);
@@ -1336,7 +1324,6 @@ __FdoSetDevicePowerUp(
 
     ASSERT3U(DeviceState, ==, PowerDeviceD0);
     status = FdoD3ToD0(Fdo);
-    WmiSessionsResumeAll(Fdo);
     ASSERT(NT_SUCCESS(status));
 
 done:
@@ -1368,10 +1355,8 @@ __FdoSetDevicePowerDown(
 
     ASSERT3U(DeviceState, ==, PowerDeviceD3);
 
-    if (__FdoGetDevicePowerState(Fdo) == PowerDeviceD0){
-        WmiSessionsSuspendAll(Fdo);
+    if (__FdoGetDevicePowerState(Fdo) == PowerDeviceD0)
         FdoD0ToD3(Fdo);
-    }
 
     IoSkipCurrentIrpStackLocation(Irp);
     status = IoCallDriver(Fdo->LowerDeviceObject, Irp);

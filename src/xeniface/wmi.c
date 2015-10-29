@@ -1327,6 +1327,9 @@ WmiRegister(
 {
     NTSTATUS            status;
 
+    if (Fdo->WmiReady)
+        return STATUS_SUCCESS;
+
     XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
     XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Initialisation\n");
 
