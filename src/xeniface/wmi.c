@@ -884,6 +884,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                         XenIfaceDebugPrint(WARNING,"SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
 
                         XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
+                        watch->watchhandle = NULL;
                         StartWatch(watch->fdoData, watch);
                     }
                 }
@@ -1187,6 +1188,7 @@ RemoveSessionLocked(XENIFACE_FDO *fdoData,
     SessionRemoveWatchesLocked(session);
     if (session->transaction != NULL) {
         XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);
+        session->transaction = NULL;
     }
     session->closing = TRUE;
     KeSetEvent(&session->SessionChangedEvent, IO_NO_INCREMENT, FALSE);
@@ -1230,6 +1232,7 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
         XenIfaceDebugPrint(TRACE,"Suspend unwatch %p\n", watch->watchhandle);
 
         XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
+        watch->watchhandle = NULL;
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
     XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
