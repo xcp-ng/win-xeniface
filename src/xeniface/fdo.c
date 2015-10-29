@@ -523,86 +523,6 @@ FdoReleaseMutex(
         FdoDestroy(Fdo);
 }
 
-
-static FORCEINLINE PANSI_STRING
-__FdoMultiSzToUpcaseAnsi(
-    IN  PCHAR       Buffer
-    )
-{
-    PANSI_STRING    Ansi;
-    LONG            Index;
-    LONG            Count;
-    NTSTATUS        status;
-
-    Index = 0;
-    Count = 0;
-    for (;;) {
-        if (Buffer[Index] == '\0') {
-            Count++;
-            Index++;
-
-            // Check for double NUL
-            if (Buffer[Index] == '\0')
-                break;
-        } else {
-            Buffer[Index] = (CHAR)toupper(Buffer[Index]);
-            Index++;
-        }
-    }
-
-    Ansi = (PANSI_STRING)__FdoAllocate(sizeof (ANSI_STRING) * (Count + 1));
-
-    status = STATUS_NO_MEMORY;
-    if (Ansi == NULL)
-        goto fail1;
-
-    for (Index = 0; Index < Count; Index++) {
-        ULONG   Length;
-
-        Length = (ULONG)strlen(Buffer);
-        Ansi[Index].MaximumLength = (USHORT)(Length + 1);
-        Ansi[Index].Buffer = (PCHAR)__FdoAllocate(Ansi[Index].MaximumLength);
-
-        status = STATUS_NO_MEMORY;
-        if (Ansi[Index].Buffer == NULL)
-            goto fail2;
-
-        RtlCopyMemory(Ansi[Index].Buffer, Buffer, Length);
-        Ansi[Index].Length = (USHORT)Length;
-
-        Buffer += Length + 1;
-    }
-
-    return Ansi;
-
-fail2:
-    Error("fail2\n");
-
-    while (--Index >= 0)
-        __FdoFree(Ansi[Index].Buffer);
-
-    __FdoFree(Ansi);
-
-fail1:
-    Error("fail1 (%08x)\n", status);
-
-    return NULL;
-}
-
-static FORCEINLINE VOID
-__FdoFreeAnsi(
-    IN  PANSI_STRING    Ansi
-    )
-{
-    ULONG               Index;
-
-    for (Index = 0; Ansi[Index].Buffer != NULL; Index++)
-        __FdoFree(Ansi[Index].Buffer);
-
-    __FdoFree(Ansi);
-}
-
-
 static DECLSPEC_NOINLINE VOID
 FdoParseResources(
     IN  PXENIFACE_FDO             Fdo,
@@ -650,17 +570,19 @@ FdoParseResources(
     }
 }
 
-static FORCEINLINE NTSTATUS
-__FdoD3ToD0(
+static DECLSPEC_NOINLINE NTSTATUS
+FdoD3ToD0(
     IN  PXENIFACE_FDO Fdo
     )
 {
-    POWER_STATE     PowerState;
+    KIRQL           Irql;
     NTSTATUS        status;
+    POWER_STATE     PowerState;
 
-    Trace("====>\n");
+    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
 
-    ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
+    KeRaiseIrql(DISPATCH_LEVEL, &Irql);
+
     ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD3);
 
     status = XENBUS_STORE(Acquire, &Fdo->StoreInterface);
@@ -686,85 +608,13 @@ __FdoD3ToD0(
     if (!NT_SUCCESS(status))
         goto fail4;
 
-    __FdoSetDevicePowerState(Fdo, PowerDeviceD0);
-
-    PowerState.DeviceState = PowerDeviceD0;
-    PoSetPowerState(Fdo->Dx->DeviceObject,
-                    DevicePowerState,
-                    PowerState);
-
-    Trace("<====\n");
-
-    return STATUS_SUCCESS;
-
-fail4:
-    Error("fail4\n");
-    XENBUS_GNTTAB(Release, &Fdo->GnttabInterface);
-
-fail3:
-    Error("fail3\n");
-    XENBUS_EVTCHN(Release, &Fdo->EvtchnInterface);
-
-fail2:
-    Error("fail2\n");
-    XENBUS_STORE(Release, &Fdo->StoreInterface);
-
-fail1:
-    Error("fail1 (%08x)\n", status);
-
-    return status;
-}
-
-static FORCEINLINE VOID
-__FdoD0ToD3(
-    IN  PXENIFACE_FDO Fdo
-    )
-{
-    POWER_STATE     PowerState;
-
-    Trace("====>\n");
-
-    ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
-    ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD0);
-
-    PowerState.DeviceState = PowerDeviceD3;
-    PoSetPowerState(Fdo->Dx->DeviceObject,
-                    DevicePowerState,
-                    PowerState);
-
-    __FdoSetDevicePowerState(Fdo, PowerDeviceD3);
-
-    XENBUS_GNTTAB(DestroyCache, &Fdo->GnttabInterface, Fdo->GnttabCache);
-    XENBUS_GNTTAB(Release, &Fdo->GnttabInterface);
-    XENBUS_EVTCHN(Release, &Fdo->EvtchnInterface);
-    XENBUS_STORE(Release, &Fdo->StoreInterface);
-
-    Trace("<====\n");
-}
-
-static DECLSPEC_NOINLINE NTSTATUS
-FdoD3ToD0(
-    IN  PXENIFACE_FDO Fdo
-    )
-{
-    KIRQL           Irql;
-    NTSTATUS        status;
-
-    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-
-    KeRaiseIrql(DISPATCH_LEVEL, &Irql);
-
-    status = __FdoD3ToD0(Fdo);
-    if (!NT_SUCCESS(status))
-        goto fail1;
-
     status = XENBUS_SUSPEND(Acquire, &Fdo->SuspendInterface);
     if (!NT_SUCCESS(status))
-        goto fail2;
+        goto fail5;
 
     status = XENBUS_SHARED_INFO(Acquire, &Fdo->SharedInfoInterface);
     if (!NT_SUCCESS(status))
-        goto fail3;
+        goto fail6;
 
     status = XENBUS_SUSPEND(Register,
                             &Fdo->SuspendInterface,
@@ -773,7 +623,14 @@ FdoD3ToD0(
                             Fdo,
                             &Fdo->SuspendCallbackLate);
     if (!NT_SUCCESS(status))
-        goto fail4;
+        goto fail7;
+
+    __FdoSetDevicePowerState(Fdo, PowerDeviceD0);
+
+    PowerState.DeviceState = PowerDeviceD0;
+    PoSetPowerState(Fdo->Dx->DeviceObject,
+                    DevicePowerState,
+                    PowerState);
 
     Fdo->InterfacesAcquired = TRUE;
     KeLowerIrql(Irql);
@@ -782,20 +639,38 @@ FdoD3ToD0(
 
     return STATUS_SUCCESS;
 
+fail7:
+    Error("fail7\n");
+
+    XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+
+fail6:
+    Error("fail6\n");
+
+    XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
+
+fail5:
+    Error("fail5\n");
+
+    XENBUS_GNTTAB(DestroyCache,
+                  &Fdo->GnttabInterface,
+                  Fdo->GnttabCache);
+    Fdo->GnttabCache = NULL;
+
 fail4:
     Error("fail4\n");
 
-    XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+    XENBUS_GNTTAB(Release, &Fdo->GnttabInterface);
 
 fail3:
     Error("fail3\n");
 
-    XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
+    XENBUS_EVTCHN(Release, &Fdo->EvtchnInterface);
 
 fail2:
     Error("fail2\n");
 
-    __FdoD0ToD3(Fdo);
+    XENBUS_STORE(Release, &Fdo->StoreInterface);
 
 fail1:
     Error("fail1 (%08x)\n", status);
@@ -811,12 +686,14 @@ FdoD0ToD3(
     )
 {
     KIRQL           Irql;
+    POWER_STATE     PowerState;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
 
     WmiSessionsSuspendAll(Fdo);
 
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
+
     Fdo->InterfacesAcquired = FALSE;
 
     XENBUS_SUSPEND(Deregister,
@@ -825,10 +702,23 @@ FdoD0ToD3(
     Fdo->SuspendCallbackLate = NULL;
 
     XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
-
     XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
 
-    __FdoD0ToD3(Fdo);
+    XENBUS_GNTTAB(DestroyCache,
+                  &Fdo->GnttabInterface,
+                  Fdo->GnttabCache);
+    Fdo->GnttabCache = NULL;
+
+    XENBUS_GNTTAB(Release, &Fdo->GnttabInterface);
+    XENBUS_EVTCHN(Release, &Fdo->EvtchnInterface);
+    XENBUS_STORE(Release, &Fdo->StoreInterface);
+
+    PowerState.DeviceState = PowerDeviceD3;
+    PoSetPowerState(Fdo->Dx->DeviceObject,
+                    DevicePowerState,
+                    PowerState);
+
+    __FdoSetDevicePowerState(Fdo, PowerDeviceD3);
 
     KeLowerIrql(Irql);
 }
@@ -912,7 +802,6 @@ fail3:
     __FdoSetSystemPowerState(Fdo, PowerSystemSleeping3);
     FdoS3ToS4(Fdo);
     __FdoSetSystemPowerState(Fdo, PowerSystemShutdown);
-
 
     RtlZeroMemory(&Fdo->Resource, sizeof (FDO_RESOURCE) * RESOURCE_COUNT);
 
