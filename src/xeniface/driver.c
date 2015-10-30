@@ -30,6 +30,7 @@
  */
 
 #include <ntifs.h>
+#include <procgrp.h>
 #include <version.h>
 
 #include "fdo.h"
@@ -149,6 +150,7 @@ DriverEntry(
     ASSERT3P(DriverObject, ==, NULL);
 
     ExInitializeDriverRuntime(DrvRtPoolNxOptIn);
+    WdmlibProcgrpInitialize();
 
     Trace("====>\n");
 

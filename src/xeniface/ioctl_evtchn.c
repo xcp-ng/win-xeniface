@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#include <ntifs.h>
+#include <procgrp.h>
 #include "driver.h"
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
@@ -51,7 +53,7 @@ EvtchnNotificationDpc(
     UNREFERENCED_PARAMETER(_Context);
     UNREFERENCED_PARAMETER(Argument2);
 
-    ASSERT(Context);
+    ASSERT(Context != NULL);
 
 #if DBG
     XenIfaceDebugPrint(INFO, "Channel %p, LocalPort %d, Cpu %lu\n",
@@ -80,7 +82,7 @@ EvtchnInterruptHandler(
     ULONG ProcIndex;
 
     UNREFERENCED_PARAMETER(Interrupt);
-    ASSERT(Context);
+    ASSERT(Context != NULL);
 
     KeGetCurrentProcessorNumberEx(&ProcNumber);
     ProcIndex = KeGetProcessorIndexFromNumber(&ProcNumber);

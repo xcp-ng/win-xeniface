@@ -31,6 +31,7 @@
 
 
 #include <ntifs.h>
+#include <procgrp.h>
 #include <wdmguid.h>
 #include <ntstrsafe.h>
 #include <stdlib.h>

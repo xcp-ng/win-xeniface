@@ -30,6 +30,8 @@
  * SUCH DAMAGE.
  */
 
+#include <ntifs.h>
+#include <procgrp.h>
 #include "driver.h"
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
