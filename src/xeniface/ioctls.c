@@ -99,8 +99,6 @@ XenIfaceCleanup(
     KIRQL Irql;
     LIST_ENTRY ToFree;
 
-    XenIfaceDebugPrint(TRACE, "FO %p, IRQL %d, Cpu %lu\n", FileObject, KeGetCurrentIrql(), KeGetCurrentProcessorNumber());
-
     // store watches
     KeAcquireSpinLock(&Fdo->StoreWatchLock, &Irql);
     Node = Fdo->StoreWatchList.Flink;

@@ -55,10 +55,6 @@ EvtchnNotificationDpc(
 
     ASSERT(Context != NULL);
 
-#if DBG
-    XenIfaceDebugPrint(INFO, "Channel %p, LocalPort %d, Cpu %lu\n",
-                       Context->Channel, Context->LocalPort, KeGetCurrentProcessorNumber());
-#endif
     KeSetEvent(Context->Event, 0, FALSE);
 
     XENBUS_EVTCHN(Unmask,
