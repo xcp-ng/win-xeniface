@@ -875,19 +875,15 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                 ExFreePool(watch);
                 session->mapchanged = TRUE;
                 session->watchcount --;
-            }
-            else
-            {
-                if (!session->suspended) {
-                    if (watch->suspendcount !=XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface)) {
-                        watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
-                        XenIfaceDebugPrint(WARNING,"SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
+            } else if (!session->suspended &&
+                       watch->suspendcount != XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface)) {
+                watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
+                XenIfaceDebugPrint(WARNING,"SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
 
-                        XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
-                        watch->watchhandle = NULL;
-                        StartWatch(watch->fdoData, watch);
-                    }
-                }
+                XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
+                watch->watchhandle = NULL;
+                StartWatch(watch->fdoData, watch);
+            } else {
                 FireWatch(watch);
             }
             ExReleaseFastMutex(&session->WatchMapLock);
