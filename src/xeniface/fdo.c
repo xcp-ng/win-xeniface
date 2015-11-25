@@ -38,7 +38,7 @@
 #include <store_interface.h>
 
 #include <suspend_interface.h>
-
+#include <version.h>
 
 #include "driver.h"
 #include "registry.h"
@@ -176,8 +176,6 @@ static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
 	}
 
 }
-
-
 
 static FORCEINLINE PVOID
 __FdoAllocate(
@@ -599,7 +597,6 @@ __FdoFreeAnsi(
     __FdoFree(Ansi);
 }
 
-
 static DECLSPEC_NOINLINE VOID
 FdoParseResources(
     IN  PXENIFACE_FDO             Fdo,
@@ -647,15 +644,283 @@ FdoParseResources(
     }
 }
 
-static FORCEINLINE NTSTATUS
-__FdoD3ToD0(
-    IN  PXENIFACE_FDO Fdo
+static FORCEINLINE BOOLEAN
+__FdoMatchDistribution(
+    IN  PXENIFACE_FDO   Fdo,
+    IN  PCHAR           Buffer
     )
 {
-    POWER_STATE     PowerState;
-    NTSTATUS        status;
+    PCHAR               Vendor;
+    PCHAR               Product;
+    PCHAR               Context;
+    const CHAR          *Text;
+    BOOLEAN             Match;
+    ULONG               Index;
+    NTSTATUS            status;
+
+    UNREFERENCED_PARAMETER(Fdo);
+
+    status = STATUS_INVALID_PARAMETER;
+
+    Vendor = __strtok_r(Buffer, " ", &Context);
+    if (Vendor == NULL)
+        goto fail1;
+
+    Product = __strtok_r(NULL, " ", &Context);
+    if (Product == NULL)
+        goto fail2;
+
+    Match = TRUE;
+
+    Text = VENDOR_NAME_STR;
+
+    for (Index = 0; Text[Index] != 0; Index++) {
+        if (!isalnum((UCHAR)Text[Index])) {
+            if (Vendor[Index] != '_') {
+                Match = FALSE;
+                break;
+            }
+        } else {
+            if (Vendor[Index] != Text[Index]) {
+                Match = FALSE;
+                break;
+            }
+        }
+    }
+
+    Text = "XENIFACE";
+
+    if (_stricmp(Product, Text) != 0)
+        Match = FALSE;
+
+    return Match;
+
+fail2:
+    Error("fail2\n");
+
+fail1:
+    Error("fail1 (%08x)\n", status);
+
+    return FALSE;
+}
+
+static VOID
+FdoClearDistribution(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    PCHAR               Buffer;
+    PANSI_STRING        Distributions;
+    ULONG               Index;
+    NTSTATUS            status;
 
     Trace("====>\n");
+
+    status = XENBUS_STORE(Directory,
+                          &Fdo->StoreInterface,
+                          NULL,
+                          NULL,
+                          "drivers",
+                          &Buffer);
+    if (NT_SUCCESS(status)) {
+        Distributions = __FdoMultiSzToUpcaseAnsi(Buffer);
+
+        XENBUS_STORE(Free,
+                     &Fdo->StoreInterface,
+                     Buffer);
+    } else {
+        Distributions = NULL;
+    }
+
+    if (Distributions == NULL)
+        goto done;
+
+    for (Index = 0; Distributions[Index].Buffer != NULL; Index++) {
+        PANSI_STRING    Distribution = &Distributions[Index];
+
+        status = XENBUS_STORE(Read,
+                              &Fdo->StoreInterface,
+                              NULL,
+                              "drivers",
+                              Distribution->Buffer,
+                              &Buffer);
+        if (!NT_SUCCESS(status))
+            continue;
+
+        if (__FdoMatchDistribution(Fdo, Buffer))
+            (VOID) XENBUS_STORE(Remove,
+                                &Fdo->StoreInterface,
+                                NULL,
+                                "drivers",
+                                Distribution->Buffer);
+
+        XENBUS_STORE(Free,
+                     &Fdo->StoreInterface,
+                     Buffer);
+    }
+
+    __FdoFreeAnsi(Distributions);
+
+done:
+    Trace("<====\n");
+}
+
+#define MAXIMUM_INDEX   255
+
+static NTSTATUS
+FdoSetDistribution(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    ULONG               Index;
+    CHAR                Distribution[MAXNAMELEN];
+    CHAR                Vendor[MAXNAMELEN];
+    const CHAR          *Product;
+    NTSTATUS            status;
+
+    Trace("====>\n");
+
+    Index = 0;
+    while (Index <= MAXIMUM_INDEX) {
+        PCHAR   Buffer;
+
+        status = RtlStringCbPrintfA(Distribution,
+                                    MAXNAMELEN,
+                                    "%u",
+                                    Index);
+        ASSERT(NT_SUCCESS(status));
+
+        status = XENBUS_STORE(Read,
+                              &Fdo->StoreInterface,
+                              NULL,
+                              "drivers",
+                              Distribution,
+                              &Buffer);
+        if (!NT_SUCCESS(status)) {
+            if (status == STATUS_OBJECT_NAME_NOT_FOUND)
+                goto update;
+
+            goto fail1;
+        }
+
+        XENBUS_STORE(Free,
+                     &Fdo->StoreInterface,
+                     Buffer);
+
+        Index++;
+    }
+
+    status = STATUS_UNSUCCESSFUL;
+    goto fail2;
+
+update:
+    status = RtlStringCbPrintfA(Vendor,
+                                MAXNAMELEN,
+                                "%s",
+                                VENDOR_NAME_STR);
+    ASSERT(NT_SUCCESS(status));
+
+    for (Index  = 0; Vendor[Index] != '\0'; Index++)
+        if (!isalnum((UCHAR)Vendor[Index]))
+            Vendor[Index] = '_';
+
+    Product = "XENIFACE";
+
+#if DBG
+#define ATTRIBUTES   "(DEBUG)"
+#else
+#define ATTRIBUTES   ""
+#endif
+
+    (VOID) XENBUS_STORE(Printf,
+                        &Fdo->StoreInterface,
+                        NULL,
+                        "drivers",
+                        Distribution,
+                        "%s %s %u.%u.%u %s",
+                        Vendor,
+                        Product,
+                        MAJOR_VERSION,
+                        MINOR_VERSION,
+                        MICRO_VERSION,
+                        ATTRIBUTES
+                        );
+
+#undef  ATTRIBUTES
+
+    Trace("<====\n");
+    return STATUS_SUCCESS;
+
+fail2:
+    Error("fail2\n");
+
+fail1:
+    Error("fail1 (%08x)\n", status);
+
+    return status;
+}
+
+static FORCEINLINE NTSTATUS
+__FdoD3ToD0(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    Trace("====>\n");
+
+    ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
+
+    (VOID) FdoSetDistribution(Fdo);
+
+    Trace("<====\n");
+
+    return STATUS_SUCCESS;
+}
+
+static FORCEINLINE VOID
+__FdoD0ToD3(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    Trace("====>\n");
+
+    ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
+
+    FdoClearDistribution(Fdo);
+
+    Trace("<====\n");
+}
+
+static DECLSPEC_NOINLINE VOID
+FdoSuspendCallbackLate(
+    IN  PVOID       Argument
+    )
+{
+    PXENIFACE_FDO   Fdo = Argument;
+    NTSTATUS        status;
+
+    __FdoD0ToD3(Fdo);
+
+    status = __FdoD3ToD0(Fdo);
+    ASSERT(NT_SUCCESS(status));
+
+    FireSuspendEvent(Fdo);
+}
+
+static DECLSPEC_NOINLINE NTSTATUS
+FdoD3ToD0(
+    IN  PXENIFACE_FDO   Fdo
+    )
+{
+    KIRQL               Irql;
+    NTSTATUS            status;
+    POWER_STATE         PowerState;
+
+    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
+    ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD3);
+
+    Trace("====>\n");
+
+    KeRaiseIrql(DISPATCH_LEVEL, &Irql);
 
     ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
     ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD3);
@@ -663,6 +928,31 @@ __FdoD3ToD0(
     status = XENBUS_STORE(Acquire, &Fdo->StoreInterface);
     if (!NT_SUCCESS(status))
         goto fail1;
+
+    status = XENBUS_SUSPEND(Acquire, &Fdo->SuspendInterface);
+    if (!NT_SUCCESS(status))
+        goto fail2;
+
+    status = XENBUS_SHARED_INFO(Acquire, &Fdo->SharedInfoInterface);
+    if (!NT_SUCCESS(status))
+        goto fail3;
+
+    Fdo->InterfacesAcquired = TRUE;
+
+    status = __FdoD3ToD0(Fdo);
+    if (!NT_SUCCESS(status))
+        goto fail4;
+
+    status = XENBUS_SUSPEND(Register,
+                            &Fdo->SuspendInterface,
+                            SUSPEND_CALLBACK_LATE,
+                            FdoSuspendCallbackLate,
+                            Fdo,
+                            &Fdo->SuspendCallbackLate);
+    if (!NT_SUCCESS(status))
+        goto fail5;
+
+    KeLowerIrql(Irql);
 
     __FdoSetDevicePowerState(Fdo, PowerDeviceD0);
 
@@ -675,92 +965,15 @@ __FdoD3ToD0(
 
     return STATUS_SUCCESS;
 
-fail1:
-    Error("fail1 (%08x)\n", status);
-
-    return status;
-}
-
-static FORCEINLINE VOID
-__FdoD0ToD3(
-    IN  PXENIFACE_FDO Fdo
-    )
-{
-    POWER_STATE     PowerState;
-
-    Trace("====>\n");
-
-    ASSERT3U(KeGetCurrentIrql(), ==, DISPATCH_LEVEL);
-    ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD0);
-
-    PowerState.DeviceState = PowerDeviceD3;
-    PoSetPowerState(Fdo->Dx->DeviceObject,
-                    DevicePowerState,
-                    PowerState);
-
-    __FdoSetDevicePowerState(Fdo, PowerDeviceD3);
-
-    XENBUS_STORE(Release, &Fdo->StoreInterface);
-
-    Trace("<====\n");
-}
-
-static DECLSPEC_NOINLINE VOID
-FdoSuspendCallbackLate(
-    IN  PVOID   Argument
-    )
-{
-    PXENIFACE_FDO Fdo = (PXENIFACE_FDO) Argument;
-    NTSTATUS    status;
+fail5:
+    Error("fail5\n");
 
     __FdoD0ToD3(Fdo);
-
-    status = __FdoD3ToD0(Fdo);
-    ASSERT(NT_SUCCESS(status));
-}
-
-static DECLSPEC_NOINLINE NTSTATUS
-FdoD3ToD0(
-    IN  PXENIFACE_FDO Fdo
-    )
-{
-    KIRQL           Irql;
-    NTSTATUS        status;
-
-    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-
-    KeRaiseIrql(DISPATCH_LEVEL, &Irql);
-
-    status = __FdoD3ToD0(Fdo);
-    if (!NT_SUCCESS(status))
-        goto fail1;
-
-    status = XENBUS_SUSPEND(Acquire, &Fdo->SuspendInterface);
-    if (!NT_SUCCESS(status))
-        goto fail2;
-
-    status = XENBUS_SHARED_INFO(Acquire, &Fdo->SharedInfoInterface);
-    if (!NT_SUCCESS(status))
-        goto fail3;
-
-    status = XENBUS_SUSPEND(Register,
-                            &Fdo->SuspendInterface,
-                            SUSPEND_CALLBACK_LATE,
-                            FireSuspendEvent,
-                            Fdo,
-                            &Fdo->SuspendCallbackLate);
-    if (!NT_SUCCESS(status))
-        goto fail4;
-
-	Fdo->InterfacesAcquired = TRUE;
-    KeLowerIrql(Irql);
-
-    return STATUS_SUCCESS;
 
 fail4:
     Error("fail4\n");
 
-	XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+    XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
 
 fail3:
     Error("fail3\n");
@@ -770,7 +983,7 @@ fail3:
 fail2:
     Error("fail2\n");
 
-    __FdoD0ToD3(Fdo);
+    XENBUS_STORE(Release, &Fdo->StoreInterface);
 
 fail1:
     Error("fail1 (%08x)\n", status);
@@ -782,27 +995,46 @@ fail1:
 
 static DECLSPEC_NOINLINE VOID
 FdoD0ToD3(
-    IN  PXENIFACE_FDO Fdo
+    IN  PXENIFACE_FDO   Fdo
     )
 {
-    KIRQL           Irql;
+    KIRQL               Irql;
+    POWER_STATE         PowerState;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
-	Fdo->InterfacesAcquired = FALSE;
+    ASSERT3U(__FdoGetDevicePowerState(Fdo), ==, PowerDeviceD0);
+
+    Trace("====>\n");
+
+    PowerState.DeviceState = PowerDeviceD3;
+    PoSetPowerState(Fdo->Dx->DeviceObject,
+                    DevicePowerState,
+                    PowerState);
+
+    __FdoSetDevicePowerState(Fdo, PowerDeviceD3);
+
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
+
+    Fdo->InterfacesAcquired = FALSE;
 
     XENBUS_SUSPEND(Deregister,
                    &Fdo->SuspendInterface,
                    Fdo->SuspendCallbackLate);
     Fdo->SuspendCallbackLate = NULL;
 
-	XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
+    __FdoD0ToD3(Fdo);
+
+    XENBUS_SHARED_INFO(Release, &Fdo->SharedInfoInterface);
 
     XENBUS_SUSPEND(Release, &Fdo->SuspendInterface);
+
+    XENBUS_STORE(Release, &Fdo->StoreInterface);
 
     __FdoD0ToD3(Fdo);
 	
     KeLowerIrql(Irql);
+
+    Trace("<====\n");
 }
 
 static DECLSPEC_NOINLINE VOID
