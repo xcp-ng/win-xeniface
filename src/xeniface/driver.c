@@ -44,7 +44,7 @@ PDRIVER_OBJECT      DriverObject;
 
 DRIVER_UNLOAD       DriverUnload;
 
-XENIFACE_PARAMETERS	DriverParameters;
+XENIFACE_PARAMETERS DriverParameters;
 
 VOID
 DriverUnload(
