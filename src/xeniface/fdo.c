@@ -2589,8 +2589,9 @@ FdoCreate(
 
     ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
 
-    status = STATUS_NO_MEMORY;
     Fdo->EvtchnDpc = __FdoAllocate(sizeof (KDPC) * ProcessorCount);
+
+    status = STATUS_NO_MEMORY;
     if (Fdo->EvtchnDpc == NULL)
         goto fail16;
 
@@ -2746,7 +2747,9 @@ FdoDestroy(
 
     ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
     RtlZeroMemory(Fdo->EvtchnDpc, sizeof (KDPC) * ProcessorCount);
+
     __FdoFree(Fdo->EvtchnDpc);
+    Fdo->EvtchnDpc = NULL;
 
     RtlZeroMemory(&Fdo->GnttabCacheLock, sizeof (KSPIN_LOCK));
     ASSERT(IsListEmpty(&Fdo->IrpList));
