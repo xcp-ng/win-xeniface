@@ -2435,13 +2435,11 @@ FdoCreate(
     )
 {
     PDEVICE_OBJECT      FunctionDeviceObject;
-    PXENIFACE_DX          Dx;
-    PXENIFACE_FDO         Fdo;
+    PXENIFACE_DX        Dx;
+    PXENIFACE_FDO       Fdo;
     WCHAR               Name[MAXNAMELEN * sizeof (WCHAR)];
     ULONG               Size;
     NTSTATUS            status;
-    ULONG               ProcessorCount;
-    ULONG               Index;
 
 #pragma prefast(suppress:28197) // Possibly leaking memory 'FunctionDeviceObject'
     status = IoCreateDevice(DriverObject,
@@ -2587,25 +2585,6 @@ FdoCreate(
     if (!NT_SUCCESS(status))
         goto fail15;
 
-    ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
-
-    Fdo->EvtchnDpc = __FdoAllocate(sizeof (KDPC) * ProcessorCount);
-
-    status = STATUS_NO_MEMORY;
-    if (Fdo->EvtchnDpc == NULL)
-        goto fail16;
-
-    for (Index = 0; Index < ProcessorCount; Index++) {
-        PROCESSOR_NUMBER ProcNumber;
-
-        status = KeGetProcessorNumberFromIndex(Index, &ProcNumber);
-        ASSERT(NT_SUCCESS(status));
-
-        KeInitializeDpc(&Fdo->EvtchnDpc[Index], EvtchnNotificationDpc, NULL);
-        status = KeSetTargetProcessorDpcEx(&Fdo->EvtchnDpc[Index], &ProcNumber);
-        ASSERT(NT_SUCCESS(status));
-    }
-
     Info("%p (%s)\n",
          FunctionDeviceObject,
          __FdoGetName(Fdo));
@@ -2614,11 +2593,6 @@ FdoCreate(
     FunctionDeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 
     return STATUS_SUCCESS;
-
-fail16:
-    Error("fail6\n");
-
-    RtlZeroMemory(&Fdo->IrpQueue, sizeof (IO_CSQ));
 
 fail15:
     Error("fail15\n");
@@ -2731,7 +2705,6 @@ FdoDestroy(
 {
     PXENIFACE_DX          Dx = Fdo->Dx;
     PDEVICE_OBJECT        FunctionDeviceObject = Dx->DeviceObject;
-    ULONG                 ProcessorCount;
 
     ASSERT(IsListEmpty(&Dx->ListEntry));
     ASSERT3U(Fdo->References, ==, 0);
@@ -2744,12 +2717,6 @@ FdoDestroy(
          __FdoGetName(Fdo));
 
     Dx->Fdo = NULL;
-
-    ProcessorCount = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
-    RtlZeroMemory(Fdo->EvtchnDpc, sizeof (KDPC) * ProcessorCount);
-
-    __FdoFree(Fdo->EvtchnDpc);
-    Fdo->EvtchnDpc = NULL;
 
     RtlZeroMemory(&Fdo->GnttabCacheLock, sizeof (KSPIN_LOCK));
     ASSERT(IsListEmpty(&Fdo->IrpList));
