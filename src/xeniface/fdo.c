@@ -187,7 +187,7 @@ __FdoAllocate(
     IN  ULONG   Length
     )
 {
-    return __AllocateNonPagedPoolWithTag(Length, FDO_POOL);
+    return __AllocatePoolWithTag(NonPagedPool, Length, FDO_POOL);
 }
 
 static FORCEINLINE VOID
@@ -591,7 +591,7 @@ __FdoMultiSzToUpcaseAnsi(
             if (Buffer[Index] == '\0')
                 break;
         } else {
-            Buffer[Index] = (CHAR)toupper(Buffer[Index]);
+            Buffer[Index] = __toupper(Buffer[Index]);
             Index++;
         }
     }

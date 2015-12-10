@@ -1,36 +1,36 @@
 /* Copyright (c) Citrix Systems Inc.
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, 
- * with or without modification, are permitted provided 
+ *
+ * Redistribution and use in source and binary forms,
+ * with or without modification, are permitted provided
  * that the following conditions are met:
- * 
- * *   Redistributions of source code must retain the above 
- *     copyright notice, this list of conditions and the 
+ *
+ * *   Redistributions of source code must retain the above
+ *     copyright notice, this list of conditions and the
  *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above 
- *     copyright notice, this list of conditions and the 
- *     following disclaimer in the documentation and/or other 
+ * *   Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the
+ *     following disclaimer in the documentation and/or other
  *     materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
 
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _XENIFACE_UTIL_H
+#define _XENIFACE_UTIL_H
 
 #include <ntddk.h>
 
@@ -78,6 +78,32 @@ __ffs(
 #define __ffu(_mask)  \
         __ffs(~(_mask))
 
+static FORCEINLINE VOID
+__CpuId(
+    IN  ULONG   Leaf,
+    OUT PULONG  EAX OPTIONAL,
+    OUT PULONG  EBX OPTIONAL,
+    OUT PULONG  ECX OPTIONAL,
+    OUT PULONG  EDX OPTIONAL
+    )
+{
+    ULONG       Value[4] = {0};
+
+    __cpuid(Value, Leaf);
+
+    if (EAX)
+        *EAX = Value[0];
+
+    if (EBX)
+        *EBX = Value[1];
+
+    if (ECX)
+        *ECX = Value[2];
+
+    if (EDX)
+        *EDX = Value[3];
+}
+
 static FORCEINLINE LONG
 __InterlockedAdd(
     IN  LONG    *Value,
@@ -112,85 +138,32 @@ __InterlockedSubtract(
     return New;
 }
 
-typedef struct _NON_PAGED_BUFFER_HEADER {
-    SIZE_T  Length;
-    ULONG   Tag;
-} NON_PAGED_BUFFER_HEADER, *PNON_PAGED_BUFFER_HEADER;
-
-typedef struct _NON_PAGED_BUFFER_TRAILER {
-    ULONG   Tag;
-} NON_PAGED_BUFFER_TRAILER, *PNON_PAGED_BUFFER_TRAILER;
-
 static FORCEINLINE PVOID
-__AllocateNonPagedPoolWithTag(
-    IN  SIZE_T                  Length,
-    IN  ULONG                   Tag
+__AllocatePoolWithTag(
+    IN  POOL_TYPE   PoolType,
+    IN  SIZE_T      NumberOfBytes,
+    IN  ULONG       Tag
     )
 {
-    PUCHAR                      Buffer;
-    PNON_PAGED_BUFFER_HEADER    Header;
-    PNON_PAGED_BUFFER_TRAILER   Trailer;
+    PUCHAR          Buffer;
 
-    ASSERT(Length != 0);
+    __analysis_assume(PoolType == NonPagedPool ||
+                      PoolType == PagedPool);
 
-    Buffer = (PUCHAR)ExAllocatePoolWithTag(NonPagedPool,
-                                   sizeof (NON_PAGED_BUFFER_HEADER) +
-                                   Length +
-                                   sizeof (NON_PAGED_BUFFER_TRAILER),
-                                   Tag);
+    Buffer = ExAllocatePoolWithTag(PoolType, NumberOfBytes, Tag);
     if (Buffer == NULL)
-        goto done;
+        return NULL;
 
-    RtlZeroMemory(Buffer, 
-                  sizeof (NON_PAGED_BUFFER_HEADER) +
-                  Length +
-                  sizeof (NON_PAGED_BUFFER_TRAILER));
-
-    Header = (PNON_PAGED_BUFFER_HEADER)Buffer;
-    Header->Length = Length;
-    Header->Tag = Tag;
-
-    Buffer += sizeof (NON_PAGED_BUFFER_HEADER);
-
-    Trailer = (PNON_PAGED_BUFFER_TRAILER)(Buffer + Length);
-    Trailer->Tag = Tag;
-
-done:
+    RtlZeroMemory(Buffer, NumberOfBytes);
     return Buffer;
 }
 
 static FORCEINLINE VOID
 __FreePoolWithTag(
-    IN  PVOID                   _Buffer,
-    IN  ULONG                   Tag
+    IN  PVOID   Buffer,
+    IN  ULONG   Tag
     )
 {
-    PUCHAR                      Buffer = (PUCHAR)_Buffer;
-    SIZE_T                      Length;
-    PNON_PAGED_BUFFER_HEADER    Header;
-    PNON_PAGED_BUFFER_TRAILER   Trailer;
-
-    ASSERT(Buffer != NULL);
-
-    Buffer -= sizeof (NON_PAGED_BUFFER_HEADER);
-
-    Header = (PNON_PAGED_BUFFER_HEADER)Buffer;
-    ASSERT3U(Tag, ==, Header->Tag);
-    Length = Header->Length;
-
-    Buffer += sizeof (NON_PAGED_BUFFER_HEADER);
-
-    Trailer = (PNON_PAGED_BUFFER_TRAILER)(Buffer + Length);
-    ASSERT3U(Tag, ==, Trailer->Tag);
-
-    Buffer -= sizeof (NON_PAGED_BUFFER_HEADER);
-
-    RtlFillMemory(Buffer, 
-                  sizeof (NON_PAGED_BUFFER_HEADER) +
-                  Length +
-                  sizeof (NON_PAGED_BUFFER_TRAILER),
-                  0xAA);
-
     ExFreePoolWithTag(Buffer, Tag);
 }
 
@@ -232,10 +205,10 @@ __AllocatePage(
 
     MdlMappedSystemVa = MmMapLockedPagesSpecifyCache(Mdl,
                                                      KernelMode,
-                                                     MmCached,
-                                                     NULL,
-                                                     FALSE,
-                                                     NormalPagePriority);
+						                             MmCached,
+						                             NULL,
+						                             FALSE,
+						                             NormalPagePriority);
 
     status = STATUS_UNSUCCESSFUL;
     if (MdlMappedSystemVa == NULL)
@@ -270,7 +243,7 @@ __FreePage(
     MdlMappedSystemVa = Mdl->MappedSystemVa;
 
     RtlFillMemory(MdlMappedSystemVa, PAGE_SIZE, 0xAA);
-    
+
     MmUnmapLockedPages(MdlMappedSystemVa, Mdl);
 
     MmFreePagesFromMdl(Mdl);
@@ -314,4 +287,26 @@ __strtok_r(
     return Token;
 }
 
-#endif  // _UTIL_H
+static FORCEINLINE CHAR
+__toupper(
+    IN  CHAR    Character
+    )
+{
+    if (Character < 'a' || Character > 'z')
+        return Character;
+
+    return 'A' + Character - 'a';
+}
+
+static FORCEINLINE CHAR
+__tolower(
+    IN  CHAR    Character
+    )
+{
+    if (Character < 'A' || Character > 'Z')
+        return Character;
+
+    return 'a' + Character - 'A';
+}
+
+#endif  // _XENIFACE_UTIL_H
