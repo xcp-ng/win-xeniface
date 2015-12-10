@@ -30,9 +30,9 @@
  */
 
 #include <ntddk.h>
-#include <util.h>
 
 #include "thread.h"
+#include "util.h"
 #include "log.h"
 #include "assert.h"
 
@@ -52,7 +52,7 @@ __ThreadAllocate(
     IN  ULONG   Length
     )
 {
-    return __AllocateNonPagedPoolWithTag(Length, THREAD_POOL);
+    return __AllocatePoolWithTag(NonPagedPool, Length, THREAD_POOL);
 }
 
 static FORCEINLINE VOID

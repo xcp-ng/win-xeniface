@@ -30,9 +30,9 @@
  */
 
 #include <ntddk.h>
-#include <util.h>
 
 #include "registry.h"
+#include "util.h"
 #include "assert.h"
 
 #define REGISTRY_POOL 'GERX'
@@ -44,7 +44,7 @@ __RegistryAllocate(
     IN  ULONG   Length
     )
 {
-    return __AllocateNonPagedPoolWithTag(Length, REGISTRY_POOL);
+    return __AllocatePoolWithTag(NonPagedPool, Length, REGISTRY_POOL);
 }
 
 static FORCEINLINE VOID
