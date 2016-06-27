@@ -4,7 +4,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xeniface_coinst", "xeniface
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xeniface", "xeniface\xeniface.vcxproj", "{22166290-65D8-49D2-BB88-33201797C7D8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LiteAgent", "liteagent\LiteAgent.vcxproj", "{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xenagent", "xenagent\xenagent.vcxproj", "{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "package", "package\package.vcxproj", "{9B071A35-897C-477A-AEB7-95F77618A21D}"
 	ProjectSection(ProjectDependencies) = postProject
