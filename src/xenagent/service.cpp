@@ -151,7 +151,7 @@ static CXenAgent s_service;
     return s_service.__ServiceControlHandlerEx(req, evt, data, ctxt);
 }
 
-CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL)
+CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL), m_devlist(GUID_INTERFACE_XENIFACE)
 {
     m_status.dwServiceType        = SERVICE_WIN32;
     m_status.dwCurrentState       = SERVICE_START_PENDING;
@@ -169,18 +169,36 @@ CXenAgent::~CXenAgent()
     CloseHandle(m_svc_stop);
 }
 
+/*virtual*/ CDevice* CXenAgent::Create(const wchar_t* path)
+{
+    return new CDevice(path);
+}
+
+/*virtual*/ void CXenAgent::OnDeviceAdded(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceAdded(%ws)\n", dev->Path());
+}
+
+/*virtual*/ void CXenAgent::OnDeviceRemoved(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceRemoved(%ws)\n", dev->Path());
+}
+
 void CXenAgent::OnServiceStart()
 {
     CXenAgent::Log("OnServiceStart()\n");
+    m_devlist.Start(m_handle, this);
 }
 
 void CXenAgent::OnServiceStop()
 {
     CXenAgent::Log("OnServiceStop()\n");
+    m_devlist.Stop();
 }
 
 void CXenAgent::OnDeviceEvent(DWORD evt, LPVOID data)
 {
+    m_devlist.OnDeviceEvent(evt, data);
 }
 
 bool CXenAgent::ServiceMainLoop()

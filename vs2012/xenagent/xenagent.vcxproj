@@ -194,9 +194,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\xenagent\service.cpp"/>
+    <ClCompile Include="..\..\src\xenagent\devicelist.cpp"/>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\xenagent\service.h" />
+    <ClInclude Include="..\..\src\xenagent\devicelist.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\..\src\xenagent\messages.mc">

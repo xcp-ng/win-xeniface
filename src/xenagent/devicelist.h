@@ -29,55 +29,65 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __XENAGENT_SERVICE_H__
-#define __XENAGENT_SERVICE_H__
+#ifndef __XENAGENT_DEVICELIST_H__
+#define __XENAGENT_DEVICELIST_H__
 
-#include <version.h>
+#include <windows.h>
+#include <dbt.h>
+#include <map>
+#include <string>
 
-#define SVC_NAME "xensvc"
-#define SVC_DISPLAYNAME PRODUCT_NAME_STR ## "Interface Service"
-#define SVC_DESC "Monitors and provides various metrics to XenStore"
-
-#include "devicelist.h"
-
-class CXenAgent : public IDeviceCreator
+class CDevice
 {
-public: // statics
-    static void Log(const char* fmt, ...);
+public:
+    CDevice(const wchar_t* path);
+    virtual ~CDevice();
 
-    static int ServiceInstall();
-    static int ServiceUninstall();
-    static int ServiceEntry();
+    const wchar_t* Path() const;
 
-    static void WINAPI ServiceMain(int argc, char** argv);
-    static DWORD WINAPI ServiceControlHandlerEx(DWORD, DWORD, LPVOID, LPVOID);
+    HANDLE Open(HANDLE svc);
+    void Close();
 
-public: // ctor/dtor
-    CXenAgent();
-    ~CXenAgent();
+protected:
+    bool Ioctl(DWORD ioctl, void* in, DWORD insz, void* out, DWORD outsz, DWORD* bytes = NULL);
 
-public: // IDeviceCreator
-    virtual CDevice* Create(const wchar_t* path);
-    virtual void OnDeviceAdded(CDevice* dev);
-    virtual void OnDeviceRemoved(CDevice* dev);
+private:
+    std::wstring    m_path;
+    HANDLE          m_handle;
+    HDEVNOTIFY      m_notify;
+};
 
-private: // service events
-    void OnServiceStart();
-    void OnServiceStop();
-    void OnDeviceEvent(DWORD, LPVOID);
-    bool ServiceMainLoop();
+class IDeviceCreator
+{
+public:
+    virtual CDevice* Create(const wchar_t* path) = 0;
+    virtual void OnDeviceAdded(CDevice* dev) = 0;
+    virtual void OnDeviceRemoved(CDevice* dev) = 0;
+};
 
-private: // service support
-    void SetServiceStatus(DWORD state, DWORD exit = 0, DWORD hint = 0);
-    void WINAPI __ServiceMain(int argc, char** argv);
-    DWORD WINAPI __ServiceControlHandlerEx(DWORD, DWORD, LPVOID, LPVOID);
+class CDeviceList
+{
+public:
+    CDeviceList(const GUID& itf);
+    ~CDeviceList();
 
-    SERVICE_STATUS          m_status;
-    SERVICE_STATUS_HANDLE   m_handle;
-    HANDLE                  m_evtlog;
-    HANDLE                  m_svc_stop;
+    bool Start(HANDLE svc, IDeviceCreator* impl);
+    void Stop();
+    void OnDeviceEvent(DWORD evt, LPVOID data);
+    CDevice* GetFirstDevice();
 
-    CDeviceList             m_devlist;
+private:
+    void OnDeviceAdded(const std::wstring& path);
+    void OnDeviceQueryRemove(HANDLE handle);
+    void OnDeviceRemoved(HANDLE dev);
+
+    typedef std::map< HANDLE, CDevice* > DeviceMap;
+
+    GUID        m_guid;
+    DeviceMap   m_devs;
+    HDEVNOTIFY  m_notify;
+    HANDLE      m_handle;
+    IDeviceCreator* m_impl;
 };
 
 #endif
