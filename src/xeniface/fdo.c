@@ -2300,6 +2300,25 @@ FdoDispatchSystemControl(
     return status;
 }
 
+static DECLSPEC_NOINLINE NTSTATUS
+FdoDispatchCleanup(
+    IN  PXENIFACE_FDO   Fdo,
+    IN  PIRP            Irp
+    )
+{
+    PIO_STACK_LOCATION  StackLocation;
+    PFILE_OBJECT        FileObject;
+
+    StackLocation = IoGetCurrentIrpStackLocation(Irp);
+    FileObject = StackLocation->FileObject;
+
+    // XenIfaceCleanup requires PASSIVE_LEVEL as it can call KeFlushQueuedDpcs
+    ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
+    XenIfaceCleanup(Fdo, FileObject);
+
+    return FdoDispatchComplete(Fdo, Irp);
+}
+
 NTSTATUS
 FdoDispatch(
     IN  PXENIFACE_FDO   Fdo,
@@ -2326,6 +2345,10 @@ FdoDispatch(
 
     case IRP_MJ_SYSTEM_CONTROL:
         status = FdoDispatchSystemControl(Fdo, Irp);
+        break;
+
+    case IRP_MJ_CLEANUP:
+        status = FdoDispatchCleanup(Fdo, Irp);
         break;
 
     case IRP_MJ_CREATE:
