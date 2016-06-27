@@ -257,6 +257,12 @@ XenIfaceIoctl(
         status = IoctlSuspendDeregister(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
         break;
 
+        // sharedinfo
+    case IOCTL_XENIFACE_SHAREDINFO_GET_TIME:
+        status = IoctlSharedInfoGetTime(Fdo, Buffer, InLen, OutLen, &Irp->IoStatus.Information);
+        break;
+
+
     default:
         status = STATUS_INVALID_DEVICE_REQUEST;
         break;

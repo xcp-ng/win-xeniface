@@ -409,5 +409,14 @@ SuspendFreeEvent(
     __inout  PXENIFACE_SUSPEND_CONTEXT Context
     );
 
+NTSTATUS
+IoctlSharedInfoGetTime(
+    __in  PXENIFACE_FDO     Fdo,
+    __in  PCHAR             Buffer,
+    __in  ULONG             InLen,
+    __in  ULONG             OutLen,
+    __out PULONG_PTR        Info
+    );
+
 #endif // _IOCTLS_H_
 
