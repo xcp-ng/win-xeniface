@@ -63,6 +63,12 @@ typedef struct _XENIFACE_EVTCHN_CONTEXT {
     PVOID                  FileObject;
 } XENIFACE_EVTCHN_CONTEXT, *PXENIFACE_EVTCHN_CONTEXT;
 
+typedef struct _XENIFACE_SUSPEND_CONTEXT {
+    LIST_ENTRY              Entry;
+    PKEVENT                 Event;
+    PVOID                   FileObject;
+} XENIFACE_SUSPEND_CONTEXT, *PXENIFACE_SUSPEND_CONTEXT;
+
 typedef struct _XENIFACE_GRANT_CONTEXT {
     XENIFACE_CONTEXT_ID        Id;
     LIST_ENTRY                 Entry;
@@ -361,6 +367,46 @@ VOID
 GnttabFreeMap(
     __in     PXENIFACE_FDO Fdo,
     __inout  PXENIFACE_MAP_CONTEXT Context
+    );
+
+NTSTATUS
+IoctlSuspendGetCount(
+    __in  PXENIFACE_FDO     Fdo,
+    __in  PCHAR             Buffer,
+    __in  ULONG             InLen,
+    __in  ULONG             OutLen,
+    __out PULONG_PTR        Info
+    );
+
+NTSTATUS
+IoctlSuspendRegister(
+    __in  PXENIFACE_FDO     Fdo,
+    __in  PVOID             Buffer,
+    __in  ULONG             InLen,
+    __in  ULONG             OutLen,
+    __in  PFILE_OBJECT      FileObject,
+    __out PULONG_PTR        Info
+    );
+
+NTSTATUS
+IoctlSuspendDeregister(
+    __in  PXENIFACE_FDO     Fdo,
+    __in  PVOID             Buffer,
+    __in  ULONG             InLen,
+    __in  ULONG             OutLen,
+    __in  PFILE_OBJECT      FileObject
+    );
+
+VOID
+SuspendEventFire(
+    __in    PXENIFACE_FDO   Fdo
+    );
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+VOID
+SuspendFreeEvent(
+    __in     PXENIFACE_FDO Fdo,
+    __inout  PXENIFACE_SUSPEND_CONTEXT Context
     );
 
 #endif // _IOCTLS_H_

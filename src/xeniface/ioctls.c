@@ -96,6 +96,7 @@ XenIfaceCleanup(
     PLIST_ENTRY Node;
     PXENIFACE_STORE_CONTEXT StoreContext;
     PXENIFACE_EVTCHN_CONTEXT EvtchnContext;
+    PXENIFACE_SUSPEND_CONTEXT SuspendContext;
     KIRQL Irql;
     LIST_ENTRY ToFree;
 
@@ -141,6 +142,22 @@ XenIfaceCleanup(
         RemoveEntryList(&EvtchnContext->Entry);
         EvtchnFree(Fdo, EvtchnContext);
     }
+     
+    // suspend events
+    KeAcquireSpinLock(&Fdo->SuspendLock, &Irql);
+    Node = Fdo->SuspendList.Flink;
+    while (Node->Flink != Fdo->SuspendList.Flink) {
+        SuspendContext = CONTAINING_RECORD(Node, XENIFACE_SUSPEND_CONTEXT, Entry);
+
+        Node = Node->Flink;
+        if (SuspendContext->FileObject != FileObject)
+            continue;
+
+        XenIfaceDebugPrint(TRACE, "Suspend context %p\n", SuspendContext);
+        RemoveEntryList(&SuspendContext->Entry);
+        SuspendFreeEvent(Fdo, SuspendContext);
+    }
+    KeReleaseSpinLock(&Fdo->SuspendLock, Irql);
 }
 
 NTSTATUS
@@ -225,6 +242,19 @@ XenIfaceIoctl(
 
     case IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES:
         status = IoctlGnttabUnmapForeignPages(Fdo, Buffer, InLen, OutLen);
+        break;
+
+        // suspend
+    case IOCTL_XENIFACE_SUSPEND_GET_COUNT:
+        status = IoctlSuspendGetCount(Fdo, Buffer, InLen, OutLen, &Irp->IoStatus.Information);
+        break;
+
+    case IOCTL_XENIFACE_SUSPEND_REGISTER:
+        status = IoctlSuspendRegister(Fdo, Buffer, InLen, OutLen, Stack->FileObject, &Irp->IoStatus.Information);
+        break;
+
+    case IOCTL_XENIFACE_SUSPEND_DEREGISTER:
+        status = IoctlSuspendDeregister(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
         break;
 
     default:

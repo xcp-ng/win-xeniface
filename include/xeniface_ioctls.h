@@ -323,4 +323,41 @@ typedef struct _XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN {
     ULONG RequestId; /*! Request ID used in the corresponding IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES call */
 } XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN, *PXENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN;
 
+/*! \brief Gets the current suspend count.
+
+    Input: None
+
+    Output: ULONG
+*/
+#define IOCTL_XENIFACE_SUSPEND_GET_COUNT \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x830, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Input for IOCTL_XENIFACE_SUSPEND_REGISTER */
+typedef struct _XENIFACE_SUSPEND_REGISTER_IN {
+    HANDLE Event; /*!< Handle to an event object that will receive suspend notifications */
+} XENIFACE_SUSPEND_REGISTER_IN, *PXENIFACE_SUSPEND_REGISTER_IN;
+
+/*! \brief Input for IOCTL_XENIFACE_SUSPEND_DEREGISTER */
+typedef struct _XENIFACE_SUSPEND_REGISTER_OUT {
+    PVOID Context; /*!< Handle to the suspend event */
+} XENIFACE_SUSPEND_REGISTER_OUT, *PXENIFACE_SUSPEND_REGISTER_OUT;
+
+/*! \brief Registers an event which is signalled on resume-from-suspend
+
+    Input: XENIFACE_SUSPEND_REGISTER_IN
+
+    Output: XENIFACE_SUSPEND_REGISTER_OUT
+*/
+#define IOCTL_XENIFACE_SUSPEND_REGISTER \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x831, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Deregisters an event which is signalled on resume-from-suspend
+
+    Input: XENIFACE_SUSPEND_REGISTER_OUT
+
+    Output: None
+*/
+#define IOCTL_XENIFACE_SUSPEND_DEREGISTER \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x832, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
 #endif // _XENIFACE_IOCTLS_H_

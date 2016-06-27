@@ -908,6 +908,7 @@ FdoSuspendCallbackLate(
     ASSERT(NT_SUCCESS(status));
 
     WmiFireSuspendEvent(Fdo);
+    SuspendEventFire(Fdo);
 }
 
 static DECLSPEC_NOINLINE NTSTATUS
@@ -2593,6 +2594,9 @@ FdoCreate(
     KeInitializeSpinLock(&Fdo->EvtchnLock);
     InitializeListHead(&Fdo->EvtchnList);
 
+    KeInitializeSpinLock(&Fdo->SuspendLock);
+    InitializeListHead(&Fdo->SuspendList);
+
     KeInitializeSpinLock(&Fdo->IrpQueueLock);
     InitializeListHead(&Fdo->IrpList);
 
@@ -2624,6 +2628,10 @@ fail15:
     ASSERT(IsListEmpty(&Fdo->IrpList));
     RtlZeroMemory(&Fdo->IrpList, sizeof (LIST_ENTRY));
     RtlZeroMemory(&Fdo->IrpQueueLock, sizeof (KSPIN_LOCK));
+
+    ASSERT(IsListEmpty(&Fdo->SuspendList));
+    RtlZeroMemory(&Fdo->SuspendList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->SuspendLock, sizeof (KSPIN_LOCK));
 
     ASSERT(IsListEmpty(&Fdo->EvtchnList));
     RtlZeroMemory(&Fdo->EvtchnList, sizeof (LIST_ENTRY));
@@ -2746,6 +2754,10 @@ FdoDestroy(
     RtlZeroMemory(&Fdo->IrpList, sizeof (LIST_ENTRY));
     RtlZeroMemory(&Fdo->IrpQueueLock, sizeof (KSPIN_LOCK));
     RtlZeroMemory(&Fdo->IrpQueue, sizeof (IO_CSQ));
+
+    ASSERT(IsListEmpty(&Fdo->SuspendList));
+    RtlZeroMemory(&Fdo->SuspendList, sizeof (LIST_ENTRY));
+    RtlZeroMemory(&Fdo->SuspendLock, sizeof (KSPIN_LOCK));
 
     ASSERT(IsListEmpty(&Fdo->EvtchnList));
     RtlZeroMemory(&Fdo->EvtchnList, sizeof (LIST_ENTRY));

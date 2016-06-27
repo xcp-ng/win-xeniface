@@ -90,6 +90,9 @@ typedef struct _XENIFACE_FDO {
     KSPIN_LOCK                      EvtchnLock;
     LIST_ENTRY                      EvtchnList;
 
+    KSPIN_LOCK                      SuspendLock;
+    LIST_ENTRY                      SuspendList;
+
     KSPIN_LOCK                      GnttabCacheLock;
 
     IO_CSQ                          IrpQueue;

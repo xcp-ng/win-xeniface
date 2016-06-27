@@ -131,6 +131,7 @@
     <ClCompile Include="..\..\src\xeniface\fdo.c" />
     <ClCompile Include="..\..\src\xeniface\registry.c" />
     <ClCompile Include="..\..\src\xeniface\thread.c" />
+    <ClCompile Include="..\..\src\xeniface\ioctl_suspend.c" />
     <ClCompile Include="..\..\src\xeniface\ioctl_evtchn.c" />
     <ClCompile Include="..\..\src\xeniface\ioctl_gnttab.c" />
     <ClCompile Include="..\..\src\xeniface\ioctl_store.c" />
