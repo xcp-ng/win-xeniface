@@ -418,5 +418,13 @@ IoctlSharedInfoGetTime(
     __out PULONG_PTR        Info
     );
 
+NTSTATUS
+IoctlLog(
+    __in  PXENIFACE_FDO     Fdo,
+    __in  PCHAR             Buffer,
+    __in  ULONG             InLen,
+    __in  ULONG             OutLen
+    );
+
 #endif // _IOCTLS_H_
 

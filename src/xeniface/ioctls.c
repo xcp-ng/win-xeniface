@@ -85,6 +85,53 @@ __FreeCapturedBuffer(
     }
 }
 
+static FORCEINLINE
+BOOLEAN
+__IsValidStr(
+    __in  PCHAR             Str,
+    __in  ULONG             Len
+    )
+{
+    for ( ; Len--; ++Str) {
+        if (*Str == '\0')
+            return TRUE;
+        if (*Str == '\n' || *Str == '\r')
+            continue; // newline is allowed
+        if (!isprint((unsigned char)*Str))
+            break;
+    }
+    return FALSE;
+}
+
+DECLSPEC_NOINLINE
+NTSTATUS
+IoctlLog(
+    __in  PXENIFACE_FDO     Fdo,
+    __in  PCHAR             Buffer,
+    __in  ULONG             InLen,
+    __in  ULONG             OutLen
+    )
+{
+    NTSTATUS    status;
+
+    status = STATUS_INVALID_BUFFER_SIZE;
+    if (InLen == 0 || InLen > XENIFACE_LOG_MAX_LENGTH || OutLen != 0)
+        goto fail1;
+
+    status = STATUS_INVALID_PARAMETER;
+    if (!__IsValidStr(Buffer, InLen))
+        goto fail2;
+
+    XenIfaceDebugPrint(INFO, "USER: %s\n", Buffer);
+    return STATUS_SUCCESS;
+
+fail2:
+    XenIfaceDebugPrint(ERROR, "Fail2\n");
+fail1:
+    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    return status;
+}
+
 // Cleanup store watches and event channels, called on file object close.
 _IRQL_requires_(PASSIVE_LEVEL) // EvtchnFree calls KeFlushQueuedDpcs
 VOID
@@ -262,6 +309,10 @@ XenIfaceIoctl(
         status = IoctlSharedInfoGetTime(Fdo, Buffer, InLen, OutLen, &Irp->IoStatus.Information);
         break;
 
+        // misc
+    case IOCTL_XENIFACE_LOG:
+        status = IoctlLog(Fdo, Buffer, InLen, OutLen);
+        break;
 
     default:
         status = STATUS_INVALID_DEVICE_REQUEST;

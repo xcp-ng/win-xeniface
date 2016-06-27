@@ -369,4 +369,19 @@ typedef struct _XENIFACE_SUSPEND_REGISTER_OUT {
 #define IOCTL_XENIFACE_SHAREDINFO_GET_TIME \
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x840, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+/*! \brief Logs a message to Dom0
+
+    Input: NUL-terminated CHAR array containing the message to log
+           Must be less than XENIFACE_LOG_MAX_LENGTH long, and only contain
+           printable or newline characters ( isprint(x) || x == '\n' )
+
+    Output: None
+*/
+#define IOCTL_XENIFACE_LOG \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x84F, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Maximum number of CHARs for IOCTL_XENIFACE_LOG, including NUL terminator
+*/
+#define XENIFACE_LOG_MAX_LENGTH         256
+
 #endif // _XENIFACE_IOCTLS_H_
