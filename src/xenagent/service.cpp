@@ -171,7 +171,7 @@ CXenAgent::~CXenAgent()
 
 /*virtual*/ CDevice* CXenAgent::Create(const wchar_t* path)
 {
-    return new CDevice(path);
+    return new CXenIfaceDevice(path);
 }
 
 /*virtual*/ void CXenAgent::OnDeviceAdded(CDevice* dev)

@@ -29,56 +29,35 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __XENAGENT_SERVICE_H__
-#define __XENAGENT_SERVICE_H__
+#ifndef __XENAGENT_XENIFACEDEVICE_H__
+#define __XENAGENT_XENIFACEDEVICE_H__
 
-#include <version.h>
-
-#define SVC_NAME "xensvc"
-#define SVC_DISPLAYNAME PRODUCT_NAME_STR ## "Interface Service"
-#define SVC_DESC "Monitors and provides various metrics to XenStore"
-
+#include <windows.h>
+#include <string>
 #include "devicelist.h"
-#include "xenifacedevice.h"
 
-class CXenAgent : public IDeviceCreator
+class CXenIfaceDevice : public CDevice
 {
-public: // statics
-    static void Log(const char* fmt, ...);
+public:
+    CXenIfaceDevice(const wchar_t* path);
+    virtual ~CXenIfaceDevice();
 
-    static int ServiceInstall();
-    static int ServiceUninstall();
-    static int ServiceEntry();
+public: // store interface
+    bool StoreRead(const std::string& path, std::string& value);
+    bool StoreWrite(const std::string& path, const std::string& value);
+    bool StoreRemove(const std::string& path);
+    bool StoreAddWatch(const std::string& path, HANDLE evt, void** ctxt);
+    bool StoreRemoveWatch(void* ctxt);
 
-    static void WINAPI ServiceMain(int argc, char** argv);
-    static DWORD WINAPI ServiceControlHandlerEx(DWORD, DWORD, LPVOID, LPVOID);
+public: // suspend interface
+    bool SuspendRegister(HANDLE evt, void** ctxt);
+    bool SuspendDeregister(void* ctxt);
 
-public: // ctor/dtor
-    CXenAgent();
-    ~CXenAgent();
+public: // sharedinfo interface
+    bool SharedInfoGetTime(FILETIME* time);
 
-public: // IDeviceCreator
-    virtual CDevice* Create(const wchar_t* path);
-    virtual void OnDeviceAdded(CDevice* dev);
-    virtual void OnDeviceRemoved(CDevice* dev);
-
-private: // service events
-    void OnServiceStart();
-    void OnServiceStop();
-    void OnDeviceEvent(DWORD, LPVOID);
-    bool ServiceMainLoop();
-
-private: // service support
-    void SetServiceStatus(DWORD state, DWORD exit = 0, DWORD hint = 0);
-    void WINAPI __ServiceMain(int argc, char** argv);
-    DWORD WINAPI __ServiceControlHandlerEx(DWORD, DWORD, LPVOID, LPVOID);
-
-    SERVICE_STATUS          m_status;
-    SERVICE_STATUS_HANDLE   m_handle;
-    HANDLE                  m_evtlog;
-    HANDLE                  m_svc_stop;
-
-    CDeviceList             m_devlist;
+public: // logging
+    bool Log(const std::string& msg);
 };
 
 #endif
