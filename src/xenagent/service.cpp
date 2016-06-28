@@ -38,6 +38,24 @@
 #include "service.h"
 #include "messages.h"
 
+class CCritSec
+{
+public:
+    CCritSec(LPCRITICAL_SECTION crit);
+    ~CCritSec();
+private:
+    LPCRITICAL_SECTION m_crit;
+};
+
+CCritSec::CCritSec(LPCRITICAL_SECTION crit) : m_crit(crit)
+{
+    EnterCriticalSection(m_crit);
+}
+CCritSec::~CCritSec()
+{
+    LeaveCriticalSection(m_crit);
+}
+
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE ignore, LPSTR lpCmdLine, int nCmdShow)
 {
     if (strlen(lpCmdLine) != 0) {
@@ -151,7 +169,8 @@ static CXenAgent s_service;
     return s_service.__ServiceControlHandlerEx(req, evt, data, ctxt);
 }
 
-CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL), m_devlist(GUID_INTERFACE_XENIFACE)
+CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL),
+    m_devlist(GUID_INTERFACE_XENIFACE), m_device(NULL)
 {
     m_status.dwServiceType        = SERVICE_WIN32;
     m_status.dwCurrentState       = SERVICE_START_PENDING;
@@ -162,11 +181,15 @@ CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL), m_devlist(GUID_INTERFAC
     m_status.dwWaitHint           = 0;
 
     m_svc_stop = CreateEvent(FALSE, NULL, NULL, FALSE);
+
+    InitializeCriticalSection(&m_crit);
 }
 
 CXenAgent::~CXenAgent()
 {
     CloseHandle(m_svc_stop);
+
+    DeleteCriticalSection(&m_crit);
 }
 
 /*virtual*/ CDevice* CXenAgent::Create(const wchar_t* path)
@@ -177,11 +200,21 @@ CXenAgent::~CXenAgent()
 /*virtual*/ void CXenAgent::OnDeviceAdded(CDevice* dev)
 {
     CXenAgent::Log("OnDeviceAdded(%ws)\n", dev->Path());
+
+    CCritSec crit(&m_crit);
+    if (m_device == NULL) {
+        m_device = (CXenIfaceDevice*)dev;
+    }
 }
 
 /*virtual*/ void CXenAgent::OnDeviceRemoved(CDevice* dev)
 {
     CXenAgent::Log("OnDeviceRemoved(%ws)\n", dev->Path());
+
+    CCritSec crit(&m_crit);
+    if (m_device == dev) {
+        m_device = NULL;
+    }
 }
 
 void CXenAgent::OnServiceStart()

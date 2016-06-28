@@ -79,6 +79,8 @@ private: // service support
     HANDLE                  m_svc_stop;
 
     CDeviceList             m_devlist;
+    CXenIfaceDevice*        m_device;
+    CRITICAL_SECTION        m_crit;
 };
 
 #endif
