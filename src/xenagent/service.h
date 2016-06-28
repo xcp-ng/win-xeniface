@@ -68,6 +68,12 @@ private: // service events
     void OnDeviceEvent(DWORD, LPVOID);
     bool ServiceMainLoop();
 
+private: // helpers
+    void AcquireShutdownPrivilege();
+    void EventLog(DWORD evt);
+    void OnShutdown();
+    void OnSuspend();
+
 private: // service support
     void SetServiceStatus(DWORD state, DWORD exit = 0, DWORD hint = 0);
     void WINAPI __ServiceMain(int argc, char** argv);
@@ -77,10 +83,14 @@ private: // service support
     SERVICE_STATUS_HANDLE   m_handle;
     HANDLE                  m_evtlog;
     HANDLE                  m_svc_stop;
+    HANDLE                  m_evt_shutdown;
+    HANDLE                  m_evt_suspend;
 
     CDeviceList             m_devlist;
     CXenIfaceDevice*        m_device;
     CRITICAL_SECTION        m_crit;
+    void*                   m_ctxt_shutdown;
+    void*                   m_ctxt_suspend;
 };
 
 #endif

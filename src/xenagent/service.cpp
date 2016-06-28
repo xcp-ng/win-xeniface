@@ -32,6 +32,8 @@
 #define INITGUID
 #include <windows.h>
 #include <stdio.h>
+#include <powrprof.h>
+#include <winuser.h>
 
 #include <xeniface_ioctls.h>
 
@@ -170,7 +172,8 @@ static CXenAgent s_service;
 }
 
 CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL),
-    m_devlist(GUID_INTERFACE_XENIFACE), m_device(NULL)
+    m_devlist(GUID_INTERFACE_XENIFACE), m_device(NULL),
+    m_ctxt_shutdown(NULL), m_ctxt_suspend(NULL)
 {
     m_status.dwServiceType        = SERVICE_WIN32;
     m_status.dwCurrentState       = SERVICE_START_PENDING;
@@ -181,12 +184,16 @@ CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL),
     m_status.dwWaitHint           = 0;
 
     m_svc_stop = CreateEvent(FALSE, NULL, NULL, FALSE);
+    m_evt_shutdown = CreateEvent(FALSE, NULL, NULL, FALSE);
+    m_evt_suspend = CreateEvent(FALSE, NULL, NULL, FALSE);
 
     InitializeCriticalSection(&m_crit);
 }
 
 CXenAgent::~CXenAgent()
 {
+    CloseHandle(m_evt_suspend);
+    CloseHandle(m_evt_shutdown);
     CloseHandle(m_svc_stop);
 
     DeleteCriticalSection(&m_crit);
@@ -204,6 +211,13 @@ CXenAgent::~CXenAgent()
     CCritSec crit(&m_crit);
     if (m_device == NULL) {
         m_device = (CXenIfaceDevice*)dev;
+
+        // shutdown
+        m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
+        m_device->StoreWrite("control/feature-shutdown", "1");
+
+        // suspend
+        m_device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
     }
 }
 
@@ -213,6 +227,17 @@ CXenAgent::~CXenAgent()
 
     CCritSec crit(&m_crit);
     if (m_device == dev) {
+        // suspend
+        if (m_ctxt_suspend)
+            m_device->SuspendDeregister(m_ctxt_suspend);
+        m_ctxt_suspend = NULL;
+
+        // shutdown
+        m_device->StoreRemove("control/feature-shutdown");
+        if (m_ctxt_shutdown)
+            m_device->StoreRemoveWatch(m_ctxt_shutdown);
+        m_ctxt_shutdown = NULL;
+
         m_device = NULL;
     }
 }
@@ -236,8 +261,124 @@ void CXenAgent::OnDeviceEvent(DWORD evt, LPVOID data)
 
 bool CXenAgent::ServiceMainLoop()
 {
-    WaitForSingleObject(m_svc_stop, INFINITE);
-    return false;
+    HANDLE  events[3] = { m_svc_stop, m_evt_shutdown, m_evt_suspend };
+    DWORD   wait = WaitForMultipleObjects(3, events, FALSE, INFINITE);
+
+    switch (wait) {
+    case WAIT_OBJECT_0:
+        return false; // exit loop
+
+    case WAIT_OBJECT_0+1:
+        OnShutdown();
+        return true; // continue loop
+
+    case WAIT_OBJECT_0+2:
+        OnSuspend();
+        return true; // continue loop
+
+    default:
+        CXenAgent::Log("WaitForMultipleObjects failed (%08x)\n", wait);
+        EventLog(EVENT_XENUSER_UNEXPECTED);
+        return true; // continue loop
+    }
+}
+
+void CXenAgent::AcquireShutdownPrivilege()
+{
+    HANDLE          token;
+    TOKEN_PRIVILEGES tp;
+
+    LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME, &tp.Privileges[0].Luid);
+    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+    tp.PrivilegeCount = 1;
+
+    if (!OpenProcessToken(GetCurrentProcess(),
+                          TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                          &token))
+        return;
+
+    AdjustTokenPrivileges(token, FALSE, &tp, NULL, 0, NULL);
+    CloseHandle(token);
+}
+
+void CXenAgent::EventLog(DWORD evt)
+{
+    if (m_evtlog) {
+        ReportEvent(m_evtlog,
+                    EVENTLOG_SUCCESS,
+                    0,
+                    evt,
+                    NULL,
+                    0,
+                    0,
+                    NULL,
+                    NULL);
+    }
+}
+
+void CXenAgent::OnShutdown()
+{
+    CCritSec crit(&m_crit);
+    if (m_device == NULL)
+        return;
+
+    std::string type;
+    m_device->StoreRead("control/shutdown", type);
+
+    CXenAgent::Log("OnShutdown(%ws) = %s\n", m_device->Path(), type.c_str());
+
+    if (type == "poweroff" || type == "halt") {
+        EventLog(EVENT_XENUSER_POWEROFF);
+
+        m_device->StoreWrite("control/shutdown", "");
+        AcquireShutdownPrivilege();
+        if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, FALSE,
+                                      SHTDN_REASON_MAJOR_OTHER |
+                                      SHTDN_REASON_MINOR_ENVIRONMENT |
+                                      SHTDN_REASON_FLAG_PLANNED)) {
+            CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
+        }
+    } else if (type == "reboot") {
+        EventLog(EVENT_XENUSER_REBOOT);
+
+        m_device->StoreWrite("control/shutdown", "");
+        AcquireShutdownPrivilege();
+        if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE,
+                                      SHTDN_REASON_MAJOR_OTHER |
+                                      SHTDN_REASON_MINOR_ENVIRONMENT |
+                                      SHTDN_REASON_FLAG_PLANNED)) {
+            CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
+        }
+    } else if (type == "hibernate") {
+        EventLog(EVENT_XENUSER_HIBERNATE);
+
+        m_device->StoreWrite("control/shutdown", "");
+        AcquireShutdownPrivilege();
+        if (!SetSystemPowerState(FALSE, FALSE)) {
+            CXenAgent::Log("SetSystemPowerState failed %08x\n", GetLastError());
+        }
+    } else if (type == "s3") {
+        EventLog(EVENT_XENUSER_S3);
+
+        m_device->StoreWrite("control/shutdown", "");
+        AcquireShutdownPrivilege();
+        if (!SetSuspendState(FALSE, TRUE, FALSE)) {
+            CXenAgent::Log("SetSuspendState failed %08x\n", GetLastError());
+        }
+    }
+}
+
+void CXenAgent::OnSuspend()
+{
+    CCritSec crit(&m_crit);
+    if (m_device == NULL)
+        return;
+
+    CXenAgent::Log("OnSuspend(%ws)\n", m_device->Path());
+    EventLog(EVENT_XENUSER_UNSUSPENDED);
+
+    m_device->StoreWrite("control/feature-shutdown", "1");
 }
 
 void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*= 0*/)
