@@ -71,6 +71,10 @@ private: // service events
 private: // helpers
     void AcquireShutdownPrivilege();
     void EventLog(DWORD evt);
+    bool IsHostTimeUTC();
+    void AdjustXenTimeToUTC(FILETIME* time);
+    bool RegCheckIsUTC(const char* path);
+    void SetXenTime();
     void OnShutdown();
     void OnSuspend();
 

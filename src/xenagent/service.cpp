@@ -218,6 +218,8 @@ CXenAgent::~CXenAgent()
 
         // suspend
         m_device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
+
+        SetXenTime();
     }
 }
 
@@ -317,6 +319,121 @@ void CXenAgent::EventLog(DWORD evt)
     }
 }
 
+bool CXenAgent::IsHostTimeUTC()
+{
+#ifdef _WIN64
+    // Check SOFTWARE\Wow6432Node\$(VENDOR_NAME_STR)\$(REG_KEY_NAME) $(REG_UTC_NAME) == UTC
+    if (RegCheckIsUTC("SOFTWARE\\Wow6432Node"))
+        return true;
+#endif
+    // Check SOFTWARE\$(VENDOR_NAME_STR)\$(REG_KEY_NAME) $(REG_UTC_NAME) == UTC
+    if (RegCheckIsUTC("SOFTWARE"))
+        return true;
+
+    return false;
+}
+
+void CXenAgent::AdjustXenTimeToUTC(FILETIME* now)
+{
+    std::string vm;
+    if (!m_device->StoreRead("vm", vm))
+        return;
+
+    std::string offs;
+    if (!m_device->StoreRead(vm + "/rtc/timeoffset", offs))
+        return;
+
+    long offset = (long)atoi(offs.c_str());
+
+    ULARGE_INTEGER lnow;
+    lnow.LowPart  = now->dwLowDateTime;
+    lnow.HighPart = now->dwHighDateTime;
+
+    lnow.QuadPart -= ((LONGLONG)offset * 1000000);
+
+    now->dwLowDateTime  = lnow.LowPart;
+    now->dwHighDateTime = lnow.HighPart;
+}
+
+bool CXenAgent::RegCheckIsUTC(const char* rootpath)
+{
+    HKEY    key;
+    LRESULT lr;
+    std::string path;
+    bool    match = false;
+
+    path = rootpath;
+    path += "\\";
+    path += VENDOR_NAME_STR;
+    path += "\\";
+    path += REG_KEY_NAME;
+
+    lr = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path.c_str(), 0, KEY_READ, &key);
+    if (lr != ERROR_SUCCESS)
+        goto fail1;
+
+    long size = 32;
+    DWORD length;
+    char* buffer = NULL;
+
+    do {
+        length = size;
+        if (buffer)
+            delete [] buffer;
+
+        buffer = new char[size];
+        if (buffer == NULL)
+            goto fail2;
+
+        lr = RegQueryValueEx(key, "HostTime", NULL, NULL, (LPBYTE)buffer, &length);
+        size *= 2;
+    } while (lr == ERROR_MORE_DATA);
+    if (lr != ERROR_SUCCESS)
+        goto fail3;
+
+    if (!_strnicoll("UTC", buffer, length))
+        match = true;
+
+fail3:
+    delete [] buffer;
+fail2:
+    RegCloseKey(key);
+fail1:
+
+    return match;
+}
+
+void CXenAgent::SetXenTime()
+{
+    // Set VM's time to Xen's time (adjust for UTC settings of VM and guest)
+    FILETIME now = { 0 };
+    if (!m_device->SharedInfoGetTime(&now))
+        return;
+
+    bool IsUTC = IsHostTimeUTC();
+    if (IsUTC)
+        AdjustXenTimeToUTC(&now);
+
+    SYSTEMTIME sys = { 0 };
+    if (!FileTimeToSystemTime(&now, &sys))
+        return;
+
+    SYSTEMTIME cur = { 0 };
+    GetLocalTime(&cur);
+
+    CXenAgent::Log("Time Now = %d/%d/%d %d:%02d:%02d.%d\n",
+                   cur.wYear, cur.wMonth, cur.wDay,
+                   cur.wHour, cur.wMinute, cur.wSecond, cur.wMilliseconds);
+    CXenAgent::Log("New Time = %d/%d/%d %d:%02d:%02d.%d\n",
+                   sys.wYear, sys.wMonth, sys.wDay,
+                   sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
+
+    if (IsUTC)
+        SetSystemTime(&sys);
+    else
+        SetLocalTime(&sys);
+}
+
 void CXenAgent::OnShutdown()
 {
     CCritSec crit(&m_crit);
@@ -379,6 +496,8 @@ void CXenAgent::OnSuspend()
     EventLog(EVENT_XENUSER_UNSUSPENDED);
 
     m_device->StoreWrite("control/feature-shutdown", "1");
+
+    SetXenTime();
 }
 
 void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*= 0*/)
