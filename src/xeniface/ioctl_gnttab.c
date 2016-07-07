@@ -712,7 +712,7 @@ IoctlGnttabUnmapForeignPages(
     PXENIFACE_CONTEXT_ID ContextId;
 
     status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen != sizeof(XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN) &&
+    if (InLen != sizeof(XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN) ||
         OutLen != 0) {
         goto fail1;
     }
