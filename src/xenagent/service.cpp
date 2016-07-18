@@ -495,6 +495,12 @@ void CXenAgent::OnSuspend()
     CXenAgent::Log("OnSuspend(%ws)\n", m_device->Path());
     EventLog(EVENT_XENUSER_UNSUSPENDED);
 
+    // recreate shutdown watch, as suspending deactivated the watch
+    if (m_ctxt_shutdown)
+        m_device->StoreRemoveWatch(m_ctxt_shutdown);
+    m_ctxt_shutdown = NULL;
+
+    m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
     m_device->StoreWrite("control/feature-shutdown", "1");
 
     SetXenTime();
