@@ -81,6 +81,12 @@ static CXenAgent s_service;
     va_end(args);
 
     OutputDebugString(message);
+
+    // if possible, send to xeniface to forward to logs
+    CCritSec crit(&s_service.m_crit);
+    if (s_service.m_device) {
+        s_service.m_device->Log(message);
+    }
 }
 
 /*static*/ int CXenAgent::ServiceInstall()

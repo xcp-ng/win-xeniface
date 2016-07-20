@@ -113,6 +113,7 @@ IoctlLog(
     )
 {
     NTSTATUS    status;
+	PCHAR		ptr;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0 || InLen > XENIFACE_LOG_MAX_LENGTH || OutLen != 0)
@@ -122,6 +123,11 @@ IoctlLog(
     if (!__IsValidStr(Buffer, InLen))
         goto fail2;
 
+	// remove newlines from end of buffer
+	for (ptr = Buffer + InLen - 1;
+		 ptr != Buffer && *ptr != 0 && *ptr != '\n';
+		 --ptr)
+			*ptr = 0;
     XenIfaceDebugPrint(INFO, "USER: %s\n", Buffer);
     return STATUS_SUCCESS;
 
