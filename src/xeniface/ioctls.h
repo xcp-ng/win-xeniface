@@ -119,7 +119,7 @@ _IRQL_requires_(PASSIVE_LEVEL)
 VOID
 XenIfaceCleanup(
     __in  PXENIFACE_FDO Fdo,
-    __in  PFILE_OBJECT  FileObject
+    __in_opt  PFILE_OBJECT  FileObject
     );
 
 DECLSPEC_NOINLINE

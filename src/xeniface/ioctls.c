@@ -137,7 +137,7 @@ _IRQL_requires_(PASSIVE_LEVEL) // EvtchnFree calls KeFlushQueuedDpcs
 VOID
 XenIfaceCleanup(
     __in  PXENIFACE_FDO Fdo,
-    __in  PFILE_OBJECT  FileObject
+    __in_opt  PFILE_OBJECT  FileObject
     )
 {
     PLIST_ENTRY Node;
@@ -154,7 +154,8 @@ XenIfaceCleanup(
         StoreContext = CONTAINING_RECORD(Node, XENIFACE_STORE_CONTEXT, Entry);
 
         Node = Node->Flink;
-        if (StoreContext->FileObject != FileObject)
+        if (FileObject != NULL &&
+            StoreContext->FileObject != FileObject)
             continue;
 
         XenIfaceDebugPrint(TRACE, "Store context %p\n", StoreContext);
@@ -171,7 +172,8 @@ XenIfaceCleanup(
         EvtchnContext = CONTAINING_RECORD(Node, XENIFACE_EVTCHN_CONTEXT, Entry);
 
         Node = Node->Flink;
-        if (EvtchnContext->FileObject != FileObject)
+        if (FileObject != NULL &&
+            EvtchnContext->FileObject != FileObject)
             continue;
 
         XenIfaceDebugPrint(TRACE, "Evtchn context %p\n", EvtchnContext);
@@ -197,7 +199,8 @@ XenIfaceCleanup(
         SuspendContext = CONTAINING_RECORD(Node, XENIFACE_SUSPEND_CONTEXT, Entry);
 
         Node = Node->Flink;
-        if (SuspendContext->FileObject != FileObject)
+        if (FileObject != NULL &&
+            SuspendContext->FileObject != FileObject)
             continue;
 
         XenIfaceDebugPrint(TRACE, "Suspend context %p\n", SuspendContext);

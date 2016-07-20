@@ -1050,6 +1050,7 @@ FdoD0ToD3(
     Trace("====>\n");
 
     WmiSessionsSuspendAll(Fdo);
+    XenIfaceCleanup(Fdo, NULL);
 
     PowerState.DeviceState = PowerDeviceD3;
     PoSetPowerState(Fdo->Dx->DeviceObject,
