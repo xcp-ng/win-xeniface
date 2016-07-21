@@ -35,6 +35,7 @@ ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318}
 Provider=%Vendor%
 DriverVer=01/01/1900,0.0.0.0
 CatalogFile=xeniface.cat
+DriverPackageDisplayName=%DiskId1%
 
 [DestinationDirs]
 DefaultDestDir = 12
