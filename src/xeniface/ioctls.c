@@ -123,11 +123,14 @@ IoctlLog(
     if (!__IsValidStr(Buffer, InLen))
         goto fail2;
 
-	// remove newlines from end of buffer
-	for (ptr = Buffer + InLen - 1;
-		 ptr != Buffer && *ptr != 0 && *ptr != '\n';
-		 --ptr)
-			*ptr = 0;
+	// remove whitespace from end of buffer
+	for (ptr = Buffer + InLen - 1; ptr != Buffer; --ptr) {
+        if (*ptr != '\n' && *ptr != '\r' && *ptr != '\0')
+            break;
+
+        *ptr = '\0';
+    }
+
     XenIfaceDebugPrint(INFO, "USER: %s\n", Buffer);
     return STATUS_SUCCESS;
 
