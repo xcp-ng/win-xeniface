@@ -20,9 +20,9 @@ The tools requested that the local VM reboot.
 MessageId=0x0003
 Facility=XenUser
 Severity=Informational
-SymbolicName=EVENT_XENUSER_HIBERNATE
+SymbolicName=EVENT_XENUSER_S4
 Language=English
-The tools requested that the local VM hibernate itself.
+The tools requested that the local VM enter power state S4.
 .
 
 MessageId=0x0004

@@ -220,7 +220,10 @@ CXenAgent::~CXenAgent()
 
         // shutdown
         m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
-        m_device->StoreWrite("control/feature-shutdown", "1");
+        m_device->StoreWrite("control/feature-poweroff", "1");
+        m_device->StoreWrite("control/feature-reboot", "1");
+        m_device->StoreWrite("control/feature-s3", "1");
+        m_device->StoreWrite("control/feature-s4", "1");
 
         // suspend
         m_device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
@@ -241,7 +244,10 @@ CXenAgent::~CXenAgent()
         m_ctxt_suspend = NULL;
 
         // shutdown
-        m_device->StoreRemove("control/feature-shutdown");
+        m_device->StoreRemove("control/feature-poweroff");
+        m_device->StoreRemove("control/feature-reboot");
+        m_device->StoreRemove("control/feature-s3");
+        m_device->StoreRemove("control/feature-s4");
         if (m_ctxt_shutdown)
             m_device->StoreRemoveWatch(m_ctxt_shutdown);
         m_ctxt_shutdown = NULL;
@@ -451,7 +457,7 @@ void CXenAgent::OnShutdown()
 
     CXenAgent::Log("OnShutdown(%ws) = %s\n", m_device->Path(), type.c_str());
 
-    if (type == "poweroff" || type == "halt") {
+    if (type == "poweroff") {
         EventLog(EVENT_XENUSER_POWEROFF);
 
         m_device->StoreWrite("control/shutdown", "");
@@ -473,8 +479,8 @@ void CXenAgent::OnShutdown()
                                       SHTDN_REASON_FLAG_PLANNED)) {
             CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
         }
-    } else if (type == "hibernate") {
-        EventLog(EVENT_XENUSER_HIBERNATE);
+    } else if (type == "s4") {
+        EventLog(EVENT_XENUSER_S4);
 
         m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
@@ -507,7 +513,11 @@ void CXenAgent::OnSuspend()
     m_ctxt_shutdown = NULL;
 
     m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
-    m_device->StoreWrite("control/feature-shutdown", "1");
+    m_device->StoreWrite("control/feature-poweroff", "1");
+    m_device->StoreWrite("control/feature-reboot", "1");
+    m_device->StoreWrite("control/feature-s3", "1");
+    m_device->StoreWrite("control/feature-s4", "1");
+
 
     SetXenTime();
 }
