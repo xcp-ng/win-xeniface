@@ -34,9 +34,8 @@
 
 #include <version.h>
 
-#define SVC_NAME "xensvc"
-#define SVC_DISPLAYNAME PRODUCT_NAME_STR ## "Interface Service"
-#define SVC_DESC "Monitors and provides various metrics to XenStore"
+#define SVC_NAME        __MODULE__
+#define SVC_DISPLAYNAME SVC_NAME
 
 #include "devicelist.h"
 #include "xenifacedevice.h"

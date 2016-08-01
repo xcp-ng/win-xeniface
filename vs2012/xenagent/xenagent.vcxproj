@@ -1,213 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
+  <Import Project="..\configs.props" />
+  <PropertyGroup Label="PropertySheets">
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>WindowsApplicationForDrivers8.0</PlatformToolset>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}</ProjectGuid>
-    <Keyword>Win32Proj</Keyword>
-    <RootNamespace>xenagent</RootNamespace>
-    <ProjectName>xenagent</ProjectName>
+    <Configuration>Windows Vista Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">Win32</Platform>
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}</ProjectGuid>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
+  <Import Project="..\targets.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-
   <PropertyGroup>
-    <IncludePath>..\..\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
-
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <PropertyGroup>
+    <CustomBuildAfterTargets>Link</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;__MODULE__="XENAGENT";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\include;$(SolutionDir)\xenagent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnablePREfast>true</EnablePREfast>
+      <RuntimeLibrary Condition="'$(UseDebugLibraries)'=='true'">MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(UseDebugLibraries)'=='false'">MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <CustomBuildStep>
-        <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
-            xcopy /y $(TargetDir)xenagent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Message>Copying output files</Message>
-      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
-    </CustomBuildStep>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\include;$(SolutionDir)\xenagent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PreprocessorDefinitions>__i386__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
     <CustomBuildStep>
-        <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
-            xcopy /y $(TargetDir)xenagent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Message>Copying output files</Message>
-      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
+      <Outputs>$(TargetDir)$(TargetName).dll</Outputs>
+      <Inputs>$(IntDir)$(TargetName).res</Inputs>
+      <Command>link -machine:x86 -dll -noentry -out:%(Outputs) %(Inputs)</Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CRT_SECURE_NO_WARNINGS;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\include;$(SolutionDir)\xenagent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <BrowseInformation>true</BrowseInformation>
-      <PreprocessToFile>false</PreprocessToFile>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>__x86_64__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
     <CustomBuildStep>
-      <Message>Copying output files</Message>
-      <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
-          xcopy /y $(TargetDir)xenagent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
-      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
+      <Outputs>$(TargetDir)$(TargetName).dll</Outputs>
+      <Inputs>$(IntDir)$(TargetName).res</Inputs>
+      <Command>link -machine:x64 -dll -noentry -out:%(Outputs) %(Inputs)</Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CRT_SECURE_NO_WARNINGS;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\include;$(SolutionDir)\xenagent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <BrowseInformation>true</BrowseInformation>
-      <PreprocessToFile>false</PreprocessToFile>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-    <CustomBuildStep>
-      <Message>Copying output files</Message>
-      <Command>xcopy /y $(TargetPath) $(SolutionDir)\..\xeniface\$(PlatformTarget)\
-          xcopy /y $(TargetDir)xenagent.pdb $(SolutionDir)\..\xeniface\$(PlatformTarget)\</Command>
-      <Outputs>$(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetFileName);(SolutionDir)\..\xeniface\$(PlatformTarget)$(TargetName).pdb;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath);$(TargetDir)$(TargetName).pdb</Inputs>
-    </CustomBuildStep>
-  </ItemDefinitionGroup>
+  <ItemGroup>
+    <FilesToPackage Include="$(TargetPath)" />
+    <FilesToPackage Include="$(OutDir)$(TargetName).pdb" />
+    <FilesToPackage Include="$(OutDir)$(TargetName).dll" />
+    <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />
+  </ItemGroup>
+  <ItemGroup>
+    <MessageCompile Include="..\..\src\xenagent\messages.mc" />
+  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\xenagent\service.cpp"/>
     <ClCompile Include="..\..\src\xenagent\devicelist.cpp"/>
     <ClCompile Include="..\..\src\xenagent\xenifacedevice.cpp"/>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\src\xenagent\service.h" />
-    <ClInclude Include="..\..\src\xenagent\devicelist.h" />
-    <ClInclude Include="..\..\src\xenagent\xenifacedevice.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\..\src\xenagent\messages.mc">
-      <FileType>Document</FileType>
-      <Command>mc %(FullPath)</Command>
-      <Outputs>%(Filename).rc;%(Filename).h</Outputs>
-	</CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\xenagent\xenagent.rc" />
@@ -216,6 +83,4 @@
     <Image Include="..\..\src\xenagent\xen.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
 </Project>

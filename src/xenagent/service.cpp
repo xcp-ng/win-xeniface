@@ -58,7 +58,11 @@ CCritSec::~CCritSec()
     LeaveCriticalSection(m_crit);
 }
 
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE ignore, LPSTR lpCmdLine, int nCmdShow)
+int CALLBACK WinMain(
+    _In_     HINSTANCE hInstance,
+    _In_opt_ HINSTANCE ignore,
+    _In_     LPSTR     lpCmdLine,
+    _In_     int       nCmdShow)
 {
     if (strlen(lpCmdLine) != 0) {
         if (!strcmp(lpCmdLine, "-i") || !strcmp(lpCmdLine, "\"-i\""))
@@ -446,6 +450,9 @@ void CXenAgent::SetXenTime()
         SetLocalTime(&sys);
 }
 
+#pragma warning(push)
+#pragma warning(disable:28159)
+
 void CXenAgent::OnShutdown()
 {
     CCritSec crit(&m_crit);
@@ -497,6 +504,8 @@ void CXenAgent::OnShutdown()
         }
     }
 }
+
+#pragma warning(pop)
 
 void CXenAgent::OnSuspend()
 {

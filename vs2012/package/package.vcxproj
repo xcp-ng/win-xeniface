@@ -42,11 +42,14 @@
 	</PropertyGroup>
         <ItemGroup>
                 <ProjectReference Include="..\xeniface\xeniface.vcxproj">
-                        <Project>{22166290-65D8-49D2-BB88-33201797C7D8}</Project>
+		  <Project>{22166290-65D8-49D2-BB88-33201797C7D8}</Project>
                 </ProjectReference>
                 <ProjectReference Include="..\xeniface_coinst\xeniface_coinst.vcxproj">
-                        <Project>{85c731ad-2ea2-4049-a542-d2d38ede938c}</Project>
+		  <Project>{85c731ad-2ea2-4049-a542-d2d38ede938c}</Project>
                 </ProjectReference>
+		<ProjectReference Include="..\xenagent\xenagent.vcxproj">
+		  <Project>{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}</Project>
+		</ProjectReference>
         </ItemGroup>
 	<ItemGroup>
 		<FilesToPackage Include="$(KIT)\Redist\DIFx\dpinst\EngMui\x86\dpinst.exe" Condition="'$(Platform)'=='Win32'" />
