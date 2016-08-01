@@ -237,6 +237,28 @@ void CDeviceList::OnDeviceEvent(DWORD evt, LPVOID data)
     }
 }
 
+void CDeviceList::OnPowerEvent(DWORD evt, LPVOID data)
+{
+    switch (evt) {
+    case PBT_APMRESUMESUSPEND:
+    for (DeviceMap::iterator it = m_devs.begin();
+         it != m_devs.end();
+         ++it)
+        m_impl->OnDeviceResume(it->second);
+    break;
+
+    case PBT_APMSUSPEND:
+    for (DeviceMap::iterator it = m_devs.begin();
+         it != m_devs.end();
+         ++it)
+        m_impl->OnDeviceSuspend(it->second);
+    break;
+
+    default:
+        break;
+    }
+}
+
 CDevice* CDeviceList::GetFirstDevice()
 {
     DeviceMap::iterator it = m_devs.begin();

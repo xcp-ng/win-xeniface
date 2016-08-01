@@ -63,6 +63,8 @@ public:
     virtual CDevice* Create(const wchar_t* path) = 0;
     virtual void OnDeviceAdded(CDevice* dev) = 0;
     virtual void OnDeviceRemoved(CDevice* dev) = 0;
+    virtual void OnDeviceSuspend(CDevice* dev) = 0;
+    virtual void OnDeviceResume(CDevice* dev) = 0;
 };
 
 class CDeviceList
@@ -74,6 +76,7 @@ public:
     bool Start(HANDLE svc, IDeviceCreator* impl);
     void Stop();
     void OnDeviceEvent(DWORD evt, LPVOID data);
+    void OnPowerEvent(DWORD evt, LPVOID data);
     CDevice* GetFirstDevice();
 
 private:

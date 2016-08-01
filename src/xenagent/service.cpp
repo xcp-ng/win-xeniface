@@ -187,7 +187,9 @@ CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL),
 {
     m_status.dwServiceType        = SERVICE_WIN32;
     m_status.dwCurrentState       = SERVICE_START_PENDING;
-    m_status.dwControlsAccepted   = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+    m_status.dwControlsAccepted   = SERVICE_ACCEPT_STOP |
+                                    SERVICE_ACCEPT_SHUTDOWN |
+                                    SERVICE_ACCEPT_POWEREVENT;
     m_status.dwWin32ExitCode      = 0;
     m_status.dwServiceSpecificExitCode = 0;
     m_status.dwCheckPoint         = 0;
@@ -214,6 +216,34 @@ CXenAgent::~CXenAgent()
     return new CXenIfaceDevice(path);
 }
 
+void CXenAgent::StartShutdownWatch()
+{
+    if (m_ctxt_shutdown)
+        return;
+
+    m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
+
+    m_device->StoreWrite("control/feature-poweroff", "1");
+    m_device->StoreWrite("control/feature-reboot", "1");
+    m_device->StoreWrite("control/feature-s3", "1");
+    m_device->StoreWrite("control/feature-s4", "1");
+}
+
+void CXenAgent::StopShutdownWatch()
+{
+    if (!m_ctxt_shutdown)
+        return;
+
+    m_device->StoreRemove("control/feature-poweroff");
+    m_device->StoreRemove("control/feature-reboot");
+    m_device->StoreRemove("control/feature-s3");
+    m_device->StoreRemove("control/feature-s4");
+
+    m_device->StoreRemoveWatch(m_ctxt_shutdown);
+    m_ctxt_shutdown = NULL;
+}
+
+
 /*virtual*/ void CXenAgent::OnDeviceAdded(CDevice* dev)
 {
     CXenAgent::Log("OnDeviceAdded(%ws)\n", dev->Path());
@@ -222,16 +252,8 @@ CXenAgent::~CXenAgent()
     if (m_device == NULL) {
         m_device = (CXenIfaceDevice*)dev;
 
-        // shutdown
-        m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
-        m_device->StoreWrite("control/feature-poweroff", "1");
-        m_device->StoreWrite("control/feature-reboot", "1");
-        m_device->StoreWrite("control/feature-s3", "1");
-        m_device->StoreWrite("control/feature-s4", "1");
-
-        // suspend
         m_device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
-
+        StartShutdownWatch();
         SetXenTime();
     }
 }
@@ -242,22 +264,26 @@ CXenAgent::~CXenAgent()
 
     CCritSec crit(&m_crit);
     if (m_device == dev) {
-        // suspend
-        if (m_ctxt_suspend)
+        if (m_ctxt_suspend) {
             m_device->SuspendDeregister(m_ctxt_suspend);
-        m_ctxt_suspend = NULL;
-
-        // shutdown
-        m_device->StoreRemove("control/feature-poweroff");
-        m_device->StoreRemove("control/feature-reboot");
-        m_device->StoreRemove("control/feature-s3");
-        m_device->StoreRemove("control/feature-s4");
-        if (m_ctxt_shutdown)
-            m_device->StoreRemoveWatch(m_ctxt_shutdown);
-        m_ctxt_shutdown = NULL;
+            m_ctxt_suspend = NULL;
+        }
+        StopShutdownWatch();
 
         m_device = NULL;
     }
+}
+
+/*virtual*/ void CXenAgent::OnDeviceSuspend(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceSuspend(%ws)\n", dev->Path());
+    StopShutdownWatch();
+}
+
+/*virtual*/ void CXenAgent::OnDeviceResume(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceResume(%ws)\n", dev->Path());
+    StartShutdownWatch();
 }
 
 void CXenAgent::OnServiceStart()
@@ -275,6 +301,11 @@ void CXenAgent::OnServiceStop()
 void CXenAgent::OnDeviceEvent(DWORD evt, LPVOID data)
 {
     m_devlist.OnDeviceEvent(evt, data);
+}
+
+void CXenAgent::OnPowerEvent(DWORD evt, LPVOID data)
+{
+    m_devlist.OnPowerEvent(evt, data);
 }
 
 bool CXenAgent::ServiceMainLoop()
@@ -575,6 +606,11 @@ DWORD WINAPI CXenAgent::__ServiceControlHandlerEx(DWORD req, DWORD evt, LPVOID d
     case SERVICE_CONTROL_DEVICEEVENT:
         SetServiceStatus(SERVICE_RUNNING);
         OnDeviceEvent(evt, data);
+        return NO_ERROR;
+
+    case SERVICE_CONTROL_POWEREVENT:
+        SetServiceStatus(SERVICE_RUNNING);
+        OnPowerEvent(evt, data);
         return NO_ERROR;
 
     case SERVICE_CONTROL_INTERROGATE:
