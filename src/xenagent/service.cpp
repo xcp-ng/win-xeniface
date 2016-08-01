@@ -60,10 +60,14 @@ CCritSec::~CCritSec()
 
 int CALLBACK WinMain(
     _In_     HINSTANCE hInstance,
-    _In_opt_ HINSTANCE ignore,
+    _In_opt_ HINSTANCE hPrevious,
     _In_     LPSTR     lpCmdLine,
     _In_     int       nCmdShow)
 {
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(hPrevious);
+    UNREFERENCED_PARAMETER(nCmdShow);
+
     if (strlen(lpCmdLine) != 0) {
         if (!strcmp(lpCmdLine, "-i") || !strcmp(lpCmdLine, "\"-i\""))
             return CXenAgent::ServiceInstall();
@@ -104,7 +108,7 @@ static CXenAgent s_service;
 
     if (GetModuleFileNameA(NULL, path, MAX_PATH) == 0) {
         CloseServiceHandle(mgr);
-        return GetLastError();
+        return -1;
     }
     path[MAX_PATH] = 0;
 
@@ -166,7 +170,7 @@ static CXenAgent s_service;
 
     if (!StartServiceCtrlDispatcher(ServiceTable)) {
         CXenAgent::Log("Failed to start dispatcher\n");
-        return GetLastError();
+        return -1;
     }
     return 0;
 }
@@ -419,7 +423,7 @@ bool CXenAgent::RegCheckIsUTC(const char* rootpath)
     if (lr != ERROR_SUCCESS)
         goto fail1;
 
-    long size = 32;
+    DWORD size = 32;
     DWORD length;
     char* buffer = NULL;
 
@@ -572,6 +576,9 @@ void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*=
 
 void WINAPI CXenAgent::__ServiceMain(int argc, char** argv)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     m_handle = RegisterServiceCtrlHandlerEx(SVC_NAME, ServiceControlHandlerEx, NULL);
     if (m_handle == NULL)
         return;
@@ -591,6 +598,8 @@ void WINAPI CXenAgent::__ServiceMain(int argc, char** argv)
 
 DWORD WINAPI CXenAgent::__ServiceControlHandlerEx(DWORD req, DWORD evt, LPVOID data, LPVOID ctxt)
 {
+    UNREFERENCED_PARAMETER(ctxt);
+
     switch (req)
     {
     case SERVICE_CONTROL_STOP:

@@ -54,7 +54,7 @@ public: // statics
 
 public: // ctor/dtor
     CXenAgent();
-    ~CXenAgent();
+    virtual ~CXenAgent();
 
 public: // IDeviceCreator
     virtual CDevice* Create(const wchar_t* path);

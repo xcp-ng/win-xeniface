@@ -239,6 +239,8 @@ void CDeviceList::OnDeviceEvent(DWORD evt, LPVOID data)
 
 void CDeviceList::OnPowerEvent(DWORD evt, LPVOID data)
 {
+    UNREFERENCED_PARAMETER(data);
+
     switch (evt) {
     case PBT_APMRESUMESUSPEND:
     for (DeviceMap::iterator it = m_devs.begin();
