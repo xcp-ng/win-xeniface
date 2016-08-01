@@ -54,7 +54,5 @@
 #define VER_FILETYPE VFT_APP
 #define VER_FILESUBTYPE 0
 
-xen_icon ICON "xen.ico"
-
 #include "common.ver"
 #include "messages.rc"
