@@ -130,6 +130,9 @@ CDeviceList::~CDeviceList()
     Stop();
 }
 
+#pragma warning(push)
+#pragma warning(disable:6102) // Using value from failed function call
+
 bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
 {
     Stop();
@@ -187,6 +190,8 @@ bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
     SetupDiDestroyDeviceInfoList(info);
     return true;
 }
+
+#pragma warning(pop)
 
 void CDeviceList::Stop()
 {
