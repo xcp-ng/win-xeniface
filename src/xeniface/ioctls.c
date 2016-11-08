@@ -157,6 +157,7 @@ XenIfaceCleanup(
     LIST_ENTRY ToFree;
 
     // store watches
+    InitializeListHead(&ToFree);
     KeAcquireSpinLock(&Fdo->StoreWatchLock, &Irql);
     Node = Fdo->StoreWatchList.Flink;
     while (Node->Flink != Fdo->StoreWatchList.Flink) {
@@ -169,9 +170,19 @@ XenIfaceCleanup(
 
         XenIfaceDebugPrint(TRACE, "Store context %p\n", StoreContext);
         RemoveEntryList(&StoreContext->Entry);
-        StoreFreeWatch(Fdo, StoreContext);
+        // StoreFreeWatch requires PASSIVE_LEVEL and we're inside a lock
+        InsertTailList(&ToFree, &StoreContext->Entry);
     }
     KeReleaseSpinLock(&Fdo->StoreWatchLock, Irql);
+
+    Node = ToFree.Flink;
+    while (Node->Flink != ToFree.Flink) {
+        StoreContext = CONTAINING_RECORD(Node, XENIFACE_STORE_CONTEXT, Entry);
+        Node = Node->Flink;
+
+        RemoveEntryList(&StoreContext->Entry);
+        StoreFreeWatch(Fdo, StoreContext);
+    }
 
     // event channels
     InitializeListHead(&ToFree);

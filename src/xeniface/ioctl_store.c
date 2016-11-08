@@ -428,6 +428,36 @@ fail1:
     return status;
 }
 
+static NTSTATUS
+StoreWatch(
+    IN  PXENIFACE_THREAD    Self,
+    IN  PVOID               _Context
+    )
+{
+    PXENIFACE_STORE_CONTEXT Context = _Context;
+    PKEVENT                 Event;
+
+    Event = ThreadGetEvent(Self);
+
+    for (;;) {
+        (VOID) KeWaitForSingleObject(Event,
+                                     Executive,
+                                     KernelMode,
+                                     FALSE,
+                                     NULL);
+        KeClearEvent(Event);
+
+        if (ThreadIsAlerted(Self))
+            break;
+
+        XenIfaceDebugPrint(INFO, "%s\n", Context->Path);
+
+        KeSetEvent(Context->Event, IO_NO_INCREMENT, FALSE);
+    }
+
+    return STATUS_SUCCESS;
+}
+
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreAddWatch(
@@ -483,17 +513,21 @@ IoctlStoreAddWatch(
 
     XenIfaceDebugPrint(TRACE, "> Path '%s', Event %p, FO %p\n", Path, In->Event, FileObject);
 
-    status = XENBUS_STORE(WatchAdd,
-                          &Fdo->StoreInterface,
-                          NULL, // prefix
-                          Path,
-                          Context->Event,
-                          &Context->Watch);
+    Context->Path = Path;
 
+    status = ThreadCreate(StoreWatch, Context, &Context->Thread);
     if (!NT_SUCCESS(status))
         goto fail6;
 
-    __FreeCapturedBuffer(Path);
+    status = XENBUS_STORE(WatchAdd,
+                          &Fdo->StoreInterface,
+                          NULL, // prefix
+                          Context->Path,
+                          ThreadGetEvent(Context->Thread),
+                          &Context->Watch);
+
+    if (!NT_SUCCESS(status))
+        goto fail7;
 
     ExInterlockedInsertTailList(&Fdo->StoreWatchList, &Context->Entry, &Fdo->StoreWatchLock);
 
@@ -503,6 +537,13 @@ IoctlStoreAddWatch(
     *Info = sizeof(XENIFACE_STORE_ADD_WATCH_OUT);
 
     return status;
+
+fail7:
+    __FreeCapturedBuffer(Context->Path);
+
+    XenIfaceDebugPrint(ERROR, "Fail7\n");
+    ThreadAlert(Context->Thread);
+    ThreadJoin(Context->Thread);
 
 fail6:
     XenIfaceDebugPrint(ERROR, "Fail6\n");
@@ -537,6 +578,8 @@ StoreFreeWatch(
 {
     NTSTATUS status;
 
+    ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
     XenIfaceDebugPrint(TRACE, "Context %p, Watch %p, FO %p\n",
                        Context, Context->Watch, Context->FileObject);
 
@@ -545,6 +588,11 @@ StoreFreeWatch(
                           Context->Watch);
 
     ASSERT(NT_SUCCESS(status)); // this is fatal since we'd leave an active watch without cleaning it up
+
+    ThreadAlert(Context->Thread);
+    ThreadJoin(Context->Thread);
+
+    __FreeCapturedBuffer(Context->Path);
 
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));

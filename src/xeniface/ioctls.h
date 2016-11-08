@@ -48,6 +48,8 @@ typedef struct _XENIFACE_CONTEXT_ID {
 
 typedef struct _XENIFACE_STORE_CONTEXT {
     LIST_ENTRY             Entry;
+    PCHAR                  Path;
+    PXENIFACE_THREAD       Thread;
     PXENBUS_STORE_WATCH    Watch;
     PKEVENT                Event;
     PVOID                  FileObject;
