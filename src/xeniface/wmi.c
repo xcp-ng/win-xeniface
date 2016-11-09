@@ -1160,7 +1160,6 @@ CreateNewSession(XENIFACE_FDO *fdoData,
         session->suspended=TRUE;
     }
     fdoData->Sessions++;
-    UnlockSessions(fdoData);
     InitializeObjectAttributes(&oa, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);
 
     status = PsCreateSystemThread(&hthread, THREAD_ALL_ACCESS, &oa, NULL, NULL, WatchCallbackThread, session);
@@ -1170,6 +1169,7 @@ CreateNewSession(XENIFACE_FDO *fdoData,
             return status;
     }
     ObReferenceObjectByHandle(hthread, THREAD_ALL_ACCESS, NULL, KernelMode,  &session->WatchThread, NULL);
+    UnlockSessions(fdoData);
     RtlFreeAnsiString(&ansi);
     return STATUS_SUCCESS;
 }
