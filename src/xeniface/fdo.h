@@ -106,7 +106,7 @@ typedef struct _XENIFACE_FDO {
     int                             WmiReady;
 
     USHORT                          Sessions;
-    FAST_MUTEX                      SessionLock;
+    XENIFACE_MUTEX                  SessionLock;
     LIST_ENTRY                      SessionHead;
 
     PXENIFACE_THREAD                registryThread;

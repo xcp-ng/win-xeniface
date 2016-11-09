@@ -1,4 +1,4 @@
-/* Copyright (c) Citrix Systems Inc.
+ /* Copyright (c) Citrix Systems Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -46,24 +46,17 @@
 #include "xeniface_ioctls.h"
 #include <version.h>
 
-__drv_raisesIRQL(APC_LEVEL)
-__drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock)
 void LockSessions(
         XENIFACE_FDO* fdoData)
 {
-    ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
-    ExAcquireFastMutex(&fdoData->SessionLock);
+    AcquireMutex(&fdoData->SessionLock);
 }
 
 
-__drv_requiresIRQL(APC_LEVEL)
-__drv_restoresIRQLGlobal(OldIrql, fdoData->SessionLock)
 void UnlockSessions(
         XENIFACE_FDO* fdoData)
 {
-    ASSERT(KeGetCurrentIrql() == APC_LEVEL);
-#pragma prefast (suppress:26110)
-    ExReleaseFastMutex(&fdoData->SessionLock);
+    ReleaseMutex(&fdoData->SessionLock);
 }
 
 void GetUnicodeString(UNICODE_STRING *unicode, USHORT maxlength, LPWSTR location)
@@ -678,7 +671,7 @@ typedef struct _XenStoreSession {
     KEVENT* watchevents[MAXIMUM_WAIT_OBJECTS];
     KWAIT_BLOCK watchwaitblockarray[MAXIMUM_WAIT_OBJECTS];
     KEVENT SessionChangedEvent;
-    FAST_MUTEX WatchMapLock;
+    XENIFACE_MUTEX WatchMapLock;
     BOOLEAN mapchanged;
     BOOLEAN closing;
     BOOLEAN suspended;
@@ -730,14 +723,13 @@ int CompareUnicodeStrings(PCUNICODE_STRING string1, PCUNICODE_STRING string2) {
 
 }
 
-_IRQL_raises_(APC_LEVEL)
 XenStoreWatch *
 SessionFindWatchLocked(XenStoreSession *session,
                         UNICODE_STRING *path) {
     XenStoreWatch * watch;
 
     XenIfaceDebugPrint(TRACE,"Wait for session watch lock\n");
-    ExAcquireFastMutex(&session->WatchMapLock);
+    AcquireMutex(&session->WatchMapLock);
     XenIfaceDebugPrint(TRACE,"got session watch lock\n");
     watch = (XenStoreWatch *)session->watches.Flink;
 
@@ -844,7 +836,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
     XenStoreSession * session = (XenStoreSession*) StartContext;
 
     for(;;) {
-        ExAcquireFastMutex(&session->WatchMapLock);
+        AcquireMutex(&session->WatchMapLock);
         if (session->mapchanged) {
             // Construct a new mapping
             XenStoreWatch *watch;
@@ -857,7 +849,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             session->mapchanged = FALSE;
             session->watchevents[i] = &session->SessionChangedEvent;
         }
-        ExReleaseFastMutex(&session->WatchMapLock);
+        ReleaseMutex(&session->WatchMapLock);
         XenIfaceDebugPrint(TRACE,"Wait for new event\n");
         status = KeWaitForMultipleObjects(i+1, session->watchevents, WaitAny, Executive, KernelMode, TRUE, NULL, session->watchwaitblockarray);
         XenIfaceDebugPrint(TRACE,"got new event\n");
@@ -865,7 +857,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             XenStoreWatch *watch;
             XenIfaceDebugPrint(TRACE,"watch or suspend\n");
             watch = CONTAINING_RECORD(session->watchevents[status-STATUS_WAIT_0], XenStoreWatch, watchevent );
-            ExAcquireFastMutex(&session->WatchMapLock);
+            AcquireMutex(&session->WatchMapLock);
             KeClearEvent(&watch->watchevent);
 
 
@@ -886,10 +878,10 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             } else {
                 FireWatch(watch);
             }
-            ExReleaseFastMutex(&session->WatchMapLock);
+            ReleaseMutex(&session->WatchMapLock);
         }
         else if ( status == STATUS_WAIT_0 + i) {
-            ExAcquireFastMutex(&session->WatchMapLock);
+            AcquireMutex(&session->WatchMapLock);
             KeClearEvent(&session->SessionChangedEvent);
             if (session->closing==TRUE) {
                 XenIfaceDebugPrint(TRACE,"Trying to end session thread\n");
@@ -905,14 +897,14 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                             session->watchcount --;
                     }
                 }
-                ExReleaseFastMutex(&session->WatchMapLock);
+                ReleaseMutex(&session->WatchMapLock);
                 XenIfaceDebugPrint(TRACE,"Ending session thread\n");
                 PsTerminateSystemThread(STATUS_SUCCESS);
-                //ExReleaseFastMutex(&session->WatchMapLock);
+                //ReleaseMutex(&session->WatchMapLock);
             }
             else {
 
-                ExReleaseFastMutex(&session->WatchMapLock);
+                ReleaseMutex(&session->WatchMapLock);
             }
         }
 
@@ -956,7 +948,7 @@ SessionAddWatchLocked(XenStoreSession *session,
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    ExAcquireFastMutex(&session->WatchMapLock);
+    AcquireMutex(&session->WatchMapLock);
     session->mapchanged = TRUE;
     KeSetEvent(&session->SessionChangedEvent, IO_NO_INCREMENT,FALSE);
     session->watchcount++;
@@ -971,7 +963,7 @@ SessionAddWatchLocked(XenStoreSession *session,
     }
     XenIfaceDebugPrint(TRACE, "WATCHLIST-------------------\n");
 
-    ExReleaseFastMutex(&session->WatchMapLock);
+    ReleaseMutex(&session->WatchMapLock);
     return STATUS_SUCCESS;
 
 }
@@ -1004,7 +996,7 @@ void SessionRemoveWatchesLocked(XenStoreSession *session) {
     XenStoreWatch *watch;
 
     XenIfaceDebugPrint(TRACE, "wait remove mutex\n");
-    ExAcquireFastMutex(&session->WatchMapLock);
+    AcquireMutex(&session->WatchMapLock);
     for (watch = (XenStoreWatch *)session->watches.Flink;
          watch!=(XenStoreWatch *)&session->watches;
          watch=(XenStoreWatch *)watch->listentry.Flink) {
@@ -1013,7 +1005,7 @@ void SessionRemoveWatchesLocked(XenStoreSession *session) {
         SessionRemoveWatchLocked(session, watch);
     }
     XenIfaceDebugPrint(TRACE, "release remove mutex\n");
-    ExReleaseFastMutex(&session->WatchMapLock);
+    ReleaseMutex(&session->WatchMapLock);
 }
 
 
@@ -1037,8 +1029,6 @@ FindSessionByInstanceLocked(XENIFACE_FDO *fdoData,
 
 __checkReturn
 __success(return!=NULL)
-__drv_raisesIRQL(APC_LEVEL)
-__drv_savesIRQLGlobal(OldIrql, fdoData->SessionLock)
 XenStoreSession *
 FindSessionByInstanceAndLock(XENIFACE_FDO *fdoData,
                                 UNICODE_STRING *instance) {
@@ -1098,7 +1088,7 @@ CreateNewSession(XENIFACE_FDO *fdoData,
         return STATUS_INSUFFICIENT_RESOURCES;
     RtlZeroMemory(session, sizeof(XenStoreSession));
 
-    ExInitializeFastMutex(&session->WatchMapLock);
+    InitializeMutex(&session->WatchMapLock);
     session->mapchanged = TRUE;
     status = RtlUnicodeStringToAnsiString(&ansi, stringid, TRUE);
     if (!NT_SUCCESS(status)) {
@@ -1222,7 +1212,7 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
 {
     int i;
     XenStoreWatch *watch;
-    ExAcquireFastMutex(&session->WatchMapLock);
+    AcquireMutex(&session->WatchMapLock);
     watch = (XenStoreWatch *)session->watches.Flink;
     for (i=0; watch != (XenStoreWatch *)&session->watches; i++) {
         XenIfaceDebugPrint(TRACE,"Suspend unwatch %p\n", watch->watchhandle);
@@ -1240,7 +1230,7 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
     }
     XenIfaceDebugPrint(TRACE, "WATCHLIST-------------------\n");
     session->suspended=1;
-    ExReleaseFastMutex(&session->WatchMapLock);
+    ReleaseMutex(&session->WatchMapLock);
 }
 
 void SuspendSessionLocked(XENIFACE_FDO *fdoData,
@@ -1274,7 +1264,7 @@ WmiSessionsSuspendAll(
 void SessionRenewWatchesLocked(XenStoreSession *session) {
     int i;
     XenStoreWatch *watch;
-    ExAcquireFastMutex(&session->WatchMapLock);
+    AcquireMutex(&session->WatchMapLock);
     watch = (XenStoreWatch *)session->watches.Flink;
     for (i=0; watch != (XenStoreWatch *)&session->watches; i++) {
         if (!watch->finished) {
@@ -1294,7 +1284,7 @@ void SessionRenewWatchesLocked(XenStoreSession *session) {
     session->suspended=0;
     session->mapchanged = TRUE;
     KeSetEvent(&session->SessionChangedEvent, IO_NO_INCREMENT,FALSE);
-    ExReleaseFastMutex(&session->WatchMapLock);
+    ReleaseMutex(&session->WatchMapLock);
 }
 
 void ResumeSessionLocked(XENIFACE_FDO *fdoData,
@@ -1548,7 +1538,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
         XenIfaceDebugPrint(WARNING, "No Watch\n");
     }
 #pragma prefast (suppress:26110)
-    ExReleaseFastMutex(&session->WatchMapLock);
+    ReleaseMutex(&session->WatchMapLock);
     UnlockSessions(fdoData);
 
     *byteswritten=0;
@@ -3111,7 +3101,7 @@ WmiInitialize(
 
     Fdo->Sessions = 0;
     InitializeListHead(&Fdo->SessionHead);
-    ExInitializeFastMutex(&Fdo->SessionLock);
+    InitializeMutex(&Fdo->SessionLock);
 
     return STATUS_SUCCESS;
 
