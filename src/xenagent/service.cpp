@@ -202,6 +202,7 @@ CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL),
     m_svc_stop = CreateEvent(FALSE, NULL, NULL, FALSE);
     m_evt_shutdown = CreateEvent(FALSE, NULL, NULL, FALSE);
     m_evt_suspend = CreateEvent(FALSE, NULL, NULL, FALSE);
+    m_count = 0;
 
     InitializeCriticalSection(&m_crit);
 }
@@ -315,19 +316,23 @@ void CXenAgent::OnPowerEvent(DWORD evt, LPVOID data)
 bool CXenAgent::ServiceMainLoop()
 {
     HANDLE  events[3] = { m_svc_stop, m_evt_shutdown, m_evt_suspend };
-    DWORD   wait = WaitForMultipleObjects(3, events, FALSE, INFINITE);
+    DWORD   wait = WaitForMultipleObjectsEx(3, events, FALSE, 60000, TRUE);
 
     switch (wait) {
     case WAIT_OBJECT_0:
         return false; // exit loop
 
     case WAIT_OBJECT_0+1:
-        OnShutdown();
-        return true; // continue loop
+        return !CheckShutdown();
 
     case WAIT_OBJECT_0+2:
-        OnSuspend();
+        CheckSuspend();
         return true; // continue loop
+
+    case WAIT_IO_COMPLETION:
+    case WAIT_TIMEOUT:
+        CheckSuspend();
+        return !CheckShutdown();
 
     default:
         CXenAgent::Log("WaitForMultipleObjects failed (%08x)\n", wait);
@@ -488,16 +493,17 @@ void CXenAgent::SetXenTime()
 #pragma warning(push)
 #pragma warning(disable:28159)
 
-void CXenAgent::OnShutdown()
+bool CXenAgent::CheckShutdown()
 {
     CCritSec crit(&m_crit);
     if (m_device == NULL)
-        return;
+        return false;
 
     std::string type;
-    m_device->StoreRead("control/shutdown", type);
+    if (!m_device->StoreRead("control/shutdown", type))
+        return false;
 
-    CXenAgent::Log("OnShutdown(%ws) = %s\n", m_device->Path(), type.c_str());
+    CXenAgent::Log("Shutdown(%ws) = %s\n", m_device->Path(), type.c_str());
 
     if (type == "poweroff") {
         EventLog(EVENT_XENUSER_POWEROFF);
@@ -510,6 +516,7 @@ void CXenAgent::OnShutdown()
                                       SHTDN_REASON_FLAG_PLANNED)) {
             CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
         }
+        return true;
     } else if (type == "reboot") {
         EventLog(EVENT_XENUSER_REBOOT);
 
@@ -521,6 +528,7 @@ void CXenAgent::OnShutdown()
                                       SHTDN_REASON_FLAG_PLANNED)) {
             CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
         }
+        return true;
     } else if (type == "s4") {
         EventLog(EVENT_XENUSER_S4);
 
@@ -529,6 +537,7 @@ void CXenAgent::OnShutdown()
         if (!SetSystemPowerState(FALSE, FALSE)) {
             CXenAgent::Log("SetSystemPowerState failed %08x\n", GetLastError());
         }
+        return true;
     } else if (type == "s3") {
         EventLog(EVENT_XENUSER_S3);
 
@@ -537,18 +546,30 @@ void CXenAgent::OnShutdown()
         if (!SetSuspendState(FALSE, TRUE, FALSE)) {
             CXenAgent::Log("SetSuspendState failed %08x\n", GetLastError());
         }
+        return true;
     }
+
+    return false;
 }
 
 #pragma warning(pop)
 
-void CXenAgent::OnSuspend()
+void CXenAgent::CheckSuspend()
 {
     CCritSec crit(&m_crit);
     if (m_device == NULL)
         return;
 
-    CXenAgent::Log("OnSuspend(%ws)\n", m_device->Path());
+    DWORD count = 0;
+
+    if (!m_device->SuspendGetCount(&count))
+        return;
+
+    if (m_count == count)
+        return;
+
+    CXenAgent::Log("Suspend(%ws)\n", m_device->Path());
+
     EventLog(EVENT_XENUSER_UNSUSPENDED);
 
     // recreate shutdown watch, as suspending deactivated the watch

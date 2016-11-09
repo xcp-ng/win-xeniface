@@ -138,6 +138,17 @@ bool CXenIfaceDevice::SuspendDeregister(void* ctxt)
                  NULL, 0);
 }
 
+bool CXenIfaceDevice::SuspendGetCount(DWORD *count)
+{
+    DWORD out;
+    if (!Ioctl(IOCTL_XENIFACE_SUSPEND_GET_COUNT,
+                NULL, 0,
+                &out, (DWORD)sizeof(out)))
+        return false;
+    *count = out;
+    return true;
+}
+
 // sharedinfo interface
 bool CXenIfaceDevice::SharedInfoGetTime(FILETIME* time)
 {

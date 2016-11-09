@@ -102,6 +102,7 @@ IoctlStoreRead(
     NTSTATUS    status;
     PCHAR       Value;
     ULONG       Length;
+    BOOLEAN     SquashError = FALSE;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0)
@@ -112,8 +113,12 @@ IoctlStoreRead(
         goto fail2;
 
     status = XENBUS_STORE(Read, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(status)) {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)
+            SquashError = TRUE;
+
         goto fail3;
+    }
 
     Length = (ULONG)strlen(Value) + 1;
 
@@ -142,11 +147,15 @@ fail4:
     XenIfaceDebugPrint(ERROR, "Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
     XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3 (\"%s\")\n", Buffer);
+    if (!SquashError)
+        XenIfaceDebugPrint(ERROR, "Fail3 (\"%s\")\n", Buffer);
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    if (!SquashError)
+        XenIfaceDebugPrint(ERROR, "Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    if (!SquashError)
+        XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+
     return status;
 }
 

@@ -52,6 +52,7 @@ public: // store interface
 public: // suspend interface
     bool SuspendRegister(HANDLE evt, void** ctxt);
     bool SuspendDeregister(void* ctxt);
+    bool SuspendGetCount(DWORD *count);
 
 public: // sharedinfo interface
     bool SharedInfoGetTime(FILETIME* time);

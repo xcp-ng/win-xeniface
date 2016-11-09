@@ -79,8 +79,8 @@ private: // helpers
     void AdjustXenTimeToUTC(FILETIME* time);
     bool RegCheckIsUTC(const char* path);
     void SetXenTime();
-    void OnShutdown();
-    void OnSuspend();
+    bool CheckShutdown();
+    void CheckSuspend();
 
 private: // service support
     void SetServiceStatus(DWORD state, DWORD exit = 0, DWORD hint = 0);
@@ -99,6 +99,7 @@ private: // service support
     CRITICAL_SECTION        m_crit;
     void*                   m_ctxt_shutdown;
     void*                   m_ctxt_suspend;
+    DWORD                   m_count;
 };
 
 #endif
