@@ -84,10 +84,7 @@ EvtchnInterruptHandler(
     KeGetCurrentProcessorNumberEx(&ProcNumber);
     ProcIndex = KeGetProcessorIndexFromNumber(&ProcNumber);
 
-    if (!KeInsertQueueDpc(&Context->Dpc, NULL, NULL)) {
-        XenIfaceDebugPrint(TRACE, "NOT INSERTED: Context %p, Port %lu, FO %p, Cpu %lu\n",
-                           Context, Context->LocalPort, Context->FileObject, ProcIndex);
-    }
+    (VOID) KeInsertQueueDpc(&Context->Dpc, NULL, NULL);
 
     return TRUE;
 }
