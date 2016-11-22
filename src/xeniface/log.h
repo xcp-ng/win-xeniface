@@ -35,11 +35,6 @@
 #include <ntddk.h>
 #include <stdarg.h>
 
-#define     ERROR    DPFLTR_ERROR_LEVEL
-#define     WARNING  DPFLTR_WARNING_LEVEL
-#define     TRACE    DPFLTR_TRACE_LEVEL
-#define     INFO     DPFLTR_INFO_LEVEL
-
 #pragma warning(disable:4127)   // conditional expression is constant
 
 #define __MODULE__ "XENIFACE"
@@ -139,38 +134,5 @@ __Info(
 
 #define Info(...)  \
         __Info(__MODULE__ "|"  __FUNCTION__ ": ", __VA_ARGS__)
-
-
-#define XenIfaceDebugPrint(LEVEL, ...) \
-    __XenIfaceDebugPrint(__MODULE__ "|" __FUNCTION__ ": ",LEVEL, __VA_ARGS__)
-
-static __inline VOID
-__XenIfaceDebugPrint    (
-    __in const CHAR *Prefix,
-    __in ULONG   DebugPrintLevel,
-    __in PCCHAR  DebugMessage,
-    ...
-    )
-
-{
-    va_list    list;
-
-#if !DBG
-    if (DebugPrintLevel == TRACE)
-        return;
-#endif
-
-    va_start(list, DebugMessage);
-
-    if (DebugMessage)
-    {
-        vDbgPrintExWithPrefix(Prefix, DPFLTR_IHVDRIVER_ID, DebugPrintLevel, DebugMessage, list);
-
-    }
-    va_end(list);
-
-    return;
-}
-
 
 #endif  // _XENIFACE_LOG_H

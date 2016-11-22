@@ -150,8 +150,7 @@ CsqCompleteCanceledIrp(
     PXENIFACE_FDO Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
     PIO_WORKITEM WorkItem;
 
-    XenIfaceDebugPrint(TRACE, "Irp %p, IRQL %d\n",
-                       Irp, KeGetCurrentIrql());
+    Trace("Irp %p, IRQL %d\n", Irp, KeGetCurrentIrql());
 
     // This is not guaranteed to run at PASSIVE_LEVEL, so queue a work item
     // to perform actual cleanup/IRP completion.

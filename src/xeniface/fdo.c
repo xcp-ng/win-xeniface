@@ -81,7 +81,7 @@ FdoInitialiseXSRegistryEntries(
                           "/mh/boot-time/management-mac-address",
                           &value);
     if (!NT_SUCCESS(status)){
-        XenIfaceDebugPrint(ERROR, "no such xenstore key\n");
+        Error("no such xenstore key\n");
         goto failXS;
     }
 
@@ -93,7 +93,7 @@ FdoInitialiseXSRegistryEntries(
     status = ZwOpenKey(&RegHandle, KEY_WRITE, &Attributes);
 
     if (!NT_SUCCESS(status)) {
-        XenIfaceDebugPrint(ERROR, "no such registry key %s\n", DriverParameters.RegistryPath);
+        Error("no such registry key %s\n", DriverParameters.RegistryPath);
         goto failReg;
     }
 
@@ -101,17 +101,17 @@ FdoInitialiseXSRegistryEntries(
     RtlInitUnicodeString(&UnicodeValue, NULL);
     RtlInitAnsiString(&AnsiValue, value);
 
-    XenIfaceDebugPrint(ERROR, "About to convert unicode string\n");
+    Error("About to convert unicode string\n");
     status = RtlAnsiStringToUnicodeString(&UnicodeValue, &AnsiValue, TRUE);
     if (!NT_SUCCESS(status)) {
-        XenIfaceDebugPrint(ERROR, "Can't convert string\n");
+        Error("Can't convert string\n");
         goto failReg;
     }
 
-    XenIfaceDebugPrint(ERROR, "About to write unicode string\n");
+    Error("About to write unicode string\n");
     status = ZwSetValueKey(RegHandle, &UnicodeValueName, 0, REG_SZ, UnicodeValue.Buffer, UnicodeValue.Length+sizeof(WCHAR));
     if (!NT_SUCCESS(status)) {
-        XenIfaceDebugPrint(ERROR, "Can't write key\n");
+        Error("Can't write key\n");
         goto failWrite;
     }
 
@@ -124,17 +124,17 @@ FdoInitialiseXSRegistryEntries(
 
 failWrite:
 
-    XenIfaceDebugPrint(ERROR, "Fail : Write\n");
+    Error("Fail : Write\n");
     ZwClose(RegHandle);
     RtlFreeUnicodeString(&UnicodeValue);
 
 failReg:
 
-    XenIfaceDebugPrint(ERROR, "Fail : Reg\n");
+    Error("Fail : Reg\n");
     XENBUS_STORE(Free, &Fdo->StoreInterface, value);
 
 failXS:
-    XenIfaceDebugPrint(ERROR, "Failed to initialise registry (%08x)\n", status);
+    Error("Failed to initialise registry (%08x)\n", status);
     return;
 }
 
@@ -161,7 +161,7 @@ static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
         status = KeWaitForMultipleObjects(REGISTRY_EVENTS, (PVOID *)threadevents, WaitAny, Executive, KernelMode, TRUE, NULL, NULL);
         if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
             if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
-                XenIfaceDebugPrint(ERROR,"WriteRegistry\n");
+                Error("WriteRegistry\n");
                 FdoInitialiseXSRegistryEntries(Fdo);
                 KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
             }
@@ -173,7 +173,7 @@ static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
 
         }
         else if (!NT_SUCCESS(status)) {
-            XenIfaceDebugPrint(ERROR, "Registry handler thread failed %x\n", status);
+            Error("Registry handler thread failed %x\n", status);
             return status;
         }
     }

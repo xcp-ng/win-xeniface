@@ -98,7 +98,7 @@ EvtchnFree(
 {
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
-    XenIfaceDebugPrint(TRACE, "Context %p, LocalPort %d, FO %p\n",
+    Trace("Context %p, LocalPort %d, FO %p\n",
                        Context, Context->LocalPort, Context->FileObject);
 
     XENBUS_EVTCHN(Close,
@@ -176,7 +176,7 @@ IoctlEvtchnBindUnbound(
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
     Context->FileObject = FileObject;
 
-    XenIfaceDebugPrint(TRACE, "> RemoteDomain %d, Mask %d, FO %p\n",
+    Trace("> RemoteDomain %d, Mask %d, FO %p\n",
                        In->RemoteDomain, In->Mask, FileObject);
 
     status = ObReferenceObjectByHandle(In->Event,
@@ -219,23 +219,23 @@ IoctlEvtchnBindUnbound(
                       FALSE);
     }
 
-    XenIfaceDebugPrint(TRACE, "< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
+    Trace("< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
     return STATUS_SUCCESS;
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4\n");
+    Error("Fail4\n");
     ObDereferenceObject(Context->Event);
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
     ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -269,7 +269,7 @@ IoctlEvtchnBindInterdomain(
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
     Context->FileObject = FileObject;
 
-    XenIfaceDebugPrint(TRACE, "> RemoteDomain %d, RemotePort %lu, Mask %d, FO %p\n",
+    Trace("> RemoteDomain %d, RemotePort %lu, Mask %d, FO %p\n",
                        In->RemoteDomain, In->RemotePort, In->Mask, FileObject);
 
     status = ObReferenceObjectByHandle(In->Event,
@@ -313,24 +313,24 @@ IoctlEvtchnBindInterdomain(
                       FALSE);
     }
 
-    XenIfaceDebugPrint(TRACE, "< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
+    Trace("< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
 
     return STATUS_SUCCESS;
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4\n");
+    Error("Fail4\n");
     ObDereferenceObject(Context->Event);
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
     ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -355,7 +355,7 @@ IoctlEvtchnClose(
         goto fail1;
     }
 
-    XenIfaceDebugPrint(TRACE, "> LocalPort %lu, FO %p\n", In->LocalPort, FileObject);
+    Trace("> LocalPort %lu, FO %p\n", In->LocalPort, FileObject);
 
     KeAcquireSpinLock(&Fdo->EvtchnLock, &Irql);
     status = STATUS_NOT_FOUND;
@@ -370,11 +370,11 @@ IoctlEvtchnClose(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
     KeReleaseSpinLock(&Fdo->EvtchnLock, Irql);
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -408,7 +408,7 @@ EvtchnNotify(
     return STATUS_SUCCESS;
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     KeReleaseSpinLock(&Fdo->EvtchnLock, Irql);
     return status;
 }
@@ -433,13 +433,13 @@ IoctlEvtchnNotify(
     }
 
 #if DBG
-    XenIfaceDebugPrint(INFO, "> LocalPort %d, FO %p\n", In->LocalPort, FileObject);
+    Info("> LocalPort %d, FO %p\n", In->LocalPort, FileObject);
 #endif
 
     return EvtchnNotify(Fdo, In->LocalPort, FileObject);
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -464,7 +464,7 @@ IoctlEvtchnUnmask(
         goto fail1;
     }
 
-    XenIfaceDebugPrint(TRACE, "> LocalPort %d, FO %p\n", In->LocalPort, FileObject);
+    Trace("> LocalPort %d, FO %p\n", In->LocalPort, FileObject);
 
     KeAcquireSpinLock(&Fdo->EvtchnLock, &Irql);
 
@@ -484,10 +484,10 @@ IoctlEvtchnUnmask(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
     KeReleaseSpinLock(&Fdo->EvtchnLock, Irql);
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }

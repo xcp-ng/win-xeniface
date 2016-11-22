@@ -728,9 +728,9 @@ SessionFindWatchLocked(XenStoreSession *session,
                         UNICODE_STRING *path) {
     XenStoreWatch * watch;
 
-    XenIfaceDebugPrint(TRACE,"Wait for session watch lock\n");
+    Trace("Wait for session watch lock\n");
     AcquireMutex(&session->WatchMapLock);
-    XenIfaceDebugPrint(TRACE,"got session watch lock\n");
+    Trace("got session watch lock\n");
     watch = (XenStoreWatch *)session->watches.Flink;
 
     while (watch != (XenStoreWatch *)&session->watches){
@@ -740,7 +740,7 @@ SessionFindWatchLocked(XenStoreSession *session,
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
 
-    XenIfaceDebugPrint(WARNING,"couldn't find watch\n");
+    Warning("couldn't find watch\n");
     return NULL;
 
 }
@@ -750,13 +750,13 @@ WmiFireSuspendEvent(
     IN  PXENIFACE_FDO   Fdo
     )
 {
-    XenIfaceDebugPrint(ERROR, "Ready to unsuspend Event\n");
+    Error("Ready to unsuspend Event\n");
     KeSetEvent(&Fdo->registryWriteEvent, IO_NO_INCREMENT, FALSE);
 
     if (!Fdo->WmiReady)
         return;
 
-    XenIfaceDebugPrint(TRACE, "Fire Suspend Event\n");
+    Trace("Fire Suspend Event\n");
     WmiFireEvent(Fdo->Dx->DeviceObject,
                  (LPGUID)&OBJECT_GUID(XenStoreUnsuspendedEvent),
                  0,
@@ -785,7 +785,7 @@ void FireWatch(XenStoreWatch* watch) {
     }
 
     if (eventdata !=NULL) {
-        XenIfaceDebugPrint(TRACE,"Fire Watch Event\n");
+        Trace("Fire Watch Event\n");
         WmiFireEvent(watch->fdoData->Dx->DeviceObject,
                      (LPGUID)&OBJECT_GUID(XenStoreWatchEvent),
                      0,
@@ -821,7 +821,7 @@ StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
         return status;
     }
 
-    XenIfaceDebugPrint(WARNING,"Start Watch %p\n", watch->watchhandle);
+    Warning("Start Watch %p\n", watch->watchhandle);
 
     ExFreePool(tmppath);
     RtlFreeAnsiString(&ansipath);
@@ -840,7 +840,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
         if (session->mapchanged) {
             // Construct a new mapping
             XenStoreWatch *watch;
-            XenIfaceDebugPrint(TRACE,"Construct a new mapping\n");
+            Trace("Construct a new mapping\n");
             watch = (XenStoreWatch *)session->watches.Flink;
             for (i=0; watch != (XenStoreWatch *)&session->watches; i++) {
                 session->watchevents[i] = &watch->watchevent;
@@ -850,12 +850,12 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             session->watchevents[i] = &session->SessionChangedEvent;
         }
         ReleaseMutex(&session->WatchMapLock);
-        XenIfaceDebugPrint(TRACE,"Wait for new event\n");
+        Trace("Wait for new event\n");
         status = KeWaitForMultipleObjects(i+1, session->watchevents, WaitAny, Executive, KernelMode, TRUE, NULL, session->watchwaitblockarray);
-        XenIfaceDebugPrint(TRACE,"got new event\n");
+        Trace("got new event\n");
         if ((status >= STATUS_WAIT_0) && (status < STATUS_WAIT_0 +i )) {
             XenStoreWatch *watch;
-            XenIfaceDebugPrint(TRACE,"watch or suspend\n");
+            Trace("watch or suspend\n");
             watch = CONTAINING_RECORD(session->watchevents[status-STATUS_WAIT_0], XenStoreWatch, watchevent );
             AcquireMutex(&session->WatchMapLock);
             KeClearEvent(&watch->watchevent);
@@ -870,7 +870,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             } else if (!session->suspended &&
                        watch->suspendcount != XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface)) {
                 watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
-                XenIfaceDebugPrint(WARNING,"SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
+                Warning("SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
 
                 XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
                 watch->watchhandle = NULL;
@@ -884,7 +884,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             AcquireMutex(&session->WatchMapLock);
             KeClearEvent(&session->SessionChangedEvent);
             if (session->closing==TRUE) {
-                XenIfaceDebugPrint(TRACE,"Trying to end session thread\n");
+                Trace("Trying to end session thread\n");
                 if (session->watchcount != 0) {
                     XenStoreWatch *watch;
                     for (watch = (XenStoreWatch *)session->watches.Flink;
@@ -898,7 +898,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
                     }
                 }
                 ReleaseMutex(&session->WatchMapLock);
-                XenIfaceDebugPrint(TRACE,"Ending session thread\n");
+                Trace("Ending session thread\n");
                 PsTerminateSystemThread(STATUS_SUCCESS);
                 //ReleaseMutex(&session->WatchMapLock);
             }
@@ -954,14 +954,14 @@ SessionAddWatchLocked(XenStoreSession *session,
     session->watchcount++;
     InsertHeadList(&session->watches,(PLIST_ENTRY)(*watch));
 
-    XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
+    Trace("WATCHLIST for session %p-----------\n", session);
     pwatch = (XenStoreWatch *)session->watches.Flink;
 
     while (pwatch != (XenStoreWatch *)&session->watches){
-        XenIfaceDebugPrint(TRACE, "WATCHLIST %p\n",pwatch->watchhandle);
+        Trace("WATCHLIST %p\n", pwatch->watchhandle);
         pwatch = (XenStoreWatch *)pwatch->listentry.Flink;
     }
-    XenIfaceDebugPrint(TRACE, "WATCHLIST-------------------\n");
+    Trace("WATCHLIST-------------------\n");
 
     ReleaseMutex(&session->WatchMapLock);
     return STATUS_SUCCESS;
@@ -971,22 +971,22 @@ SessionAddWatchLocked(XenStoreSession *session,
 void SessionRemoveWatchLocked(XenStoreSession *session, XenStoreWatch *watch) {
 
     XenStoreWatch *pwatch;
-    XenIfaceDebugPrint(TRACE, "Remove watch locked\n");
-    XenIfaceDebugPrint(TRACE, "watch %p\n", watch);
-    XenIfaceDebugPrint(TRACE, "handle %p\n", watch->watchhandle);
+    Trace("Remove watch locked\n");
+    Trace("watch %p\n", watch);
+    Trace("handle %p\n", watch->watchhandle);
 
     if (watch->watchhandle) {
         XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
         watch->watchhandle=NULL;
         watch->finished = TRUE;
-    XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
+        Trace("WATCHLIST for session %p-----------\n", session);
     pwatch = (XenStoreWatch *)session->watches.Flink;
 
     while (pwatch != (XenStoreWatch *)&session->watches){
-        XenIfaceDebugPrint(TRACE, "WATCHLIST %p\n",pwatch->watchhandle);
+        Trace("WATCHLIST %p\n", pwatch->watchhandle);
         pwatch = (XenStoreWatch *)pwatch->listentry.Flink;
     }
-    XenIfaceDebugPrint(TRACE, "WATCHLIST-------------------\n");
+    Trace("WATCHLIST-------------------\n");
         KeSetEvent(&watch->watchevent, IO_NO_INCREMENT,FALSE);
     }
 
@@ -995,16 +995,16 @@ void SessionRemoveWatchLocked(XenStoreSession *session, XenStoreWatch *watch) {
 void SessionRemoveWatchesLocked(XenStoreSession *session) {
     XenStoreWatch *watch;
 
-    XenIfaceDebugPrint(TRACE, "wait remove mutex\n");
+    Trace("wait remove mutex\n");
     AcquireMutex(&session->WatchMapLock);
     for (watch = (XenStoreWatch *)session->watches.Flink;
          watch!=(XenStoreWatch *)&session->watches;
          watch=(XenStoreWatch *)watch->listentry.Flink) {
 
-        XenIfaceDebugPrint(TRACE, "try remove %p\n",session->watches.Flink );
+        Trace("try remove %p\n", session->watches.Flink);
         SessionRemoveWatchLocked(session, watch);
     }
-    XenIfaceDebugPrint(TRACE, "release remove mutex\n");
+    Trace("release remove mutex\n");
     ReleaseMutex(&session->WatchMapLock);
 }
 
@@ -1142,11 +1142,11 @@ CreateNewSession(XENIFACE_FDO *fdoData,
     KeInitializeEvent(&session->SessionChangedEvent, NotificationEvent, FALSE);
     session->closing = FALSE;
     if (fdoData->InterfacesAcquired){
-        XenIfaceDebugPrint(TRACE,"Add session unsuspended\n");
+        Trace("Add session unsuspended\n");
         session->suspended=FALSE;
     }
     else {
-        XenIfaceDebugPrint(TRACE,"Add session suspended\n");
+        Trace("Add session suspended\n");
         session->suspended=TRUE;
     }
     fdoData->Sessions++;
@@ -1168,7 +1168,7 @@ void
 RemoveSessionLocked(XENIFACE_FDO *fdoData,
                     XenStoreSession *session) {
 
-    XenIfaceDebugPrint(TRACE,"RemoveSessionLocked\n");
+    Trace("RemoveSessionLocked\n");
     RemoveEntryList((LIST_ENTRY*)session);
     fdoData->Sessions--;
     SessionRemoveWatchesLocked(session);
@@ -1188,22 +1188,22 @@ RemoveSessionLocked(XENIFACE_FDO *fdoData,
 void
 RemoveSession(XENIFACE_FDO *fdoData,
                     XenStoreSession *session) {
-    XenIfaceDebugPrint(TRACE,"RemoveSession\n");
+    Trace("RemoveSession\n");
     LockSessions(fdoData);
     RemoveSessionLocked(fdoData, session);
     UnlockSessions(fdoData);
 }
 
 void SessionsRemoveAll(XENIFACE_FDO *fdoData) {
-    XenIfaceDebugPrint(TRACE,"lock");
+    Trace("lock");
     LockSessions(fdoData);
-    XenIfaceDebugPrint(TRACE,"in lock");
+    Trace("in lock");
     while (fdoData->SessionHead.Flink != &fdoData->SessionHead) {
         RemoveSessionLocked(fdoData, (XenStoreSession *)fdoData->SessionHead.Flink);
     }
-    XenIfaceDebugPrint(TRACE,"unlock");
+    Trace("unlock");
     UnlockSessions(fdoData);
-    XenIfaceDebugPrint(TRACE,"unlocked");
+    Trace("unlocked");
 }
 
 
@@ -1215,20 +1215,20 @@ void SessionUnwatchWatchesLocked(XenStoreSession *session)
     AcquireMutex(&session->WatchMapLock);
     watch = (XenStoreWatch *)session->watches.Flink;
     for (i=0; watch != (XenStoreWatch *)&session->watches; i++) {
-        XenIfaceDebugPrint(TRACE,"Suspend unwatch %p\n", watch->watchhandle);
+        Trace("Suspend unwatch %p\n", watch->watchhandle);
 
         XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
         watch->watchhandle = NULL;
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
-    XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
+    Trace("WATCHLIST for session %p-----------\n",session);
     watch = (XenStoreWatch *)session->watches.Flink;
 
     while (watch != (XenStoreWatch *)&session->watches){
-        XenIfaceDebugPrint(TRACE, "WATCHLIST %p\n",watch->watchhandle);
+        Trace("WATCHLIST %p\n",watch->watchhandle);
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
-    XenIfaceDebugPrint(TRACE, "WATCHLIST-------------------\n");
+    Trace("WATCHLIST-------------------\n");
     session->suspended=1;
     ReleaseMutex(&session->WatchMapLock);
 }
@@ -1237,7 +1237,7 @@ void SuspendSessionLocked(XENIFACE_FDO *fdoData,
                          XenStoreSession *session) {
     SessionUnwatchWatchesLocked(session);
     if (session->transaction != NULL) {
-        XenIfaceDebugPrint(TRACE, "End transaction %p\n",session->transaction);
+        Trace("End transaction %p\n",session->transaction);
 
         XENBUS_STORE(TransactionEnd, &fdoData->StoreInterface, session->transaction, FALSE);
         session->transaction = NULL;
@@ -1252,7 +1252,7 @@ WmiSessionsSuspendAll(
     XenStoreSession *session;
 
     LockSessions(Fdo);
-    XenIfaceDebugPrint(TRACE,"Suspend all sessions\n");
+    Trace("Suspend all sessions\n");
     session = (XenStoreSession *)Fdo->SessionHead.Flink;
     while (session != (XenStoreSession *)&Fdo->SessionHead) {
         SuspendSessionLocked(Fdo, session);
@@ -1273,14 +1273,14 @@ void SessionRenewWatchesLocked(XenStoreSession *session) {
         }
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
-    XenIfaceDebugPrint(TRACE, "WATCHLIST for session %p-----------\n",session);
+    Trace("WATCHLIST for session %p-----------\n",session);
     watch = (XenStoreWatch *)session->watches.Flink;
 
     while (watch != (XenStoreWatch *)&session->watches){
-        XenIfaceDebugPrint(TRACE, "WATCHLIST %p\n",watch->watchhandle);
+        Trace("WATCHLIST %p\n",watch->watchhandle);
         watch = (XenStoreWatch *)watch->listentry.Flink;
     }
-    XenIfaceDebugPrint(TRACE, "WATCHLIST-------------------\n");
+    Trace("WATCHLIST-------------------\n");
     session->suspended=0;
     session->mapchanged = TRUE;
     KeSetEvent(&session->SessionChangedEvent, IO_NO_INCREMENT,FALSE);
@@ -1300,7 +1300,7 @@ WmiSessionsResumeAll(
     XenStoreSession *session;
 
     LockSessions(Fdo);
-    XenIfaceDebugPrint(TRACE,"Resume all sessions\n");
+    Trace("Resume all sessions\n");
     session = (XenStoreSession *)Fdo->SessionHead.Flink;
     while (session != (XenStoreSession *)&Fdo->SessionHead) {
         ResumeSessionLocked(Fdo, session);
@@ -1319,8 +1319,8 @@ WmiRegister(
     if (Fdo->WmiReady)
         return STATUS_SUCCESS;
 
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
-    XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Initialisation\n");
+    Trace("%s\n",__FUNCTION__);
+    Info("DRV: XenIface WMI Initialisation\n");
 
     status = IoWMIRegistrationControl(Fdo->Dx->DeviceObject,
                                       WMIREG_ACTION_REGISTER);
@@ -1343,8 +1343,8 @@ WmiDeregister(
     if (!Fdo->WmiReady)
         return;
 
-    XenIfaceDebugPrint(INFO,"DRV: XenIface WMI Finalisation\n");
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Info("DRV: XenIface WMI Finalisation\n");
+    Trace("%s\n",__FUNCTION__);
 
     SessionsRemoveAll(Fdo);
     (VOID) IoWMIRegistrationControl(Fdo->Dx->DeviceObject,
@@ -1360,7 +1360,7 @@ WmiChangeSingleInstance(
 {
     UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -1372,7 +1372,7 @@ WmiChangeSingleItem(
 {
     UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -1384,7 +1384,7 @@ WmiDisableCollection(
 {
     UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -1396,7 +1396,7 @@ WmiDisableEvents(
 {
     UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -1408,7 +1408,7 @@ WmiEnableCollection(
 {
     UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -1420,7 +1420,7 @@ WmiEnableEvents(
 {
     UNREFERENCED_PARAMETER(Fdo);
     UNREFERENCED_PARAMETER(stack);
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -1526,7 +1526,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
     }
 
 
-    XenIfaceDebugPrint(TRACE, "Find Watch\n");
+    Trace("Find Watch\n");
 
     watch = SessionFindWatchLocked(session, &unicpath_notbacked);
 
@@ -1535,7 +1535,7 @@ SessionExecuteRemoveWatch(UCHAR *InBuffer,
         SessionRemoveWatchLocked(session, watch);
     }
     else {
-        XenIfaceDebugPrint(WARNING, "No Watch\n");
+        Warning("No Watch\n");
     }
 #pragma prefast (suppress:26110)
     ReleaseMutex(&session->WatchMapLock);
@@ -1606,7 +1606,7 @@ SessionExecuteEndSession(UCHAR *InBuffer,
                             UNICODE_STRING *instance,
                             OUT ULONG_PTR *byteswritten) {
     XenStoreSession *session;
-    XenIfaceDebugPrint(TRACE, "ExecuteEndSession\n");
+    Trace("ExecuteEndSession\n");
     *byteswritten = 0;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
             NULL){
@@ -1635,7 +1635,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
     char *tmppath;
     char* tmpvalue;
 
-    XenIfaceDebugPrint(TRACE, " Try to write\n");
+    Trace(" Try to write\n");
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
                             WMI_STRING, &upathname,
                             WMI_STRING, &uvalue,
@@ -1673,7 +1673,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
         goto fail4;
     }
     status = XENBUS_STORE(Printf, &fdoData->StoreInterface, session->transaction, NULL, tmppath, tmpvalue);
-    XenIfaceDebugPrint(TRACE, " Write %s to %s (%p)\n", tmpvalue, tmppath, status);
+    Trace(" Write %s to %s (%p)\n", tmpvalue, tmppath, status);
     UnlockSessions(fdoData);
 
 fail4:
@@ -2124,7 +2124,7 @@ SessionExecuteLog(UCHAR *InBuffer,
     if (!NT_SUCCESS(status))
         return status;
 
-    XenIfaceDebugPrint(INFO,"USER: %s\n", message.Buffer);
+    Info("USER: %s\n", message.Buffer);
 
     RtlFreeAnsiString(&message);
     *byteswritten = 0;
@@ -2381,7 +2381,7 @@ SessionExecuteMethod(UCHAR *Buffer,
     NTSTATUS status;
     UNICODE_STRING instance;
     UCHAR *InstStr;
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     if (!AccessWmiBuffer(Buffer, TRUE, &RequiredSize, BufferSize,
                             WMI_BUFFER, sizeof(WNODE_METHOD_ITEM),
                                 &Method,
@@ -2404,7 +2404,7 @@ SessionExecuteMethod(UCHAR *Buffer,
     GetCountedUnicodeString(&instance, InstStr);
 
 
-    XenIfaceDebugPrint(TRACE,"Method Id %d\n", Method->MethodId);
+    Trace("Method Id %d\n", Method->MethodId);
     switch (Method->MethodId) {
         case GetValue:
             status = SessionExecuteGetValue(InBuffer, Method->SizeDataBlock,
@@ -2513,7 +2513,7 @@ SessionExecuteMethod(UCHAR *Buffer,
 
 
         default:
-            XenIfaceDebugPrint(INFO,"DRV: Unknown WMI method %d\n", Method->MethodId);
+            Info("DRV: Unknown WMI method %d\n", Method->MethodId);
             return STATUS_WMI_ITEMID_NOT_FOUND;
     }
     Method->SizeDataBlock = (ULONG)*byteswritten;
@@ -2920,7 +2920,7 @@ WmiRegInfo(
 
 
     WMIREGGUID * guid;
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
 
     if  (stack->Parameters.WMI.DataPath == WMIREGISTER) {
         mofnamesz = mofname.Length + sizeof(USHORT);
@@ -2993,7 +2993,7 @@ WmiRegInfoEx(
    )
 {
 
-    XenIfaceDebugPrint(TRACE,"%s\n",__FUNCTION__);
+    Trace("%s\n",__FUNCTION__);
     return WmiRegInfo(fdoData, stack, byteswritten);
 }
 
@@ -3008,16 +3008,14 @@ WmiProcessMinorFunction(
     Stack = IoGetCurrentIrpStackLocation(Irp);
 
     if (Stack->Parameters.WMI.ProviderId != (ULONG_PTR)Fdo->Dx->DeviceObject) {
-        XenIfaceDebugPrint(TRACE,
-                           "ProviderID %p %p",
-                           Stack->Parameters.WMI.ProviderId,
-                           Fdo->PhysicalDeviceObject);
+        Trace("ProviderID %p %p",
+              Stack->Parameters.WMI.ProviderId,
+              Fdo->PhysicalDeviceObject);
         return STATUS_NOT_SUPPORTED;
     } else {
-        XenIfaceDebugPrint(TRACE,
-                           "ProviderID Match %p %p",
-                           Stack->Parameters.WMI.ProviderId,
-                           Fdo->PhysicalDeviceObject);
+        Trace("ProviderID Match %p %p",
+              Stack->Parameters.WMI.ProviderId,
+              Fdo->PhysicalDeviceObject);
     }
 
     switch (Stack->MinorFunction) {

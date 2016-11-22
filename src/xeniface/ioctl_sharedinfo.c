@@ -61,8 +61,8 @@ IoctlSharedInfoGetTime(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }

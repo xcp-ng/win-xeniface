@@ -62,9 +62,9 @@ IoctlSuspendGetCount(
     return status;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -108,7 +108,7 @@ IoctlSuspendRegister(
     if (!NT_SUCCESS(status))
         goto fail3;
 
-    XenIfaceDebugPrint(TRACE, "> Suspend Event %p, FO %p\n", In->Event, FileObject);
+    Trace("> Suspend Event %p, FO %p\n", In->Event, FileObject);
     ExInterlockedInsertTailList(&Fdo->SuspendList, &Context->Entry, &Fdo->SuspendLock);
 
     Out->Context = Context;
@@ -117,15 +117,15 @@ IoctlSuspendRegister(
     return status;
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_SUSPEND_CONTEXT));
     ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -136,7 +136,7 @@ SuspendFreeEvent(
     __inout  PXENIFACE_SUSPEND_CONTEXT Context
     )
 {
-    XenIfaceDebugPrint(TRACE, "Context %p, FO %p\n",
+    Trace("Context %p, FO %p\n",
                        Context, Context->FileObject);
 
     ObDereferenceObject(Context->Event);
@@ -166,7 +166,7 @@ IoctlSuspendDeregister(
         goto fail1;
     }
 
-    XenIfaceDebugPrint(TRACE, "> Context %p, FO %p\n", In->Context, FileObject);
+    Trace("> Context %p, FO %p\n", In->Context, FileObject);
 
     KeAcquireSpinLock(&Fdo->SuspendLock, &Irql);
     Node = Fdo->SuspendList.Flink;
@@ -193,10 +193,10 @@ IoctlSuspendDeregister(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 

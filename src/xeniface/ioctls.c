@@ -64,7 +64,7 @@ __CaptureUserBuffer(
         ProbeForRead(Buffer, Length, 1);
         RtlCopyMemory(TempBuffer, Buffer, Length);
     } except(EXCEPTION_EXECUTE_HANDLER) {
-        XenIfaceDebugPrint(ERROR, "Exception while probing/reading buffer at %p, size 0x%lx\n", Buffer, Length);
+        Error("Exception while probing/reading buffer at %p, size 0x%lx\n", Buffer, Length);
         ExFreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
         TempBuffer = NULL;
         Status = GetExceptionCode();
@@ -131,13 +131,13 @@ IoctlLog(
         *ptr = '\0';
     }
 
-    XenIfaceDebugPrint(INFO, "USER: %s\n", Buffer);
+    Info("USER: %s\n", Buffer);
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -168,7 +168,7 @@ XenIfaceCleanup(
             StoreContext->FileObject != FileObject)
             continue;
 
-        XenIfaceDebugPrint(TRACE, "Store context %p\n", StoreContext);
+        Trace("Store context %p\n", StoreContext);
         RemoveEntryList(&StoreContext->Entry);
         // StoreFreeWatch requires PASSIVE_LEVEL and we're inside a lock
         InsertTailList(&ToFree, &StoreContext->Entry);
@@ -196,7 +196,7 @@ XenIfaceCleanup(
             EvtchnContext->FileObject != FileObject)
             continue;
 
-        XenIfaceDebugPrint(TRACE, "Evtchn context %p\n", EvtchnContext);
+        Trace("Evtchn context %p\n", EvtchnContext);
         RemoveEntryList(&EvtchnContext->Entry);
         // EvtchnFree requires PASSIVE_LEVEL and we're inside a lock
         InsertTailList(&ToFree, &EvtchnContext->Entry);
@@ -223,7 +223,7 @@ XenIfaceCleanup(
             SuspendContext->FileObject != FileObject)
             continue;
 
-        XenIfaceDebugPrint(TRACE, "Suspend context %p\n", SuspendContext);
+        Trace("Suspend context %p\n", SuspendContext);
         RemoveEntryList(&SuspendContext->Entry);
         SuspendFreeEvent(Fdo, SuspendContext);
     }

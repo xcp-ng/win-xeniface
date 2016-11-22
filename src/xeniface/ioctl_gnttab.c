@@ -60,12 +60,12 @@ CompleteGnttabIrp(
     // but we need to be there to unmap memory.
     ChangeProcess = PsGetCurrentProcess() != Id->Process;
     if (ChangeProcess) {
-        XenIfaceDebugPrint(TRACE, "Changing process from %p to %p\n", PsGetCurrentProcess(), Id->Process);
+        Trace("Changing process from %p to %p\n", PsGetCurrentProcess(), Id->Process);
         KeStackAttachProcess(Id->Process, &ApcState);
     }
 
-    XenIfaceDebugPrint(TRACE, "Irp %p, Process %p, Id %lu, Type %d, IRQL %d\n",
-                       Irp, Id->Process, Id->RequestId, Id->Type, KeGetCurrentIrql());
+    Trace("Irp %p, Process %p, Id %lu, Type %d, IRQL %d\n",
+          Irp, Id->Process, Id->RequestId, Id->Type, KeGetCurrentIrql());
 
     switch (Id->Type) {
 
@@ -191,7 +191,7 @@ IoctlGnttabPermitForeignAccess(
     Context->NotifyOffset = In->NotifyOffset;
     Context->NotifyPort = In->NotifyPort;
 
-    XenIfaceDebugPrint(TRACE, "> RemoteDomain %d, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
+    Trace("> RemoteDomain %d, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
                        Context->RemoteDomain, Context->NumberPages, Context->Flags, Context->NotifyOffset, Context->NotifyPort,
                        Context->Id.Process, Context->Id.RequestId);
 
@@ -237,7 +237,7 @@ IoctlGnttabPermitForeignAccess(
 
 // prefast somehow thinks that this call can modify Page...
 #pragma prefast(suppress:6385)
-        XenIfaceDebugPrint(INFO, "Grants[%lu] = %p\n", Page, Context->Grants[Page]);
+        Info("Grants[%lu] = %p\n", Page, Context->Grants[Page]);
         if (!NT_SUCCESS(status))
             goto fail11;
     }
@@ -261,7 +261,7 @@ IoctlGnttabPermitForeignAccess(
     if (Context->UserVa == NULL)
         goto fail13;
 
-    XenIfaceDebugPrint(TRACE, "< Context %p, Irp %p, KernelVa %p, UserVa %p\n",
+    Trace("< Context %p, Irp %p, KernelVa %p, UserVa %p\n",
                        Context, Irp, Context->KernelVa, Context->UserVa);
 
     // Pass the result to user mode.
@@ -277,7 +277,7 @@ IoctlGnttabPermitForeignAccess(
         }
     } except(EXCEPTION_EXECUTE_HANDLER) {
         status = GetExceptionCode();
-        XenIfaceDebugPrint(ERROR, "Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", status, Out, OutLen);
+        Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", status, Out, OutLen);
         goto fail14;
     }
 
@@ -293,20 +293,20 @@ IoctlGnttabPermitForeignAccess(
     return STATUS_PENDING;
 
 fail15:
-    XenIfaceDebugPrint(ERROR, "Fail15\n");
+    Error("Fail15\n");
 
 fail14:
-    XenIfaceDebugPrint(ERROR, "Fail14\n");
+    Error("Fail14\n");
     MmUnmapLockedPages(Context->UserVa, Context->Mdl);
 
 fail13:
-    XenIfaceDebugPrint(ERROR, "Fail13\n");
+    Error("Fail13\n");
 
 fail12:
-    XenIfaceDebugPrint(ERROR, "Fail12\n");
+    Error("Fail12\n");
 
 fail11:
-    XenIfaceDebugPrint(ERROR, "Fail11: Page = %lu\n", Page);
+    Error("Fail11: Page = %lu\n", Page);
 
     while (Page > 0) {
         ASSERT(NT_SUCCESS(XENBUS_GNTTAB(RevokeForeignAccess,
@@ -320,39 +320,39 @@ fail11:
     IoFreeMdl(Context->Mdl);
 
 fail10:
-    XenIfaceDebugPrint(ERROR, "Fail10\n");
+    Error("Fail10\n");
     ExFreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
 
 fail9:
-    XenIfaceDebugPrint(ERROR, "Fail9\n");
+    Error("Fail9\n");
     ExFreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
 
 fail8:
-    XenIfaceDebugPrint(ERROR, "Fail8\n");
+    Error("Fail8\n");
 
 fail7:
-    XenIfaceDebugPrint(ERROR, "Fail7\n");
+    Error("Fail7\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_GRANT_CONTEXT));
     ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail6:
-    XenIfaceDebugPrint(ERROR, "Fail6\n");
+    Error("Fail6\n");
 
 fail5:
-    XenIfaceDebugPrint(ERROR, "Fail5\n");
+    Error("Fail5\n");
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4\n");
+    Error("Fail4\n");
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
     __FreeCapturedBuffer(In);
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -368,7 +368,7 @@ GnttabFreeGrant(
 
     ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
 
-    XenIfaceDebugPrint(TRACE, "Context %p\n", Context);
+    Trace("Context %p\n", Context);
 
     if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) {
         ((PCHAR)Context->KernelVa)[Context->NotifyOffset] = 0;
@@ -378,7 +378,7 @@ GnttabFreeGrant(
         status = EvtchnNotify(Fdo, Context->NotifyPort, NULL);
 
         if (!NT_SUCCESS(status)) // non-fatal, we must free memory
-            XenIfaceDebugPrint(ERROR, "failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
+            Error("failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
     }
 
     // unmap from user address space
@@ -431,7 +431,7 @@ IoctlGnttabRevokeForeignAccess(
     Id.Process = PsGetCurrentProcess();
     Id.RequestId = In->RequestId;
 
-    XenIfaceDebugPrint(TRACE, "> Process %p, Id %lu\n", Id.Process, Id.RequestId);
+    Trace("> Process %p, Id %lu\n", Id.Process, Id.RequestId);
 
     status = STATUS_NOT_FOUND;
     PendingIrp = IoCsqRemoveNextIrp(&Fdo->IrpQueue, &Id);
@@ -449,10 +449,10 @@ IoctlGnttabRevokeForeignAccess(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -519,12 +519,12 @@ IoctlGnttabMapForeignPages(
     Context->NotifyOffset = In->NotifyOffset;
     Context->NotifyPort = In->NotifyPort;
 
-    XenIfaceDebugPrint(TRACE, "> RemoteDomain %d, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
+    Trace("> RemoteDomain %d, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
                        Context->RemoteDomain, Context->NumberPages, Context->Flags, Context->NotifyOffset, Context->NotifyPort,
                        Context->Id.Process, Context->Id.RequestId);
 
     for (PageIndex = 0; PageIndex < In->NumberPages; PageIndex++)
-        XenIfaceDebugPrint(INFO, "> Ref %d\n", In->References[PageIndex]);
+        Info("> Ref %d\n", In->References[PageIndex]);
 
     status = STATUS_INVALID_PARAMETER;
     if (FindGnttabIrp(Fdo, &Context->Id) != NULL)
@@ -572,7 +572,7 @@ IoctlGnttabMapForeignPages(
     if (Context->UserVa == NULL)
         goto fail12;
 
-    XenIfaceDebugPrint(TRACE, "< Context %p, Irp %p, Address %p, KernelVa %p, UserVa %p\n",
+    Trace("< Context %p, Irp %p, Address %p, KernelVa %p, UserVa %p\n",
                        Context, Irp, Context->Address, Context->KernelVa, Context->UserVa);
 
     // Pass the result to user mode.
@@ -582,7 +582,7 @@ IoctlGnttabMapForeignPages(
         Out->Address = Context->UserVa;
     } except(EXCEPTION_EXECUTE_HANDLER) {
         status = GetExceptionCode();
-        XenIfaceDebugPrint(ERROR, "Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", status, Out, OutLen);
+        Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", status, Out, OutLen);
         goto fail13;
     }
 
@@ -598,56 +598,56 @@ IoctlGnttabMapForeignPages(
     return STATUS_PENDING;
 
 fail14:
-    XenIfaceDebugPrint(ERROR, "Fail14\n");
+    Error("Fail14\n");
 
 fail13:
-    XenIfaceDebugPrint(ERROR, "Fail13\n");
+    Error("Fail13\n");
     MmUnmapLockedPages(Context->UserVa, Context->Mdl);
 
 fail12:
-    XenIfaceDebugPrint(ERROR, "Fail12\n");
+    Error("Fail12\n");
 
 fail11:
-    XenIfaceDebugPrint(ERROR, "Fail11\n");
+    Error("Fail11\n");
     IoFreeMdl(Context->Mdl);
 
 fail10:
-    XenIfaceDebugPrint(ERROR, "Fail10\n");
+    Error("Fail10\n");
     MmUnmapIoSpace(Context->KernelVa, Context->NumberPages * PAGE_SIZE);
 
 fail9:
-    XenIfaceDebugPrint(ERROR, "Fail9\n");
+    Error("Fail9\n");
     ASSERT(NT_SUCCESS(XENBUS_GNTTAB(UnmapForeignPages,
                                     &Fdo->GnttabInterface,
                                     Context->Address
                                     )));
 
 fail8:
-    XenIfaceDebugPrint(ERROR, "Fail8\n");
+    Error("Fail8\n");
 
 fail7:
-    XenIfaceDebugPrint(ERROR, "Fail7\n");
+    Error("Fail7\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_MAP_CONTEXT));
     ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail6:
-    XenIfaceDebugPrint(ERROR, "Fail6\n");
+    Error("Fail6\n");
 
 fail5:
-    XenIfaceDebugPrint(ERROR, "Fail5\n");
+    Error("Fail5\n");
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4\n");
+    Error("Fail4\n");
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
     __FreeCapturedBuffer(In);
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -663,7 +663,7 @@ GnttabFreeMap(
 
     ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
 
-    XenIfaceDebugPrint(TRACE, "Context %p\n", Context);
+    Trace("Context %p\n", Context);
 
     if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) {
         ((PCHAR)Context->KernelVa)[Context->NotifyOffset] = 0;
@@ -673,7 +673,7 @@ GnttabFreeMap(
         status = EvtchnNotify(Fdo, Context->NotifyPort, NULL);
 
         if (!NT_SUCCESS(status)) // non-fatal, we must free memory
-            XenIfaceDebugPrint(ERROR, "failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
+            Error("failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
     }
 
     // unmap from user address space
@@ -721,7 +721,7 @@ IoctlGnttabUnmapForeignPages(
     Id.Process = PsGetCurrentProcess();
     Id.RequestId = In->RequestId;
 
-    XenIfaceDebugPrint(TRACE, "> Process %p, Id %lu\n", Id.Process, Id.RequestId);
+    Trace("> Process %p, Id %lu\n", Id.Process, Id.RequestId);
 
     status = STATUS_NOT_FOUND;
     PendingIrp = IoCsqRemoveNextIrp(&Fdo->IrpQueue, &Id);
@@ -739,9 +739,9 @@ IoctlGnttabUnmapForeignPages(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }

@@ -74,7 +74,6 @@ __MultiSzLen(
 static FORCEINLINE
 VOID
 __DisplayMultiSz(
-    __in PCHAR              Caller,
     __in PCHAR              Str
     )
 {
@@ -84,7 +83,7 @@ __DisplayMultiSz(
 
     for (Ptr = Str, Idx = 0; *Ptr; ++Idx) {
         Len = (ULONG)strlen(Ptr);
-        XenIfaceDebugPrint(TRACE, "|%s: [%d]=(%d)->\"%s\"\n", Caller, Idx, Len, Ptr);
+        Trace("> [%d]=(%d)->\"%s\"\n", Idx, Len, Ptr);
         Ptr += (Len + 1);
     }
 }
@@ -124,7 +123,7 @@ IoctlStoreRead(
 
     status = STATUS_BUFFER_OVERFLOW;
     if (OutLen == 0) {
-        XenIfaceDebugPrint(TRACE, "(\"%s\")=(%d)\n", Buffer, Length);
+        Trace("(\"%s\")=(%d)\n", Buffer, Length);
         goto done;
     }
 
@@ -132,7 +131,7 @@ IoctlStoreRead(
     if (OutLen < Length)
         goto fail4;
 
-    XenIfaceDebugPrint(TRACE, "(\"%s\")=(%d)->\"%s\"\n", Buffer, Length, Value);
+    Trace("(\"%s\")=(%d)->\"%s\"\n", Buffer, Length, Value);
 
     RtlCopyMemory(Buffer, Value, Length);
     Buffer[Length - 1] = 0;
@@ -144,17 +143,17 @@ done:
     return status;
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
+    Error("Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
     XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
     if (!SquashError)
-        XenIfaceDebugPrint(ERROR, "Fail3 (\"%s\")\n", Buffer);
+        Error("Fail3 (\"%s\")\n", Buffer);
 fail2:
     if (!SquashError)
-        XenIfaceDebugPrint(ERROR, "Fail2\n");
+        Error("Fail2\n");
 fail1:
     if (!SquashError)
-        XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+        Error("Fail1 (%08x)\n", status);
 
     return status;
 }
@@ -190,17 +189,17 @@ IoctlStoreWrite(
     if (!NT_SUCCESS(status))
         goto fail4;
 
-    XenIfaceDebugPrint(TRACE, "(\"%s\"=\"%s\")\n", Buffer, Value);
+    Trace("(\"%s\"=\"%s\")\n", Buffer, Value);
     return status;
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4 (\"%s\")\n", Value);
+    Error("Fail4 (\"%s\")\n", Value);
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3 (\"%s\")\n", Buffer);
+    Error("Fail3 (\"%s\")\n", Buffer);
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -235,7 +234,7 @@ IoctlStoreDirectory(
 
     status = STATUS_BUFFER_OVERFLOW;
     if (OutLen == 0) {
-        XenIfaceDebugPrint(TRACE, "(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
+        Trace("(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
         goto done;
     }
 
@@ -243,9 +242,9 @@ IoctlStoreDirectory(
     if (OutLen < Length)
         goto fail4;
 
-    XenIfaceDebugPrint(INFO, "(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
+    Info("(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
 #if DBG
-    __DisplayMultiSz(__FUNCTION__, Value);
+    __DisplayMultiSz(Value);
 #endif
 
     RtlCopyMemory(Buffer, Value, Length);
@@ -259,14 +258,14 @@ done:
     return status;
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
+    Error("Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
     XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3 (\"%s\")\n", Buffer);
+    Error("Fail3 (\"%s\")\n", Buffer);
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -293,15 +292,15 @@ IoctlStoreRemove(
     if (!NT_SUCCESS(status))
         goto fail3;
 
-    XenIfaceDebugPrint(TRACE, "(\"%s\")\n", Buffer);
+    Trace("(\"%s\")\n", Buffer);
     return status;
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3 (\"%s\")\n", Buffer);
+    Error("Fail3 (\"%s\")\n", Buffer);
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -335,14 +334,14 @@ __ConvertPermissions(
     return XenbusPermissions;
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
     ExFreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1\n");
+    Error("Fail1\n");
     return NULL;
 }
 
@@ -394,10 +393,10 @@ IoctlStoreSetPermissions(
         goto fail5;
 
     Path[In->PathLength - 1] = 0;
-    XenIfaceDebugPrint(TRACE, "> Path '%s', NumberPermissions %lu\n", Path, In->NumberPermissions);
+    Trace("> Path '%s', NumberPermissions %lu\n", Path, In->NumberPermissions);
 
     for (Index = 0; Index < In->NumberPermissions; Index++) {
-        XenIfaceDebugPrint(TRACE, "> %lu: Domain %d, Mask 0x%x\n",
+        Trace("> %lu: Domain %d, Mask 0x%x\n",
                            Index, Permissions[Index].Domain, Permissions[Index].Mask);
     }
 
@@ -416,24 +415,24 @@ IoctlStoreSetPermissions(
     return status;
 
 fail6:
-    XenIfaceDebugPrint(ERROR, "Fail6\n");
+    Error("Fail6\n");
     __FreeCapturedBuffer(Path);
 
 fail5:
-    XenIfaceDebugPrint(ERROR, "Fail5\n");
+    Error("Fail5\n");
     __FreePermissions(Permissions);
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4\n");
+    Error("Fail4\n");
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -459,7 +458,7 @@ StoreWatch(
         if (ThreadIsAlerted(Self))
             break;
 
-        XenIfaceDebugPrint(INFO, "%s\n", Context->Path);
+        Info("%s\n", Context->Path);
 
         KeSetEvent(Context->Event, IO_NO_INCREMENT, FALSE);
     }
@@ -520,7 +519,7 @@ IoctlStoreAddWatch(
     if (!NT_SUCCESS(status))
         goto fail5;
 
-    XenIfaceDebugPrint(TRACE, "> Path '%s', Event %p, FO %p\n", Path, In->Event, FileObject);
+    Trace("> Path '%s', Event %p, FO %p\n", Path, In->Event, FileObject);
 
     Context->Path = Path;
 
@@ -540,7 +539,7 @@ IoctlStoreAddWatch(
 
     ExInterlockedInsertTailList(&Fdo->StoreWatchList, &Context->Entry, &Fdo->StoreWatchLock);
 
-    XenIfaceDebugPrint(TRACE, "< Context %p, Watch %p\n", Context, Context->Watch);
+    Trace("< Context %p, Watch %p\n", Context, Context->Watch);
 
     Out->Context = Context;
     *Info = sizeof(XENIFACE_STORE_ADD_WATCH_OUT);
@@ -550,31 +549,31 @@ IoctlStoreAddWatch(
 fail7:
     __FreeCapturedBuffer(Context->Path);
 
-    XenIfaceDebugPrint(ERROR, "Fail7\n");
+    Error("Fail7\n");
     ThreadAlert(Context->Thread);
     ThreadJoin(Context->Thread);
 
 fail6:
-    XenIfaceDebugPrint(ERROR, "Fail6\n");
+    Error("Fail6\n");
     ObDereferenceObject(Context->Event);
 
 fail5:
-    XenIfaceDebugPrint(ERROR, "Fail5\n");
+    Error("Fail5\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
     ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail4:
-    XenIfaceDebugPrint(ERROR, "Fail4\n");
+    Error("Fail4\n");
     __FreeCapturedBuffer(Path);
 
 fail3:
-    XenIfaceDebugPrint(ERROR, "Fail3\n");
+    Error("Fail3\n");
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -589,7 +588,7 @@ StoreFreeWatch(
 
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
-    XenIfaceDebugPrint(TRACE, "Context %p, Watch %p, FO %p\n",
+    Trace("Context %p, Watch %p, FO %p\n",
                        Context, Context->Watch, Context->FileObject);
 
     status = XENBUS_STORE(WatchRemove,
@@ -630,7 +629,7 @@ IoctlStoreRemoveWatch(
         goto fail1;
     }
 
-    XenIfaceDebugPrint(TRACE, "> Context %p, FO %p\n", In->Context, FileObject);
+    Trace("> Context %p, FO %p\n", In->Context, FileObject);
 
     KeAcquireSpinLock(&Fdo->StoreWatchLock, &Irql);
     Node = Fdo->StoreWatchList.Flink;
@@ -657,9 +656,9 @@ IoctlStoreRemoveWatch(
     return STATUS_SUCCESS;
 
 fail2:
-    XenIfaceDebugPrint(ERROR, "Fail2\n");
+    Error("Fail2\n");
 
 fail1:
-    XenIfaceDebugPrint(ERROR, "Fail1 (%08x)\n", status);
+    Error("Fail1 (%08x)\n", status);
     return status;
 }
