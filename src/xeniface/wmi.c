@@ -750,7 +750,7 @@ WmiFireSuspendEvent(
     IN  PXENIFACE_FDO   Fdo
     )
 {
-    Error("Ready to unsuspend Event\n");
+    Info("Ready to unsuspend Event\n");
     KeSetEvent(&Fdo->registryWriteEvent, IO_NO_INCREMENT, FALSE);
 
     if (!Fdo->WmiReady)
@@ -821,7 +821,7 @@ StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
         return status;
     }
 
-    Warning("Start Watch %p\n", watch->watchhandle);
+    Info("Start Watch %p\n", watch->watchhandle);
 
     ExFreePool(tmppath);
     RtlFreeAnsiString(&ansipath);
@@ -870,7 +870,7 @@ VOID WatchCallbackThread(__in PVOID StartContext) {
             } else if (!session->suspended &&
                        watch->suspendcount != XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface)) {
                 watch->suspendcount = XENBUS_SUSPEND(GetCount, &watch->fdoData->SuspendInterface);
-                Warning("SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
+                Info("SessionSuspendResumeUnwatch %p\n", watch->watchhandle);
 
                 XENBUS_STORE(WatchRemove, &watch->fdoData->StoreInterface, watch->watchhandle);
                 watch->watchhandle = NULL;

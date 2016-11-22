@@ -101,14 +101,14 @@ FdoInitialiseXSRegistryEntries(
     RtlInitUnicodeString(&UnicodeValue, NULL);
     RtlInitAnsiString(&AnsiValue, value);
 
-    Error("About to convert unicode string\n");
+    Info("About to convert unicode string\n");
     status = RtlAnsiStringToUnicodeString(&UnicodeValue, &AnsiValue, TRUE);
     if (!NT_SUCCESS(status)) {
         Error("Can't convert string\n");
         goto failReg;
     }
 
-    Error("About to write unicode string\n");
+    Info("About to write unicode string\n");
     status = ZwSetValueKey(RegHandle, &UnicodeValueName, 0, REG_SZ, UnicodeValue.Buffer, UnicodeValue.Length+sizeof(WCHAR));
     if (!NT_SUCCESS(status)) {
         Error("Can't write key\n");
@@ -161,7 +161,7 @@ static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
         status = KeWaitForMultipleObjects(REGISTRY_EVENTS, (PVOID *)threadevents, WaitAny, Executive, KernelMode, TRUE, NULL, NULL);
         if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
             if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
-                Error("WriteRegistry\n");
+                Info("WriteRegistry\n");
                 FdoInitialiseXSRegistryEntries(Fdo);
                 KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
             }
