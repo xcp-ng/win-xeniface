@@ -451,6 +451,8 @@ if __name__ == '__main__':
         print("VENDOR_DEVICE_ID\t'%s'" % os.environ['VENDOR_DEVICE_ID'])
 
     print("PRODUCT_NAME\t\t'%s'" % os.environ['PRODUCT_NAME'])
+    print("OBJECT_PREFIX\t\t'%s'" % os.environ['OBJECT_PREFIX'])
+    print("REG_KEY_NAME\t\t'%s'" % os.environ['REG_KEY_NAME'])
     print("MAJOR_VERSION\t\t%s" % os.environ['MAJOR_VERSION'])
     print("MINOR_VERSION\t\t%s" % os.environ['MINOR_VERSION'])
     print("MICRO_VERSION\t\t%s" % os.environ['MICRO_VERSION'])
