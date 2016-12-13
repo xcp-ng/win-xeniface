@@ -1036,6 +1036,7 @@ fail1:
     return status;
 }
 
+__drv_requiresIRQL(PASSIVE_LEVEL)
 static DECLSPEC_NOINLINE VOID
 FdoD0ToD3(
     IN  PXENIFACE_FDO   Fdo
@@ -1299,6 +1300,7 @@ FdoSurpriseRemoval(
     return status;
 }
 
+__drv_requiresIRQL(PASSIVE_LEVEL)
 static DECLSPEC_NOINLINE NTSTATUS
 FdoRemoveDevice(
     IN  PXENIFACE_FDO Fdo,
@@ -2302,6 +2304,7 @@ FdoDispatchSystemControl(
     return status;
 }
 
+__drv_requiresIRQL(PASSIVE_LEVEL)
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchCleanup(
     IN  PXENIFACE_FDO   Fdo,
@@ -2368,6 +2371,7 @@ FdoDispatch(
     return status;
 }
 
+__drv_requiresIRQL(PASSIVE_LEVEL)
 static NTSTATUS
 FdoQueryInterface(
     IN  PXENIFACE_FDO   Fdo,

@@ -138,6 +138,7 @@ __InterlockedSubtract(
     return New;
 }
 
+__checkReturn
 static FORCEINLINE PVOID
 __AllocatePoolWithTag(
     IN  POOL_TYPE   PoolType,
@@ -150,6 +151,7 @@ __AllocatePoolWithTag(
     __analysis_assume(PoolType == NonPagedPool ||
                       PoolType == PagedPool);
 
+#pragma warning(suppress:28160) // annotation error
     Buffer = ExAllocatePoolWithTag(PoolType, NumberOfBytes, Tag);
     if (Buffer == NULL)
         return NULL;
@@ -190,11 +192,14 @@ __AllocatePage(
                                   SkipBytes,
                                   TotalBytes,
                                   MmCached,
-                                  0);
+                                  MM_DONT_ZERO_ALLOCATION);
 
     status = STATUS_NO_MEMORY;
     if (Mdl == NULL)
         goto fail1;
+
+    if (Mdl->ByteCount < PAGE_SIZE)
+        goto fail2;
 
     ASSERT((Mdl->MdlFlags & (MDL_MAPPED_TO_SYSTEM_VA |
                              MDL_PARTIAL_HAS_BEEN_MAPPED |
@@ -212,13 +217,16 @@ __AllocatePage(
 
     status = STATUS_UNSUCCESSFUL;
     if (MdlMappedSystemVa == NULL)
-        goto fail2;
+        goto fail3;
 
     ASSERT3P(MdlMappedSystemVa, ==, Mdl->MappedSystemVa);
 
     RtlZeroMemory(MdlMappedSystemVa, PAGE_SIZE);
 
     return Mdl;
+
+fail3:
+    Error("fail3\n");
 
 fail2:
     Error("fail2\n");
@@ -267,8 +275,46 @@ __strtok_r(
     if (Token == NULL)
         return NULL;
 
-    while (*Token != L'\0' &&
+    while (*Token != '\0' &&
            strchr(Delimiter, *Token) != NULL)
+        Token++;
+
+    if (*Token == '\0')
+        return NULL;
+
+    End = Token + 1;
+    while (*End != '\0' &&
+           strchr(Delimiter, *End) == NULL)
+        End++;
+
+    if (*End != '\0')
+        *End++ = '\0';
+
+    *Context = End;
+
+    return Token;
+}
+
+static FORCEINLINE PWCHAR
+__wcstok_r(
+    IN      PWCHAR  Buffer,
+    IN      PWCHAR  Delimiter,
+    IN OUT  PWCHAR  *Context
+    )
+{
+    PWCHAR          Token;
+    PWCHAR          End;
+
+    if (Buffer != NULL)
+        *Context = Buffer;
+
+    Token = *Context;
+
+    if (Token == NULL)
+        return NULL;
+
+    while (*Token != L'\0' &&
+           wcschr(Delimiter, *Token) != NULL)
         Token++;
 
     if (*Token == L'\0')
@@ -276,7 +322,7 @@ __strtok_r(
 
     End = Token + 1;
     while (*End != L'\0' &&
-           strchr(Delimiter, *End) == NULL)
+           wcschr(Delimiter, *End) == NULL)
         End++;
 
     if (*End != L'\0')

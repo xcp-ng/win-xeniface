@@ -1868,6 +1868,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
             leafoffset--;
     }
     if (leafoffset != 0){
+#pragma warning(suppress:6386) // buffer overrun
         RtlCopyBytes(tmppath,path->Buffer, leafoffset);
         RtlCopyBytes(tmpleaf, path->Buffer+leafoffset+1, path->Length-leafoffset-1);
     }
@@ -1879,6 +1880,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
             tmppath[0]='/';
         }
         else {
+#pragma warning(suppress:6386) // buffer overrun
             RtlCopyBytes(tmpleaf, path->Buffer, path->Length);
         }
 

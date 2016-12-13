@@ -321,15 +321,28 @@ __ConvertPermissions(
     if (XenbusPermissions == NULL)
         goto fail2;
 
+#pragma warning(push)
+#pragma warning(disable:6385)
+#pragma warning(disable:6386)
+
     // Currently XENIFACE_STORE_PERMISSION is the same as XENBUS_STORE_PERMISSION,
     // but we convert them here in case something changes in the future.
     for (Index = 0; Index < NumberPermissions; Index++) {
-        if ((XenifacePermissions[Index].Mask & ~XENIFACE_STORE_ALLOWED_PERMISSIONS) != 0)
+        XENIFACE_STORE_PERMISSION_MASK  Mask = XenifacePermissions[Index].Mask;
+
+        if (Mask & ~XENIFACE_STORE_ALLOWED_PERMISSIONS)
             goto fail3;
 
         XenbusPermissions[Index].Domain = XenifacePermissions[Index].Domain;
-        XenbusPermissions[Index].Mask = (XENBUS_STORE_PERMISSION_MASK)XenifacePermissions[Index].Mask;
+        XenbusPermissions[Index].Mask = 0;
+
+        if (Mask & XENIFACE_STORE_PERM_READ)
+            XenbusPermissions[Index].Mask |= XENBUS_STORE_PERM_READ;
+        if (Mask & XENIFACE_STORE_PERM_WRITE)
+            XenbusPermissions[Index].Mask |= XENBUS_STORE_PERM_WRITE;
     }
+
+#pragma warning(pop)
 
     return XenbusPermissions;
 
