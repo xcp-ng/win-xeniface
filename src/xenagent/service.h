@@ -39,6 +39,7 @@
 
 #include "devicelist.h"
 #include "xenifacedevice.h"
+#include "convdevice.h"
 
 class CXenAgent;
 
@@ -65,14 +66,18 @@ public: // IDeviceCreator
 public:
     bool CheckShutdown();
     void CheckSuspend();
+    bool CheckSlateMode(std::string *mode);
 
 public:
     HANDLE  m_evt_shutdown;
     HANDLE  m_evt_suspend;
+    HANDLE  m_evt_slate_mode;
 
 private:
     void StartShutdownWatch();
     void StopShutdownWatch();
+    void StartSlateModeWatch();
+    void StopSlateModeWatch();
     void AcquireShutdownPrivilege();
     bool IsHostTimeUTC();
     void AdjustXenTimeToUTC(FILETIME* time);
@@ -86,7 +91,36 @@ private:
     CRITICAL_SECTION    m_crit;
     void*               m_ctxt_shutdown;
     void*               m_ctxt_suspend;
+    void*               m_ctxt_slate_mode;
     DWORD               m_count;
+};
+
+class CConvCreator : public IDeviceCreator
+{
+public:
+    CConvCreator(CXenAgent&);
+    virtual ~CConvCreator();
+    CConvCreator& operator=(const CConvCreator&);
+
+    bool Start(HANDLE svc);
+    void Stop();
+    void OnDeviceEvent(DWORD evt, LPVOID data);
+    void OnPowerEvent(DWORD evt, LPVOID data);
+    void SetSlateMode(std::string mode);
+    bool DevicePresent();
+
+public:
+    virtual CDevice* Create(const wchar_t* path);
+    virtual void OnDeviceAdded(CDevice* dev);
+    virtual void OnDeviceRemoved(CDevice* dev);
+    virtual void OnDeviceSuspend(CDevice* dev);
+    virtual void OnDeviceResume(CDevice* dev);
+
+private:
+    CXenAgent&          m_agent;
+    CDeviceList         m_devlist;
+    CConvDevice*        m_device;
+    CRITICAL_SECTION    m_crit;
 };
 
 class CXenAgent
@@ -108,6 +142,9 @@ public: // ctor/dtor
 public:
     void EventLog(DWORD evt);
 
+public:
+    bool ConvDevicePresent();
+
 private: // service events
     void OnServiceStart();
     void OnServiceStop();
@@ -125,6 +162,7 @@ private: // service support
     HANDLE                  m_evtlog;
     HANDLE                  m_svc_stop;
     CXenIfaceCreator        m_xeniface;
+    CConvCreator            m_conv;
 };
 
 #endif

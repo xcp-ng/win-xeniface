@@ -101,6 +101,22 @@ void CDevice::Close()
     m_handle = INVALID_HANDLE_VALUE;
 }
 
+bool CDevice::Write(void *buf, DWORD bufsz, DWORD *bytes /* = NULL*/)
+{
+    if (m_handle == INVALID_HANDLE_VALUE)
+        return false;
+
+    DWORD _bytes;
+    if (!WriteFile(m_handle,
+                   buf,
+                   bufsz,
+                   (bytes == NULL) ? &_bytes : bytes,
+                   NULL))
+        return false;
+
+    return true;
+}
+
 bool CDevice::Ioctl(DWORD ioctl, void* in, DWORD insz, void* out, DWORD outsz, DWORD* bytes /*= NULL*/)
 {
     if (m_handle == INVALID_HANDLE_VALUE)

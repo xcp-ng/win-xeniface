@@ -29,69 +29,31 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __XENAGENT_DEVICELIST_H__
-#define __XENAGENT_DEVICELIST_H__
+#ifndef __XENAGENT_CONVDEVICE_H__
+#define __XENAGENT_CONVDEVICE_H__
 
 #include <windows.h>
-#include <dbt.h>
-#include <map>
 #include <string>
+#include "devicelist.h"
 
-class CDevice
-{
-public:
-    CDevice(const wchar_t* path);
-    virtual ~CDevice();
-
-    const wchar_t* Path() const;
-
-    HANDLE Open(HANDLE svc);
-    void Close();
-
-protected:
-    bool Write(void *buf, DWORD bufsz, DWORD *bytes = NULL);
-    bool Ioctl(DWORD ioctl, void* in, DWORD insz, void* out, DWORD outsz, DWORD* bytes = NULL);
-
-private:
-    std::wstring    m_path;
-    HANDLE          m_handle;
-    HDEVNOTIFY      m_notify;
+enum {
+    CCONV_DEVICE_SLATE_MODE,
+    CCONV_DEVICE_LAPTOP_MODE,
+    CCONV_DEVICE_UNKNOWN_MODE
 };
 
-class IDeviceCreator
+class CConvDevice : public CDevice
 {
 public:
-    virtual CDevice* Create(const wchar_t* path) = 0;
-    virtual void OnDeviceAdded(CDevice* dev) = 0;
-    virtual void OnDeviceRemoved(CDevice* dev) = 0;
-    virtual void OnDeviceSuspend(CDevice* dev) = 0;
-    virtual void OnDeviceResume(CDevice* dev) = 0;
-};
+    CConvDevice(const wchar_t* path);
+    virtual ~CConvDevice();
 
-class CDeviceList
-{
 public:
-    CDeviceList(const GUID& itf);
-    ~CDeviceList();
-
-    bool Start(HANDLE svc, IDeviceCreator* impl);
-    void Stop();
-    void OnDeviceEvent(DWORD evt, LPVOID data);
-    void OnPowerEvent(DWORD evt, LPVOID data);
-    CDevice* GetFirstDevice();
+    void SetMode(DWORD mode);
 
 private:
-    void OnDeviceAdded(const std::wstring& path);
-    void OnDeviceQueryRemove(HANDLE handle);
-    void OnDeviceRemoved(HANDLE dev);
-
-    typedef std::map< HANDLE, CDevice* > DeviceMap;
-
-    GUID        m_guid;
-    DeviceMap   m_devs;
-    HDEVNOTIFY  m_notify;
-    HANDLE      m_handle;
-    IDeviceCreator* m_impl;
+    bool DisablePrompt();
+    bool GetMode(DWORD *mode);
 };
 
 #endif

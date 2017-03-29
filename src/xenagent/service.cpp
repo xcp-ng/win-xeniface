@@ -60,10 +60,12 @@ CCritSec::~CCritSec()
 
 CXenIfaceCreator::CXenIfaceCreator(CXenAgent& agent) :
     m_devlist(GUID_INTERFACE_XENIFACE), m_device(NULL),
-    m_ctxt_shutdown(NULL), m_ctxt_suspend(NULL), m_agent(agent)
+    m_ctxt_shutdown(NULL), m_ctxt_suspend(NULL),
+    m_ctxt_slate_mode(NULL), m_agent(agent)
 {
     m_evt_shutdown = CreateEvent(FALSE, NULL, NULL, FALSE);
     m_evt_suspend = CreateEvent(FALSE, NULL, NULL, FALSE);
+    m_evt_slate_mode = CreateEvent(FALSE, NULL, NULL, FALSE);
     m_count = 0;
 
     InitializeCriticalSection(&m_crit);
@@ -71,6 +73,7 @@ CXenIfaceCreator::CXenIfaceCreator(CXenAgent& agent) :
 
 CXenIfaceCreator::~CXenIfaceCreator()
 {
+    CloseHandle(m_evt_slate_mode);
     CloseHandle(m_evt_suspend);
     CloseHandle(m_evt_shutdown);
 
@@ -120,7 +123,12 @@ void CXenIfaceCreator::Log(const char* message)
         m_device = (CXenIfaceDevice*)dev;
 
         m_device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
+
         StartShutdownWatch();
+
+        if (m_agent.ConvDevicePresent())
+            StartSlateModeWatch();
+
         SetXenTime();
     }
 }
@@ -135,6 +143,10 @@ void CXenIfaceCreator::Log(const char* message)
             m_device->SuspendDeregister(m_ctxt_suspend);
             m_ctxt_suspend = NULL;
         }
+
+        if (m_agent.ConvDevicePresent())
+            StopSlateModeWatch();
+
         StopShutdownWatch();
 
         m_device = NULL;
@@ -144,13 +156,21 @@ void CXenIfaceCreator::Log(const char* message)
 /*virtual*/ void CXenIfaceCreator::OnDeviceSuspend(CDevice* dev)
 {
     CXenAgent::Log("OnDeviceSuspend(%ws)\n", dev->Path());
+
+    if (m_agent.ConvDevicePresent())
+        StopSlateModeWatch();
+
     StopShutdownWatch();
 }
 
 /*virtual*/ void CXenIfaceCreator::OnDeviceResume(CDevice* dev)
 {
     CXenAgent::Log("OnDeviceResume(%ws)\n", dev->Path());
+
     StartShutdownWatch();
+
+    if (m_agent.ConvDevicePresent())
+        StartSlateModeWatch();
 }
 
 bool CXenIfaceCreator::CheckShutdown()
@@ -230,11 +250,34 @@ void CXenIfaceCreator::CheckSuspend()
 
     m_agent.EventLog(EVENT_XENUSER_UNSUSPENDED);
 
-    // recreate shutdown watch, as suspending deactivated the watch
+    // recreate watches, as suspending deactivated the watch
+    if (m_agent.ConvDevicePresent())
+        StopSlateModeWatch();
+
     StopShutdownWatch();
+
     StartShutdownWatch();
+
+    if (m_agent.ConvDevicePresent())
+        StartSlateModeWatch();
+
     SetXenTime();
     m_count = count;
+}
+
+bool CXenIfaceCreator::CheckSlateMode(std::string *mode)
+{
+    CCritSec crit(&m_crit);
+    if (m_device == NULL)
+        return false;
+
+    if (!m_device->StoreRead("control/laptop-slate-mode", *mode))
+        return false;
+
+    if (*mode != "")
+        m_device->StoreWrite("control/laptop-slate-mode", "");
+
+    return true;
 }
 
 void CXenIfaceCreator::StartShutdownWatch()
@@ -262,6 +305,26 @@ void CXenIfaceCreator::StopShutdownWatch()
 
     m_device->StoreRemoveWatch(m_ctxt_shutdown);
     m_ctxt_shutdown = NULL;
+}
+
+void CXenIfaceCreator::StartSlateModeWatch()
+{
+    if (m_ctxt_slate_mode)
+        return;
+
+    m_device->StoreAddWatch("control/laptop-slate-mode", m_evt_slate_mode, &m_ctxt_slate_mode);
+    m_device->StoreWrite("control/feature-laptop-slate-mode", "1");
+}
+
+void CXenIfaceCreator::StopSlateModeWatch()
+{
+    if (!m_ctxt_slate_mode)
+        return;
+
+    m_device->StoreRemove("control/feature-laptop-slate-mode");
+
+    m_device->StoreRemoveWatch(m_ctxt_slate_mode);
+    m_ctxt_slate_mode = NULL;
 }
 
 void CXenIfaceCreator::AcquireShutdownPrivilege()
@@ -398,6 +461,94 @@ void CXenIfaceCreator::SetXenTime()
         SetLocalTime(&sys);
 }
 
+/* 317fc439-3f77-41c8-b09e-08ad63272aa3 */
+DEFINE_GUID(GUID_GPIOBUTTONS_LAPTOPSLATE_INTERFACE, \
+            0x317fc439, 0x3f77, 0x41c8, 0xb0, 0x9e, 0x08, 0xad, 0x63, 0x27, 0x2a, 0xa3);
+
+CConvCreator::CConvCreator(CXenAgent& agent) :
+    m_devlist(GUID_GPIOBUTTONS_LAPTOPSLATE_INTERFACE), m_device(NULL),
+    m_agent(agent)
+{
+    InitializeCriticalSection(&m_crit);
+}
+
+CConvCreator::~CConvCreator()
+{
+    DeleteCriticalSection(&m_crit);
+}
+
+bool CConvCreator::Start(HANDLE svc)
+{
+    return m_devlist.Start(svc, this);
+}
+
+void CConvCreator::Stop()
+{
+    m_devlist.Stop();
+}
+
+void CConvCreator::OnDeviceEvent(DWORD evt, LPVOID data)
+{
+    m_devlist.OnDeviceEvent(evt, data);
+}
+
+void CConvCreator::OnPowerEvent(DWORD evt, LPVOID data)
+{
+    m_devlist.OnPowerEvent(evt, data);
+}
+
+void CConvCreator::SetSlateMode(std::string mode)
+{
+    CCritSec crit(&m_crit);
+    if (m_device == NULL)
+        return;
+
+    m_agent.EventLog(EVENT_XENUSER_MODE_SWITCH);
+
+    if (mode == "laptop")
+        m_device->SetMode(CCONV_DEVICE_LAPTOP_MODE);
+    else if (mode == "slate")
+        m_device->SetMode(CCONV_DEVICE_SLATE_MODE);
+}
+
+bool CConvCreator::DevicePresent()
+{
+    return m_device != NULL;
+}
+
+/*virtual*/ CDevice* CConvCreator::Create(const wchar_t* path)
+{
+    return new CConvDevice(path);
+}
+
+/*virtual*/ void CConvCreator::OnDeviceAdded(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceAdded(%ws)\n", dev->Path());
+
+    CCritSec crit(&m_crit);
+    if (m_device == NULL)
+        m_device = (CConvDevice*)dev;
+}
+
+/*virtual*/ void CConvCreator::OnDeviceRemoved(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceRemoved(%ws)\n", dev->Path());
+
+    CCritSec crit(&m_crit);
+    if (m_device == dev)
+        m_device = NULL;
+}
+
+/*virtual*/ void CConvCreator::OnDeviceSuspend(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceSuspend(%ws)\n", dev->Path());
+}
+
+/*virtual*/ void CConvCreator::OnDeviceResume(CDevice* dev)
+{
+    CXenAgent::Log("OnDeviceResume(%ws)\n", dev->Path());
+}
+
 static CXenAgent s_service;
 
 /*static*/ void CXenAgent::Log(const char* fmt, ...)
@@ -505,7 +656,8 @@ static CXenAgent s_service;
 #pragma warning(push)
 #pragma warning(disable:4355)
 
-CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL), m_xeniface(*this)
+CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL), m_xeniface(*this),
+                         m_conv(*this)
 {
     m_status.dwServiceType        = SERVICE_WIN32;
     m_status.dwCurrentState       = SERVICE_START_PENDING;
@@ -530,6 +682,7 @@ CXenAgent::~CXenAgent()
 void CXenAgent::OnServiceStart()
 {
     CXenAgent::Log("OnServiceStart()\n");
+    m_conv.Start(m_handle);
     m_xeniface.Start(m_handle);
 }
 
@@ -537,23 +690,28 @@ void CXenAgent::OnServiceStop()
 {
     CXenAgent::Log("OnServiceStop()\n");
     m_xeniface.Stop();
+    m_conv.Stop();
 }
 
 void CXenAgent::OnDeviceEvent(DWORD evt, LPVOID data)
 {
+    m_conv.OnDeviceEvent(evt, data);
     m_xeniface.OnDeviceEvent(evt, data);
 }
 
 void CXenAgent::OnPowerEvent(DWORD evt, LPVOID data)
 {
+    m_conv.OnPowerEvent(evt, data);
     m_xeniface.OnPowerEvent(evt, data);
 }
 
 bool CXenAgent::ServiceMainLoop()
 {
-    HANDLE  events[3] = { m_svc_stop, m_xeniface.m_evt_shutdown,
-                          m_xeniface.m_evt_suspend };
-    DWORD   wait = WaitForMultipleObjectsEx(3, events, FALSE, 60000, TRUE);
+    HANDLE  events[] = { m_svc_stop,
+                         m_xeniface.m_evt_shutdown,
+                         m_xeniface.m_evt_suspend,
+                         m_xeniface.m_evt_slate_mode };
+    DWORD   wait = WaitForMultipleObjectsEx(4, events, FALSE, 60000, TRUE);
 
     switch (wait) {
     case WAIT_OBJECT_0:
@@ -566,6 +724,14 @@ bool CXenAgent::ServiceMainLoop()
         m_xeniface.CheckSuspend();
         return true; // continue loop
 
+    case WAIT_OBJECT_0+3: {
+        std::string mode;
+
+        if (m_xeniface.CheckSlateMode(&mode))
+            m_conv.SetSlateMode(mode);
+
+        return true; // continue loop
+    }
     case WAIT_IO_COMPLETION:
     case WAIT_TIMEOUT:
         m_xeniface.CheckSuspend();
@@ -591,6 +757,11 @@ void CXenAgent::EventLog(DWORD evt)
                     NULL,
                     NULL);
     }
+}
+
+bool CXenAgent::ConvDevicePresent()
+{
+    return m_conv.DevicePresent();
 }
 
 void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*= 0*/)

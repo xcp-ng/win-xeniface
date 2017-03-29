@@ -108,3 +108,11 @@ SymbolicName=EVENT_XENUSER_UNEXPECTED
 Language=English
 The tools experienced an unexpected error.
 .
+
+MessageId=0x0009
+Facility=System
+Severity=Informational
+SymbolicName=EVENT_XENUSER_MODE_SWITCH
+Language=English
+The tools requested a mode switch.
+.

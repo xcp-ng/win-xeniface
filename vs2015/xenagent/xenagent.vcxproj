@@ -71,6 +71,7 @@
     <ClCompile Include="..\..\src\xenagent\service.cpp"/>
     <ClCompile Include="..\..\src\xenagent\devicelist.cpp"/>
     <ClCompile Include="..\..\src\xenagent\xenifacedevice.cpp"/>
+    <ClCompile Include="..\..\src\xenagent\convdevice.cpp"/>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\xenagent\xenagent.rc" />
