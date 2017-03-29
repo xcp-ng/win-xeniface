@@ -576,6 +576,7 @@ void CXenAgent::CheckSuspend()
     StopShutdownWatch();
     StartShutdownWatch();
     SetXenTime();
+    m_count = count;
 }
 
 void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*= 0*/)
