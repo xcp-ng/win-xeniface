@@ -40,7 +40,56 @@
 #include "devicelist.h"
 #include "xenifacedevice.h"
 
-class CXenAgent : public IDeviceCreator
+class CXenAgent;
+
+class CXenIfaceCreator : public IDeviceCreator
+{
+public:
+    CXenIfaceCreator(CXenAgent&);
+    virtual ~CXenIfaceCreator();
+    CXenIfaceCreator& operator=(const CXenIfaceCreator&);
+
+    bool Start(HANDLE svc);
+    void Stop();
+    void OnDeviceEvent(DWORD evt, LPVOID data);
+    void OnPowerEvent(DWORD evt, LPVOID data);
+    void Log(const char *message);
+
+public: // IDeviceCreator
+    virtual CDevice* Create(const wchar_t* path);
+    virtual void OnDeviceAdded(CDevice* dev);
+    virtual void OnDeviceRemoved(CDevice* dev);
+    virtual void OnDeviceSuspend(CDevice* dev);
+    virtual void OnDeviceResume(CDevice* dev);
+
+public:
+    bool CheckShutdown();
+    void CheckSuspend();
+
+public:
+    HANDLE  m_evt_shutdown;
+    HANDLE  m_evt_suspend;
+
+private:
+    void StartShutdownWatch();
+    void StopShutdownWatch();
+    void AcquireShutdownPrivilege();
+    bool IsHostTimeUTC();
+    void AdjustXenTimeToUTC(FILETIME* time);
+    bool RegCheckIsUTC(const char* path);
+    void SetXenTime();
+
+private:
+    CXenAgent&          m_agent;
+    CDeviceList         m_devlist;
+    CXenIfaceDevice*    m_device;
+    CRITICAL_SECTION    m_crit;
+    void*               m_ctxt_shutdown;
+    void*               m_ctxt_suspend;
+    DWORD               m_count;
+};
+
+class CXenAgent
 {
 public: // statics
     static void Log(const char* fmt, ...);
@@ -56,12 +105,8 @@ public: // ctor/dtor
     CXenAgent();
     virtual ~CXenAgent();
 
-public: // IDeviceCreator
-    virtual CDevice* Create(const wchar_t* path);
-    virtual void OnDeviceAdded(CDevice* dev);
-    virtual void OnDeviceRemoved(CDevice* dev);
-    virtual void OnDeviceSuspend(CDevice* dev);
-    virtual void OnDeviceResume(CDevice* dev);
+public:
+    void EventLog(DWORD evt);
 
 private: // service events
     void OnServiceStart();
@@ -69,18 +114,6 @@ private: // service events
     void OnDeviceEvent(DWORD, LPVOID);
     void OnPowerEvent(DWORD, LPVOID);
     bool ServiceMainLoop();
-
-private: // helpers
-    void StartShutdownWatch();
-    void StopShutdownWatch();
-    void AcquireShutdownPrivilege();
-    void EventLog(DWORD evt);
-    bool IsHostTimeUTC();
-    void AdjustXenTimeToUTC(FILETIME* time);
-    bool RegCheckIsUTC(const char* path);
-    void SetXenTime();
-    bool CheckShutdown();
-    void CheckSuspend();
 
 private: // service support
     void SetServiceStatus(DWORD state, DWORD exit = 0, DWORD hint = 0);
@@ -91,15 +124,7 @@ private: // service support
     SERVICE_STATUS_HANDLE   m_handle;
     HANDLE                  m_evtlog;
     HANDLE                  m_svc_stop;
-    HANDLE                  m_evt_shutdown;
-    HANDLE                  m_evt_suspend;
-
-    CDeviceList             m_devlist;
-    CXenIfaceDevice*        m_device;
-    CRITICAL_SECTION        m_crit;
-    void*                   m_ctxt_shutdown;
-    void*                   m_ctxt_suspend;
-    DWORD                   m_count;
+    CXenIfaceCreator        m_xeniface;
 };
 
 #endif
