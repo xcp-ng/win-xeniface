@@ -218,7 +218,8 @@ void CDeviceList::OnDeviceEvent(DWORD evt, LPVOID data)
     case DBT_DEVICEARRIVAL:
         if (hdr->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE) {
             itf = (PDEV_BROADCAST_DEVICEINTERFACE)hdr;
-            OnDeviceAdded(Convert((const wchar_t*)itf->dbcc_name));
+            if (itf->dbcc_classguid == m_guid)
+                OnDeviceAdded(Convert((const wchar_t*)itf->dbcc_name));
         }
         break;
 
