@@ -30,7 +30,7 @@
     <VerifyDrivers />
     <VerifyFlags>133563</VerifyFlags>
     <IntDir>..\$(ProjectName)\$(ConfigurationName)\$(Platform)\</IntDir>
-    <OutDir>..\..\xeniface\$(DDKPlatform)\</OutDir>
+    <OutDir>..\$(ConfigurationName)\$(Platform)\</OutDir>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\xeniface\xeniface.vcxproj">
