@@ -63,9 +63,9 @@ CXenIfaceCreator::CXenIfaceCreator(CXenAgent& agent) :
     m_ctxt_shutdown(NULL), m_ctxt_suspend(NULL),
     m_ctxt_slate_mode(NULL), m_agent(agent)
 {
-    m_evt_shutdown = CreateEvent(FALSE, NULL, NULL, FALSE);
-    m_evt_suspend = CreateEvent(FALSE, NULL, NULL, FALSE);
-    m_evt_slate_mode = CreateEvent(FALSE, NULL, NULL, FALSE);
+    m_evt_shutdown = CreateEvent(NULL, TRUE, FALSE, NULL);
+    m_evt_suspend = CreateEvent(NULL, TRUE, FALSE, NULL);
+    m_evt_slate_mode = CreateEvent(NULL, TRUE, FALSE, NULL);
     m_count = 0;
 
     InitializeCriticalSection(&m_crit);
@@ -711,22 +711,26 @@ bool CXenAgent::ServiceMainLoop()
                          m_xeniface.m_evt_shutdown,
                          m_xeniface.m_evt_suspend,
                          m_xeniface.m_evt_slate_mode };
-    DWORD   wait = WaitForMultipleObjectsEx(4, events, FALSE, 60000, TRUE);
+    DWORD   wait = WaitForMultipleObjectsEx(4, events, FALSE, INFINITE, TRUE);
 
     switch (wait) {
     case WAIT_OBJECT_0:
+        ResetEvent(m_svc_stop);
         return false; // exit loop
 
     case WAIT_OBJECT_0+1:
+        ResetEvent(m_xeniface.m_evt_shutdown);
         return !m_xeniface.CheckShutdown();
 
     case WAIT_OBJECT_0+2:
+        ResetEvent(m_xeniface.m_evt_suspend);
         m_xeniface.CheckSuspend();
         return true; // continue loop
 
     case WAIT_OBJECT_0+3: {
         std::string mode;
 
+        ResetEvent(m_xeniface.m_evt_slate_mode);
         if (m_xeniface.CheckSlateMode(&mode))
             m_conv.SetSlateMode(mode);
 
