@@ -115,6 +115,39 @@ fail1:
     return status;
 }
 
+static NTSTATUS
+RegistryOpenRoot(
+    IN  PWCHAR          Path,
+    OUT PHANDLE         Parent,
+    OUT PWCHAR          *ChildPath
+    )
+{
+    const WCHAR         Prefix[] = L"\\Registry\\Machine\\";
+    ULONG               Length;
+    UNICODE_STRING      Unicode;
+    NTSTATUS            status;
+
+    Length = (ULONG)wcslen(Prefix);
+
+    status = STATUS_INVALID_PARAMETER;
+    if (_wcsnicmp(Path, Prefix, Length) != 0)
+        goto fail1;
+
+    RtlInitUnicodeString(&Unicode, Prefix);
+
+    status = RegistryOpenKey(NULL, &Unicode, KEY_ALL_ACCESS, Parent);
+    if (!NT_SUCCESS(status))
+        goto fail2;
+
+    *ChildPath = Path + Length;
+
+    return STATUS_SUCCESS;
+
+fail2:
+fail1:
+    return status;
+}
+
 NTSTATUS
 RegistryCreateKey(
     IN  HANDLE          Parent,
@@ -123,27 +156,93 @@ RegistryCreateKey(
     OUT PHANDLE         Key
     )
 {
-    OBJECT_ATTRIBUTES   Attributes;
+    PWCHAR              Buffer;
+    HANDLE              Root;
+    PWCHAR              ChildPath;
+    PWCHAR              ChildName;
+    PWCHAR              Context;
+    HANDLE              Child;
     NTSTATUS            status;
 
-    InitializeObjectAttributes(&Attributes,
-                               Path,
-                               OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
-                               Parent,
-                               NULL);
+    //
+    // UNICODE_STRINGs are not guaranteed to have NUL terminated
+    // buffers.
+    //
 
-    status = ZwCreateKey(Key,
-                         KEY_ALL_ACCESS,
-                         &Attributes,
-                         0,
-                         NULL,
-                         Options,
-                         NULL
-                         );
-    if (!NT_SUCCESS(status))
+    Buffer = __RegistryAllocate(Path->MaximumLength + sizeof (WCHAR));
+
+    status = STATUS_NO_MEMORY;
+    if (Buffer == NULL)
         goto fail1;
 
+    RtlCopyMemory(Buffer, Path->Buffer, Path->Length);
+
+    Root = Parent;
+
+    if (Parent != NULL) {
+        ChildPath = Buffer;
+    } else {
+        status = RegistryOpenRoot(Buffer, &Parent, &ChildPath);
+        if (!NT_SUCCESS(status))
+            goto fail2;
+    }
+
+    ChildName = __wcstok_r(ChildPath, L"\\", &Context);
+
+    status = STATUS_INVALID_PARAMETER;
+    if (ChildName == NULL)
+        goto fail3;
+
+    Child = NULL;
+
+    while (ChildName != NULL) {
+        UNICODE_STRING      Unicode;
+        OBJECT_ATTRIBUTES   Attributes;
+
+        RtlInitUnicodeString(&Unicode, ChildName);
+
+        InitializeObjectAttributes(&Attributes,
+                                   &Unicode,
+                                   OBJ_CASE_INSENSITIVE |
+                                   OBJ_KERNEL_HANDLE |
+                                   OBJ_OPENIF,
+                                   Parent,
+                                   NULL);
+
+        status = ZwCreateKey(&Child,
+                             KEY_ALL_ACCESS,
+                             &Attributes,
+                             0,
+                             NULL,
+                             Options,
+                             NULL
+                             );
+        if (!NT_SUCCESS(status))
+            goto fail4;
+
+        ChildName = __wcstok_r(NULL, L"\\", &Context);
+
+        if (Parent != Root)
+            ZwClose(Parent);
+
+        Parent = Child;
+    }
+
+    ASSERT(Child != NULL);
+
+    *Key = Child;
+
+    __RegistryFree(Buffer);
+
     return STATUS_SUCCESS;
+
+fail4:
+fail3:
+    if (Parent != Root)
+        ZwClose(Parent);
+
+fail2:
+    __RegistryFree(Buffer);
 
 fail1:
     return status;
@@ -308,7 +407,6 @@ RegistryCreateSubKey(
 {
     ANSI_STRING         Ansi;
     UNICODE_STRING      Unicode;
-    OBJECT_ATTRIBUTES   Attributes;
     NTSTATUS            status;
 
     RtlInitAnsiString(&Ansi, Name);
@@ -317,20 +415,7 @@ RegistryCreateSubKey(
     if (!NT_SUCCESS(status))
         goto fail1;
 
-    InitializeObjectAttributes(&Attributes,
-                               &Unicode,
-                               OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
-                               Key,
-                               NULL);
-
-    status = ZwCreateKey(SubKey,
-                         KEY_ALL_ACCESS,
-                         &Attributes,
-                         0,
-                         NULL,
-                         Options,
-                         NULL
-                         );
+    status = RegistryCreateKey(Key, &Unicode, Options, SubKey);
     if (!NT_SUCCESS(status))
         goto fail2;
 
@@ -371,8 +456,6 @@ RegistryDeleteSubKey(
         goto fail3;
 
     ZwClose(SubKey);
-
-    (VOID) ZwFlushKey(Key);
 
     RtlFreeUnicodeString(&Unicode);
 
@@ -612,8 +695,6 @@ RegistryDeleteValue(
 
     RtlFreeUnicodeString(&Unicode);
 
-    (VOID) ZwFlushKey(Key);
-
     return STATUS_SUCCESS;
 
 fail2:
@@ -733,8 +814,6 @@ RegistryUpdateDwordValue(
         goto fail3;
 
     __RegistryFree(Partial);
-
-    (VOID) ZwFlushKey(Key);
 
     RtlFreeUnicodeString(&Unicode);
 
@@ -1066,8 +1145,6 @@ RegistryUpdateBinaryValue(
 
     __RegistryFree(Partial);
 
-    (VOID) ZwFlushKey(Key);
-
     RtlFreeUnicodeString(&Unicode);
 
     return STATUS_SUCCESS;
@@ -1357,8 +1434,6 @@ RegistryUpdateSzValue(
         goto fail3;
 
     __RegistryFree(Partial);
-
-    (VOID) ZwFlushKey(Key);
 
     RtlFreeUnicodeString(&Unicode);
 
