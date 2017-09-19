@@ -1672,7 +1672,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
             NULL){
         goto fail4;
     }
-    status = XENBUS_STORE(Printf, &fdoData->StoreInterface, session->transaction, NULL, tmppath, tmpvalue);
+    status = XENBUS_STORE(Printf, &fdoData->StoreInterface, session->transaction, NULL, tmppath, "%s", tmpvalue);
     Trace(" Write %s to %s (%p)\n", tmpvalue, tmppath, status);
     UnlockSessions(fdoData);
 

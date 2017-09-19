@@ -185,7 +185,7 @@ IoctlStoreWrite(
     if (!__IsValidStr(Value, InLen - Length))
         goto fail3;
 
-    status = XENBUS_STORE(Printf, &Fdo->StoreInterface, NULL, NULL, Buffer, Value);
+    status = XENBUS_STORE(Printf, &Fdo->StoreInterface, NULL, NULL, Buffer, "%s", Value);
     if (!NT_SUCCESS(status))
         goto fail4;
 
