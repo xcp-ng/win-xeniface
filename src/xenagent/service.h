@@ -74,6 +74,7 @@ public:
     HANDLE  m_evt_slate_mode;
 
 private:
+    void LogIfRebootPending();
     void StartShutdownWatch();
     void StopShutdownWatch();
     void StartSlateModeWatch();

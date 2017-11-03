@@ -87,6 +87,10 @@ bool CXenIfaceCreator::Start(HANDLE svc)
 
 void CXenIfaceCreator::Stop()
 {
+    // Check if registry key is present, implies Windows Update
+    // require a reboot, which may spend time installing updates
+    LogIfRebootPending();
+
     m_devlist.Stop();
 }
 
@@ -278,6 +282,24 @@ bool CXenIfaceCreator::CheckSlateMode(std::string *mode)
         m_device->StoreWrite("control/laptop-slate-mode", "");
 
     return true;
+}
+
+void CXenIfaceCreator::LogIfRebootPending()
+{
+    HKEY Key;
+    LONG lResult;
+
+    lResult = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+                           "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired",
+                           0,
+                           KEY_READ,
+                           &Key);
+    if (lResult != ERROR_SUCCESS)
+        return; // key doesnt exist, dont log anything
+
+    RegCloseKey(Key);
+
+    CXenAgent::Log("RebootRequired detected\n");
 }
 
 void CXenIfaceCreator::StartShutdownWatch()
