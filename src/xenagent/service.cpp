@@ -194,6 +194,7 @@ bool CXenIfaceCreator::CheckShutdown()
 
         m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
+#pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
         if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, FALSE,
                                       SHTDN_REASON_MAJOR_OTHER |
                                       SHTDN_REASON_MINOR_ENVIRONMENT |
@@ -206,6 +207,7 @@ bool CXenIfaceCreator::CheckShutdown()
 
         m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
+#pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
         if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE,
                                       SHTDN_REASON_MAJOR_OTHER |
                                       SHTDN_REASON_MINOR_ENVIRONMENT |
