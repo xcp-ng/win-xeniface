@@ -187,12 +187,13 @@ bool CXenIfaceCreator::CheckShutdown()
     if (!m_device->StoreRead("control/shutdown", type))
         return false;
 
-    CXenAgent::Log("Shutdown(%ws) = %s\n", m_device->Path(), type.c_str());
+    if (type != "")
+        CXenAgent::Log("Shutdown(%ws) = '%s'\n", m_device->Path(), type.c_str());
 
     if (type == "poweroff") {
+        m_device->StoreWrite("control/shutdown", "");
         m_agent.EventLog(EVENT_XENUSER_POWEROFF);
 
-        m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
 #pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
         if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, FALSE,
@@ -203,9 +204,9 @@ bool CXenIfaceCreator::CheckShutdown()
         }
         return true;
     } else if (type == "reboot") {
+        m_device->StoreWrite("control/shutdown", "");
         m_agent.EventLog(EVENT_XENUSER_REBOOT);
 
-        m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
 #pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
         if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE,
@@ -216,18 +217,18 @@ bool CXenIfaceCreator::CheckShutdown()
         }
         return true;
     } else if (type == "s4") {
+        m_device->StoreWrite("control/shutdown", "");
         m_agent.EventLog(EVENT_XENUSER_S4);
 
-        m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
         if (!SetSystemPowerState(FALSE, FALSE)) {
             CXenAgent::Log("SetSystemPowerState failed %08x\n", GetLastError());
         }
         return true;
     } else if (type == "s3") {
+        m_device->StoreWrite("control/shutdown", "");
         m_agent.EventLog(EVENT_XENUSER_S3);
 
-        m_device->StoreWrite("control/shutdown", "");
         AcquireShutdownPrivilege();
         if (!SetSuspendState(FALSE, TRUE, FALSE)) {
             CXenAgent::Log("SetSuspendState failed %08x\n", GetLastError());
