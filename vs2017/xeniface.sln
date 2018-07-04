@@ -8,11 +8,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xeniface", "xeniface\xenifa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xenagent", "xenagent\xenagent.vcxproj", "{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xencontrol", "xencontrol\xencontrol.vcxproj", "{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "package", "package\package.vcxproj", "{9B071A35-897C-477A-AEB7-95F77618A21D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{22166290-65D8-49D2-BB88-33201797C7D8} = {22166290-65D8-49D2-BB88-33201797C7D8}
 		{85C731AD-2EA2-4049-A542-D2D38EDE938C} = {85C731AD-2EA2-4049-A542-D2D38EDE938C}
 		{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B} = {2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2} = {D386D8E9-D015-4AD2-A5C2-4F845A803FA2}
 	EndProjectSection
 EndProject
 Global
@@ -123,6 +126,30 @@ Global
 		{9B071A35-897C-477A-AEB7-95F77618A21D}.Windows 10 Release|x64.ActiveCfg = Windows 10 Release|x64
 		{9B071A35-897C-477A-AEB7-95F77618A21D}.Windows 10 Release|x64.Build.0 = Windows 10 Release|x64
 		{9B071A35-897C-477A-AEB7-95F77618A21D}.Windows 10 Release|x64.Deploy.0 = Windows 10 Release|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Debug|Win32.ActiveCfg = Windows 8 Debug|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Debug|Win32.Build.0 = Windows 8 Debug|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Debug|Win32.Deploy.0 = Windows 8 Debug|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Debug|x64.ActiveCfg = Windows 8 Debug|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Debug|x64.Build.0 = Windows 8 Debug|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Debug|x64.Deploy.0 = Windows 8 Debug|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Release|Win32.ActiveCfg = Windows 8 Release|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Release|Win32.Build.0 = Windows 8 Release|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Release|Win32.Deploy.0 = Windows 8 Release|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Release|x64.ActiveCfg = Windows 8 Release|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Release|x64.Build.0 = Windows 8 Release|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 8 Release|x64.Deploy.0 = Windows 8 Release|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Debug|Win32.ActiveCfg = Windows 10 Debug|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Debug|Win32.Build.0 = Windows 10 Debug|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Debug|Win32.Deploy.0 = Windows 10 Debug|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Debug|x64.ActiveCfg = Windows 10 Debug|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Debug|x64.Build.0 = Windows 10 Debug|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Debug|x64.Deploy.0 = Windows 10 Debug|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Release|Win32.ActiveCfg = Windows 10 Release|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Release|Win32.Build.0 = Windows 10 Release|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Release|Win32.Deploy.0 = Windows 10 Release|Win32
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Release|x64.ActiveCfg = Windows 10 Release|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Release|x64.Build.0 = Windows 10 Release|x64
+		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}.Windows 10 Release|x64.Deploy.0 = Windows 10 Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

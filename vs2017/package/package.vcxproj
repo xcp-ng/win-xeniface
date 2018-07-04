@@ -42,6 +42,9 @@
     <ProjectReference Include="..\xenagent\xenagent.vcxproj">
       <Project>{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\xencontrol\xencontrol.vcxproj">
+      <Project>{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <FilesToPackage Include="$(DPINST_REDIST)\x86\dpinst.exe" Condition="'$(Platform)'=='Win32'" />
