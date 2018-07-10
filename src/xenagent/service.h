@@ -137,7 +137,7 @@ public: // statics
     static DWORD WINAPI ServiceControlHandlerEx(DWORD, DWORD, LPVOID, LPVOID);
 
 public: // ctor/dtor
-    CXenAgent();
+    CXenAgent() noexcept;
     virtual ~CXenAgent();
 
 public:

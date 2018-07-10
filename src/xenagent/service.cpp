@@ -681,7 +681,7 @@ static CXenAgent s_service;
 #pragma warning(push)
 #pragma warning(disable:4355)
 
-CXenAgent::CXenAgent() : m_handle(NULL), m_evtlog(NULL), m_xeniface(*this),
+CXenAgent::CXenAgent() noexcept : m_handle(NULL), m_evtlog(NULL), m_xeniface(*this),
                          m_conv(*this)
 {
     m_status.dwServiceType        = SERVICE_WIN32;

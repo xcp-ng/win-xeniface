@@ -54,7 +54,7 @@ bool CXenIfaceDevice::StoreRead(const std::string& path, std::string& value)
           NULL, 0,
           &bytes);
 
-    buffer = new char[bytes + 1];
+    buffer = new char[(size_t)bytes + 1];
     if (buffer == NULL)
         return false;
 
