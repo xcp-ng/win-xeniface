@@ -273,61 +273,19 @@ def remove_timestamps(path):
     dst.close()
     src.close()
 
-def sdv_clean(name, vs):
-    path = [vs, name, 'sdv']
-    print(path)
-
-    shutil.rmtree(os.path.join(*path), True)
-
-    path = [vs, name, 'sdv.temp']
-    print(path)
-
-    shutil.rmtree(os.path.join(*path), True)
-
-    path = [vs, name, 'staticdv.job']
-    print(path)
-
-    try:
-        os.unlink(os.path.join(*path))
-    except OSError:
-        pass
-
-    path = [vs, name, 'refine.sdv']
-    print(path)
-
-    try:
-        os.unlink(os.path.join(*path))
-    except OSError:
-        pass
-
-    path = [vs, name, 'sdv-map.h']
-    print(path)
-
-    try:
-        os.unlink(os.path.join(*path))
-    except OSError:
-        pass
-
-
 def run_sdv(name, dir, vs):
-    configuration = get_configuration('Windows 8', False)
+    release = { 'vs2012':'Windows 8',
+                'vs2013':'Windows 8',
+                'vs2017':'Windows 10' }
+
+    configuration = get_configuration(release[vs], False)
     platform = 'x64'
 
     msbuild(platform, configuration, 'Build', name + '.vcxproj',
             '', os.path.join(vs, name))
 
-    sdv_clean(name, vs)
-
     msbuild(platform, configuration, 'sdv', name + '.vcxproj',
-            '/p:Inputs="/scan"', os.path.join(vs, name))
-
-    path = [vs, name, 'sdv-map.h']
-    file = open(os.path.join(*path), 'r')
-
-    for line in file:
-        print(line)
-
-    file.close()
+            '/p:Inputs="/clean"', os.path.join(vs, name))
 
     msbuild(platform, configuration, 'sdv', name + '.vcxproj',
             '/p:Inputs="/check:default.sdv"', os.path.join(vs, name))
