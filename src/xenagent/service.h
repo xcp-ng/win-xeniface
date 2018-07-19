@@ -34,6 +34,10 @@
 
 #include <version.h>
 
+#define stringify_literal(_text) #_text
+#define stringify(_text) stringify_literal(_text)
+#define __MODULE__ stringify(PROJECT)
+
 #define SVC_NAME        __MODULE__
 #define SVC_DISPLAYNAME SVC_NAME
 

@@ -37,7 +37,9 @@
 
 #pragma warning(disable:4127)   // conditional expression is constant
 
-#define __MODULE__ "XENIFACE"
+#define stringify_literal(_text) #_text
+#define stringify(_text) stringify_literal(_text)
+#define __MODULE__ stringify(PROJECT)
 
 static __inline VOID
 __Error(
