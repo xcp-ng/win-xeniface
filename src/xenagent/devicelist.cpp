@@ -218,6 +218,8 @@ void CDeviceList::Stop()
     for (DeviceMap::iterator it = m_devs.begin();
             it != m_devs.end();
             ++it) {
+        if (m_impl)
+            m_impl->OnDeviceRemoved(it->second);
         delete it->second;
     }
     m_devs.clear();
