@@ -49,10 +49,10 @@
 #include <shellapi.h>
 
 #ifdef _WIN64
-#define XENTOOLS_INSTALL_REG_KEY   "SOFTWARE\\Wow6432Node\\Citrix\\XenTools"
-#define XENTOOLS_INSTALL_REG_KEY64 "SOFTWARE\\Citrix\\XenTools"
+#define XENTOOLS_INSTALL_REG_KEY   "SOFTWARE\\Wow6432Node\\XCP-ng\\XenTools"
+#define XENTOOLS_INSTALL_REG_KEY64 "SOFTWARE\\XCP-ng\\XenTools"
 #else
-#define XENTOOLS_INSTALL_REG_KEY   "SOFTWARE\\Citrix\\XenTools"
+#define XENTOOLS_INSTALL_REG_KEY   "SOFTWARE\\XCP-ng\\XenTools"
 #endif
 
 SERVICE_STATUS ServiceStatus; 
