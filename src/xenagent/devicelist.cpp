@@ -36,6 +36,8 @@
 
 #include "devicelist.h"
 
+#define BUFFER_SIZE 127
+
 // deal with SetupApi and RegisterDeviceNotification using different string types
 static std::wstring Convert(const char* str)
 {
@@ -50,6 +52,19 @@ static std::wstring Convert(const wchar_t* wstr)
     return std::wstring(wstr);
 }
 
+static void DebugPrint(const wchar_t* fmt, ...)
+{
+    wchar_t buffer[BUFFER_SIZE + 1];
+    va_list args;
+
+    va_start(args, fmt);
+    _vsnwprintf(buffer, BUFFER_SIZE, fmt, args);
+    va_end(args);
+
+    buffer[BUFFER_SIZE] = 0;
+    OutputDebugStringW(buffer);
+}
+
 CDevice::CDevice(const wchar_t* path) :
     m_handle(INVALID_HANDLE_VALUE), m_path(path), m_notify(NULL)
 {
@@ -58,6 +73,7 @@ CDevice::CDevice(const wchar_t* path) :
 /*virtual*/ CDevice::~CDevice()
 {
     Close();
+    Unregister();
 }
 
 const wchar_t* CDevice::Path() const
@@ -65,7 +81,7 @@ const wchar_t* CDevice::Path() const
     return m_path.c_str();
 }
 
-HANDLE CDevice::Open(HANDLE svc)
+bool CDevice::Open()
 {
     Close();
 
@@ -76,21 +92,8 @@ HANDLE CDevice::Open(HANDLE svc)
                            OPEN_EXISTING,
                            0,
                            NULL);
-    if (m_handle == INVALID_HANDLE_VALUE)
-        return INVALID_HANDLE_VALUE;
 
-    DEV_BROADCAST_HANDLE devhdl = { 0 };
-    devhdl.dbch_size = sizeof(devhdl);
-    devhdl.dbch_devicetype = DBT_DEVTYP_HANDLE;
-    devhdl.dbch_handle = m_handle;
-
-    m_notify = RegisterDeviceNotification(svc, &devhdl, DEVICE_NOTIFY_SERVICE_HANDLE);
-    if (m_notify == NULL) {
-        Close();
-        return INVALID_HANDLE_VALUE;
-    }
-
-    return m_handle;
+    return (m_handle != INVALID_HANDLE_VALUE);
 }
 
 void CDevice::Close()
@@ -99,6 +102,28 @@ void CDevice::Close()
         return;
     CloseHandle(m_handle);
     m_handle = INVALID_HANDLE_VALUE;
+}
+
+HDEVNOTIFY CDevice::Register(HANDLE svc)
+{
+    Unregister();
+
+    DEV_BROADCAST_HANDLE devhdl = { 0 };
+    devhdl.dbch_size = sizeof(devhdl);
+    devhdl.dbch_devicetype = DBT_DEVTYP_HANDLE;
+    devhdl.dbch_handle = m_handle;
+
+    m_notify = RegisterDeviceNotification(svc, &devhdl, DEVICE_NOTIFY_SERVICE_HANDLE);
+    return m_notify;
+}
+
+void CDevice::Unregister()
+{
+    if (m_notify == NULL)
+        return;
+
+    UnregisterDeviceNotification(m_notify);
+    m_notify = NULL;
 }
 
 bool CDevice::Write(void *buf, DWORD bufsz, DWORD *bytes /* = NULL*/)
@@ -198,9 +223,9 @@ bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
                                             len,
                                             NULL,
                                             NULL)) {
-            OnDeviceAdded(Convert((const char*)detail->DevicePath));
+            DeviceArrival(Convert((const char*)detail->DevicePath));
         }
-        delete [] detail;
+        delete[] detail;
         itf.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
     }
     SetupDiDestroyDeviceInfoList(info);
@@ -216,8 +241,8 @@ void CDeviceList::Stop()
     m_notify = NULL;
 
     for (DeviceMap::iterator it = m_devs.begin();
-            it != m_devs.end();
-            ++it) {
+         it != m_devs.end();
+         ++it) {
         if (m_impl)
             m_impl->OnDeviceRemoved(it->second);
         delete it->second;
@@ -234,26 +259,33 @@ void CDeviceList::OnDeviceEvent(DWORD evt, LPVOID data)
     hdr = (PDEV_BROADCAST_HDR)data;
     switch (evt) {
     case DBT_DEVICEARRIVAL:
-        if (hdr->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE) {
-            itf = (PDEV_BROADCAST_DEVICEINTERFACE)hdr;
-            if (itf->dbcc_classguid == m_guid)
-                OnDeviceAdded(Convert((const wchar_t*)itf->dbcc_name));
-        }
-        break;
-
-    case DBT_DEVICEQUERYREMOVE:
-        if (hdr->dbch_devicetype == DBT_DEVTYP_HANDLE) {
-            hdl = (PDEV_BROADCAST_HANDLE)hdr;
-            OnDeviceQueryRemove(hdl->dbch_handle);
-        }
+        if (hdr->dbch_devicetype != DBT_DEVTYP_DEVICEINTERFACE)
+            break;
+        itf = (PDEV_BROADCAST_DEVICEINTERFACE)hdr;
+        if (itf->dbcc_classguid != m_guid)
+            break;
+        DeviceArrival(Convert((const wchar_t*)itf->dbcc_name));
         break;
 
     case DBT_DEVICEREMOVEPENDING:
-        if (hdr->dbch_devicetype == DBT_DEVTYP_HANDLE) {
-            hdl = (PDEV_BROADCAST_HANDLE)hdr;
-            UnregisterDeviceNotification(hdl->dbch_hdevnotify);
-            OnDeviceRemoved(hdl->dbch_handle);
-        }
+        if (hdr->dbch_devicetype != DBT_DEVTYP_HANDLE)
+            break;
+        hdl = (PDEV_BROADCAST_HANDLE)hdr;
+        DeviceRemoved(hdl->dbch_hdevnotify);
+        break;
+
+    case DBT_DEVICEQUERYREMOVE:
+        if (hdr->dbch_devicetype != DBT_DEVTYP_HANDLE)
+            break;
+        hdl = (PDEV_BROADCAST_HANDLE)hdr;
+        DeviceRemovePending(hdl->dbch_hdevnotify);
+        break;
+
+    case DBT_DEVICEQUERYREMOVEFAILED:
+        if (hdr->dbch_devicetype != DBT_DEVTYP_HANDLE)
+            break;
+        hdl = (PDEV_BROADCAST_HANDLE)hdr;
+        DeviceRemoveFailed(hdl->dbch_hdevnotify);
         break;
 
     default:
@@ -267,18 +299,18 @@ void CDeviceList::OnPowerEvent(DWORD evt, LPVOID data)
 
     switch (evt) {
     case PBT_APMRESUMESUSPEND:
-    for (DeviceMap::iterator it = m_devs.begin();
-         it != m_devs.end();
-         ++it)
-        m_impl->OnDeviceResume(it->second);
-    break;
+        for (DeviceMap::iterator it = m_devs.begin();
+             it != m_devs.end();
+             ++it)
+            m_impl->OnDeviceResume(it->second);
+        break;
 
     case PBT_APMSUSPEND:
-    for (DeviceMap::iterator it = m_devs.begin();
-         it != m_devs.end();
-         ++it)
-        m_impl->OnDeviceSuspend(it->second);
-    break;
+        for (DeviceMap::iterator it = m_devs.begin();
+             it != m_devs.end();
+             ++it)
+            m_impl->OnDeviceSuspend(it->second);
+        break;
 
     default:
         break;
@@ -293,52 +325,81 @@ CDevice* CDeviceList::GetFirstDevice()
     return it->second;
 }
 
-void CDeviceList::OnDeviceAdded(const std::wstring& path)
+void CDeviceList::DeviceArrival(const std::wstring& path)
 {
+    DebugPrint(L"DeviceArrival(%ws)\n", path.c_str());
     CDevice* dev;
-    if (m_impl == NULL)
-        dev = new CDevice(path.c_str());
-    else
+    if (m_impl)
         dev = m_impl->Create(path.c_str());
+    else
+        dev = new CDevice(path.c_str());
     if (dev == NULL)
-        return; // create failed
+        goto fail1;
 
-    HANDLE handle = dev->Open(m_handle);
-    if (handle == INVALID_HANDLE_VALUE) {
-        delete dev;
-        return; // open failed
-    }
+    if (!dev->Open())
+        goto fail2;
 
-    DeviceMap::iterator it = m_devs.find(handle);
-    if (it != m_devs.end()) {
-        delete dev;
-        return;
-    }
+    HDEVNOTIFY nfy = dev->Register(m_handle);
+    if (nfy == NULL)
+        goto fail3;
 
-    m_devs[handle] = dev;
+    m_devs[nfy] = dev;
+
     if (m_impl)
         m_impl->OnDeviceAdded(dev);
+
+    return;
+
+fail3:
+    DebugPrint(L"fail3\n");
+fail2:
+    DebugPrint(L"fail2\n");
+    delete dev; // handles close() and unregister()
+fail1:
+    DebugPrint(L"fail1\n");
+    return;
 }
 
-void CDeviceList::OnDeviceQueryRemove(HANDLE handle)
+void CDeviceList::DeviceRemoved(HDEVNOTIFY nfy)
 {
-    DeviceMap::iterator it = m_devs.find(handle);
+    DeviceMap::iterator it = m_devs.find(nfy);
     if (it == m_devs.end())
         return; // spurious event?
 
     CDevice* dev = it->second;
+    DebugPrint(L"DeviceRemoved(%ws)\n", dev->Path());
+
+    delete dev; // handles unregister()
+    m_devs.erase(it);
+}
+
+void CDeviceList::DeviceRemovePending(HDEVNOTIFY nfy)
+{
+    DeviceMap::iterator it = m_devs.find(nfy);
+    if (it == m_devs.end())
+        return; // spurious event?
+
+    CDevice* dev = it->second;
+    DebugPrint(L"DeviceRemovePending(%ws)\n", dev->Path());
+
     if (m_impl)
         m_impl->OnDeviceRemoved(dev);
+
     dev->Close();
 }
 
-void CDeviceList::OnDeviceRemoved(HANDLE handle)
+void CDeviceList::DeviceRemoveFailed(HDEVNOTIFY nfy)
 {
-    DeviceMap::iterator it = m_devs.find(handle);
+    DeviceMap::iterator it = m_devs.find(nfy);
     if (it == m_devs.end())
         return; // spurious event?
 
     CDevice* dev = it->second;
-    delete dev;
-    m_devs.erase(it);
+    DebugPrint(L"DeviceRemoveFailed(%ws)\n", dev->Path());
+
+    if (!dev->Open())
+        DeviceRemoved(nfy);
+
+    if (m_impl)
+        m_impl->OnDeviceAdded(dev);
 }

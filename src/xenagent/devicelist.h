@@ -45,8 +45,10 @@ public:
 
     const wchar_t* Path() const;
 
-    HANDLE Open(HANDLE svc);
+    bool Open();
     void Close();
+    HDEVNOTIFY Register(HANDLE svc);
+    void Unregister();
 
 protected:
     bool Write(void *buf, DWORD bufsz, DWORD *bytes = NULL);
@@ -81,11 +83,12 @@ public:
     CDevice* GetFirstDevice();
 
 private:
-    void OnDeviceAdded(const std::wstring& path);
-    void OnDeviceQueryRemove(HANDLE handle);
-    void OnDeviceRemoved(HANDLE dev);
+    void DeviceArrival(const std::wstring& path);
+    void DeviceRemoved(HDEVNOTIFY nfy);
+    void DeviceRemovePending(HDEVNOTIFY nfy);
+    void DeviceRemoveFailed(HDEVNOTIFY nfy);
 
-    typedef std::map< HANDLE, CDevice* > DeviceMap;
+    typedef std::map< HDEVNOTIFY, CDevice* > DeviceMap;
 
     GUID        m_guid;
     DeviceMap   m_devs;
