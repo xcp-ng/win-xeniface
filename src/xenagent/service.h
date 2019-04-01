@@ -84,9 +84,8 @@ private:
     void StartSlateModeWatch();
     void StopSlateModeWatch();
     void AcquireShutdownPrivilege();
-    bool IsHostTimeUTC();
+    bool IsRTCInUTC();
     void AdjustXenTimeToUTC(FILETIME* time);
-    bool RegCheckIsUTC(const char* path);
     void SetXenTime();
 
 private:

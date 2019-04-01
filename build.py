@@ -70,9 +70,6 @@ def make_header():
     file.write('#define DAY_STR\t\t\t"' + str(now.day) + '"\n')
     file.write('\n')
 
-    file.write('#define REG_KEY_NAME\t\t\t"' + os.environ['REG_KEY_NAME'] + '"\n')
-    file.write('\n')
-
     file.close()
 
 
@@ -418,9 +415,6 @@ def main():
     if 'OBJECT_PREFIX' not in os.environ.keys():
         os.environ['OBJECT_PREFIX'] = 'XenProject'
 
-    if 'REG_KEY_NAME' not in os.environ.keys():
-        os.environ['REG_KEY_NAME'] = 'Windows PV Drivers'
-
     os.environ['MAJOR_VERSION'] = '9'
     os.environ['MINOR_VERSION'] = '0'
     os.environ['MICRO_VERSION'] = '0'
@@ -441,7 +435,6 @@ def main():
 
     print("PRODUCT_NAME\t\t'%s'" % os.environ['PRODUCT_NAME'])
     print("OBJECT_PREFIX\t\t'%s'" % os.environ['OBJECT_PREFIX'])
-    print("REG_KEY_NAME\t\t'%s'" % os.environ['REG_KEY_NAME'])
     print("MAJOR_VERSION\t\t%s" % os.environ['MAJOR_VERSION'])
     print("MINOR_VERSION\t\t%s" % os.environ['MINOR_VERSION'])
     print("MICRO_VERSION\t\t%s" % os.environ['MICRO_VERSION'])

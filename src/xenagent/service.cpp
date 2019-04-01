@@ -371,18 +371,29 @@ void CXenIfaceCreator::AcquireShutdownPrivilege()
     CloseHandle(token);
 }
 
-bool CXenIfaceCreator::IsHostTimeUTC()
+bool CXenIfaceCreator::IsRTCInUTC()
 {
-#ifdef _WIN64
-    // Check SOFTWARE\Wow6432Node\$(VENDOR_NAME_STR)\$(REG_KEY_NAME) $(REG_UTC_NAME) == UTC
-    if (RegCheckIsUTC("SOFTWARE\\Wow6432Node"))
-        return true;
-#endif
-    // Check SOFTWARE\$(VENDOR_NAME_STR)\$(REG_KEY_NAME) $(REG_UTC_NAME) == UTC
-    if (RegCheckIsUTC("SOFTWARE"))
-        return true;
+    HKEY key;
+    std::string path;
+    DWORD val = 0;
+    DWORD length = sizeof(val);
+    LRESULT lr;
 
-    return false;
+    path = "SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation";
+
+    lr = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path.c_str(), 0, KEY_READ, &key);
+    if (lr != ERROR_SUCCESS)
+        return false;
+
+    lr = RegQueryValueEx(key, "RealTimeIsUniversal", NULL, NULL,
+                         (LPBYTE)&val, &length);
+    RegCloseKey(key);
+
+    // A non-present value -> false
+    if (lr != ERROR_SUCCESS)
+        return false;
+
+    return val;
 }
 
 void CXenIfaceCreator::AdjustXenTimeToUTC(FILETIME* now)
@@ -407,62 +418,14 @@ void CXenIfaceCreator::AdjustXenTimeToUTC(FILETIME* now)
     now->dwHighDateTime = lnow.HighPart;
 }
 
-bool CXenIfaceCreator::RegCheckIsUTC(const char* rootpath)
-{
-    HKEY    key;
-    LRESULT lr;
-    std::string path;
-    bool    match = false;
-
-    path = rootpath;
-    path += "\\";
-    path += VENDOR_NAME_STR;
-    path += "\\";
-    path += REG_KEY_NAME;
-
-    lr = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path.c_str(), 0, KEY_READ, &key);
-    if (lr != ERROR_SUCCESS)
-        goto fail1;
-
-    DWORD size = 32;
-    DWORD length;
-    char* buffer = NULL;
-
-    do {
-        length = size;
-        if (buffer)
-            delete [] buffer;
-
-        buffer = new char[size];
-        if (buffer == NULL)
-            goto fail2;
-
-        lr = RegQueryValueEx(key, "HostTime", NULL, NULL, (LPBYTE)buffer, &length);
-        size *= 2;
-    } while (lr == ERROR_MORE_DATA);
-    if (lr != ERROR_SUCCESS)
-        goto fail3;
-
-    if (!_strnicoll("UTC", buffer, length))
-        match = true;
-
-fail3:
-    delete [] buffer;
-fail2:
-    RegCloseKey(key);
-fail1:
-
-    return match;
-}
-
 void CXenIfaceCreator::SetXenTime()
 {
-    // Set VM's time to Xen's time (adjust for UTC settings of VM and guest)
+    // Set VM's time to Xen's time (adjust for UTC setting)
     FILETIME now = { 0 };
     if (!m_device->SharedInfoGetTime(&now))
         return;
 
-    bool IsUTC = IsHostTimeUTC();
+    bool IsUTC = IsRTCInUTC();
     if (IsUTC)
         AdjustXenTimeToUTC(&now);
 
@@ -473,6 +436,7 @@ void CXenIfaceCreator::SetXenTime()
     SYSTEMTIME cur = { 0 };
     GetLocalTime(&cur);
 
+    CXenAgent::Log("RTC is in %s\n", IsUTC ? "UTC" : "local time");
     CXenAgent::Log("Time Now = %d/%d/%d %d:%02d:%02d.%d\n",
                    cur.wYear, cur.wMonth, cur.wDay,
                    cur.wHour, cur.wMinute, cur.wSecond, cur.wMilliseconds);
