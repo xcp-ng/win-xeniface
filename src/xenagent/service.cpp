@@ -239,6 +239,15 @@ bool CXenIfaceCreator::CheckShutdown()
     return false;
 }
 
+void CXenIfaceCreator::CheckXenTime()
+{
+    CCritSec crit(&m_crit);
+    if (m_device == NULL)
+        return;
+
+    SetXenTime();
+}
+
 void CXenIfaceCreator::CheckSuspend()
 {
     CCritSec crit(&m_crit);
@@ -268,7 +277,6 @@ void CXenIfaceCreator::CheckSuspend()
     if (m_agent.ConvDevicePresent())
         StartSlateModeWatch();
 
-    SetXenTime();
     m_count = count;
 }
 
@@ -420,12 +428,18 @@ void CXenIfaceCreator::AdjustXenTimeToUTC(FILETIME* now)
 
 void CXenIfaceCreator::SetXenTime()
 {
-    // Set VM's time to Xen's time (adjust for UTC setting)
+    bool IsUTC = IsRTCInUTC();
+
+    SYSTEMTIME cur = { 0 };
+    if (IsUTC)
+        GetSystemTime(&cur);
+    else
+        GetLocalTime(&cur);
+
     FILETIME now = { 0 };
     if (!m_device->SharedInfoGetTime(&now))
         return;
 
-    bool IsUTC = IsRTCInUTC();
     if (IsUTC)
         AdjustXenTimeToUTC(&now);
 
@@ -433,8 +447,8 @@ void CXenIfaceCreator::SetXenTime()
     if (!FileTimeToSystemTime(&now, &sys))
         return;
 
-    SYSTEMTIME cur = { 0 };
-    GetLocalTime(&cur);
+    if (memcmp(&cur, &sys, sizeof(SYSTEMTIME)) == 0)
+        return;
 
     CXenAgent::Log("RTC is in %s\n", IsUTC ? "UTC" : "local time");
     CXenAgent::Log("Time Now = %d/%d/%d %d:%02d:%02d.%d\n",
@@ -696,11 +710,12 @@ void CXenAgent::OnPowerEvent(DWORD evt, LPVOID data)
 
 bool CXenAgent::ServiceMainLoop()
 {
+    DWORD   timeout = 30 * 60 * 1000;
     HANDLE  events[] = { m_svc_stop,
                          m_xeniface.m_evt_shutdown,
                          m_xeniface.m_evt_suspend,
                          m_xeniface.m_evt_slate_mode };
-    DWORD   wait = WaitForMultipleObjectsEx(4, events, FALSE, INFINITE, TRUE);
+    DWORD   wait = WaitForMultipleObjectsEx(4, events, FALSE, timeout, TRUE);
 
     switch (wait) {
     case WAIT_OBJECT_0:
@@ -713,6 +728,7 @@ bool CXenAgent::ServiceMainLoop()
 
     case WAIT_OBJECT_0+2:
         ResetEvent(m_xeniface.m_evt_suspend);
+        m_xeniface.CheckXenTime();
         m_xeniface.CheckSuspend();
         return true; // continue loop
 
@@ -725,8 +741,10 @@ bool CXenAgent::ServiceMainLoop()
 
         return true; // continue loop
     }
-    case WAIT_IO_COMPLETION:
     case WAIT_TIMEOUT:
+        m_xeniface.CheckXenTime();
+        __fallthrough;
+    case WAIT_IO_COMPLETION:
         m_xeniface.CheckSuspend();
         return !m_xeniface.CheckShutdown();
 

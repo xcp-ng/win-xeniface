@@ -69,6 +69,7 @@ public: // IDeviceCreator
 
 public:
     bool CheckShutdown();
+    void CheckXenTime();
     void CheckSuspend();
     bool CheckSlateMode(std::string *mode);
 
