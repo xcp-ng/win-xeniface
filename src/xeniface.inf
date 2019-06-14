@@ -39,13 +39,13 @@ DriverPackageDisplayName=%DiskId1%
 
 [DestinationDirs]
 DefaultDestDir = 12
-Coinst.NT.Copy = 11
-ServiceDestDir.NT.Copy = 11
+Coinst.Copy = 11
+ServiceDestDir.Copy = 11
 
 [Manufacturer]
-%Vendor%=Inst,NT$ARCH$
+%Vendor%=Inst,NT@INF_ARCH@
 
-[Inst.NT$ARCH$]
+[Inst.NT@INF_ARCH@]
 ; DisplayName		    Section	      DeviceID
 ; -----------		    -------	      --------
 
@@ -53,21 +53,21 @@ ServiceDestDir.NT.Copy = 11
 %XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_09000000
 %XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_09000000
 
-[XenIface_Device.NT$ARCH$]
-CopyFiles=XenIface_Device.NT.Copy
-CopyFiles=ServiceDestDir.NT.Copy
+[XenIface_Device]
+CopyFiles=XenIface_Device.Copy
+CopyFiles=ServiceDestDir.Copy
 
-[XenIFace_Device.NT.Copy]
+[XenIFace_Device.Copy]
 xeniface.sys
 
-[CoInst.NT.Copy]
+[CoInst.Copy]
 xeniface_coinst_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xeniface_coinst.dll
 
-[ServiceDestDir.NT.Copy]
+[ServiceDestDir.Copy]
 xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.exe,xenagent.exe
 xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xenagent.dll
 
-[Xeniface_Device.NT$ARCH$.Services]
+[Xeniface_Device.Services]
 AddService = xeniface, %SPSVCINST_ASSOCSERVICE%, xeniface_Service_Inst
 AddService = xenagent, %XENAGENT_FLAGS%, xenagent_Service_Inst,xenagent_EventLog
 
@@ -83,8 +83,8 @@ AddReg = Xeniface_Parameters
 [Xeniface_Parameters]
 HKR,"Parameters",,0x00000010
 
-[Xeniface_Device.NT$ARCH$.Coinstallers]
-CopyFiles=CoInst.NT.Copy
+[Xeniface_Device.Coinstallers]
+CopyFiles=CoInst.Copy
 AddReg=CoInst_AddReg
 
 [CoInst_AddReg]

@@ -32,6 +32,12 @@
     <IntDir>..\$(ProjectName)\$(ConfigurationName)\$(Platform)\</IntDir>
     <OutDir>..\$(ConfigurationName)\$(Platform)\</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='Win32'">
+    <ArchiveDir>..\..\$(SolutionName)\x86</ArchiveDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='x64'">
+    <ArchiveDir>..\..\$(SolutionName)\x64</ArchiveDir>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\xeniface\xeniface.vcxproj">
       <Project>{22166290-65D8-49D2-BB88-33201797C7D8}</Project>
@@ -45,6 +51,7 @@
     <ProjectReference Include="..\xencontrol\xencontrol.vcxproj">
       <Project>{D386D8E9-D015-4AD2-A5C2-4F845A803FA2}</Project>
     </ProjectReference>
+    <FilesToPackage Include="..\xeniface.inf" />
   </ItemGroup>
   <ItemGroup Condition="Exists('$(DPINST_REDIST)')">
     <FilesToPackage Include="$(DPINST_REDIST)\x86\dpinst.exe" Condition="'$(Platform)'=='Win32'" />
