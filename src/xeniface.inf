@@ -33,7 +33,7 @@ Signature="$WINDOWS NT$"
 Class=System
 ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318} 
 Provider=%Vendor%
-DriverVer=01/01/1900,0.0.0.0
+DriverVer=@INF_DATE@,@MAJOR_VERSION@.@MINOR_VERSION@.@MICRO_VERSION@.@BUILD_NUMBER@
 CatalogFile=xeniface.cat
 DriverPackageDisplayName=%DiskId1%
 
