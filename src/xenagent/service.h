@@ -86,7 +86,6 @@ private:
     void StopSlateModeWatch();
     void AcquireShutdownPrivilege();
     bool IsRTCInUTC();
-    void AdjustXenTimeToUTC(FILETIME* time);
     void SetXenTime();
 
 private:

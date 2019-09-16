@@ -404,28 +404,6 @@ bool CXenIfaceCreator::IsRTCInUTC()
     return val;
 }
 
-void CXenIfaceCreator::AdjustXenTimeToUTC(FILETIME* now)
-{
-    std::string vm;
-    if (!m_device->StoreRead("vm", vm))
-        return;
-
-    std::string offs;
-    if (!m_device->StoreRead(vm + "/rtc/timeoffset", offs))
-        return;
-
-    long offset = (long)atoi(offs.c_str());
-
-    ULARGE_INTEGER lnow;
-    lnow.LowPart  = now->dwLowDateTime;
-    lnow.HighPart = now->dwHighDateTime;
-
-    lnow.QuadPart -= ((LONGLONG)offset * 1000000);
-
-    now->dwLowDateTime  = lnow.LowPart;
-    now->dwHighDateTime = lnow.HighPart;
-}
-
 void CXenIfaceCreator::SetXenTime()
 {
     bool IsUTC = IsRTCInUTC();
@@ -439,9 +417,6 @@ void CXenIfaceCreator::SetXenTime()
     FILETIME now = { 0 };
     if (!m_device->SharedInfoGetTime(&now))
         return;
-
-    if (IsUTC)
-        AdjustXenTimeToUTC(&now);
 
     SYSTEMTIME sys = { 0 };
     if (!FileTimeToSystemTime(&now, &sys))
