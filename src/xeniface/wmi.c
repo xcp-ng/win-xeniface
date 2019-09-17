@@ -1195,15 +1195,11 @@ RemoveSession(XENIFACE_FDO *fdoData,
 }
 
 void SessionsRemoveAll(XENIFACE_FDO *fdoData) {
-    Trace("lock");
     LockSessions(fdoData);
-    Trace("in lock");
     while (fdoData->SessionHead.Flink != &fdoData->SessionHead) {
         RemoveSessionLocked(fdoData, (XenStoreSession *)fdoData->SessionHead.Flink);
     }
-    Trace("unlock");
     UnlockSessions(fdoData);
-    Trace("unlocked");
 }
 
 
@@ -2728,7 +2724,10 @@ GenerateBaseBlock(  XENIFACE_FDO *fdoData,
                                 WNODE_FLAG_FIXED_INSTANCE_SIZE |
                                 WNODE_FLAG_PDO_INSTANCE_NAMES;
     if (fdoData->InterfacesAcquired) {
-        *time = XENBUS_SHARED_INFO(GetTime, &fdoData->SharedInfoInterface).QuadPart;
+        LARGE_INTEGER info;
+
+        XENBUS_SHARED_INFO(GetTime, &fdoData->SharedInfoInterface, &info, NULL);
+        *time = info.QuadPart;
     }
     else {
         *time = 0;
@@ -2772,7 +2771,10 @@ GenerateBaseInstance(
         return STATUS_WMI_ITEMID_NOT_FOUND;
     }
     if (fdoData->InterfacesAcquired) {
-        *time = XENBUS_SHARED_INFO(GetTime, &fdoData->SharedInfoInterface).QuadPart;
+        LARGE_INTEGER info;
+
+        XENBUS_SHARED_INFO(GetTime, &fdoData->SharedInfoInterface, &info, NULL);
+        *time = info.QuadPart;
     }
     else {
         *time = 0;

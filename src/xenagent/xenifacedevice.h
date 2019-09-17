@@ -55,7 +55,7 @@ public: // suspend interface
     bool SuspendGetCount(DWORD *count);
 
 public: // sharedinfo interface
-    bool SharedInfoGetTime(FILETIME* time);
+    bool SharedInfoGetTime(FILETIME* time, bool *local);
 
 public: // logging
     bool Log(const std::string& msg);

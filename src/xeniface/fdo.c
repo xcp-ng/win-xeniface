@@ -969,6 +969,7 @@ FdoD3ToD0(
                            &Fdo->GnttabInterface,
                            "xeniface-gnttab",
                            0,
+                           0,
                            GnttabAcquireLock,
                            GnttabReleaseLock,
                            Fdo,

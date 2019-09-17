@@ -57,10 +57,11 @@ EvtchnNotificationDpc(
 
     KeSetEvent(Context->Event, 0, FALSE);
 
-    XENBUS_EVTCHN(Unmask,
-                  &Context->Fdo->EvtchnInterface,
-                  Context->Channel,
-                  FALSE);
+    (VOID) XENBUS_EVTCHN(Unmask,
+                         &Context->Fdo->EvtchnInterface,
+                         Context->Channel,
+                         FALSE,
+                         TRUE);
 }
 
 _Function_class_(KSERVICE_ROUTINE)
@@ -213,10 +214,11 @@ IoctlEvtchnBindUnbound(
     *Info = sizeof(XENIFACE_EVTCHN_BIND_UNBOUND_OUT);
 
     if (!In->Mask) {
-        XENBUS_EVTCHN(Unmask,
-                      &Fdo->EvtchnInterface,
-                      Context->Channel,
-                      FALSE);
+        (VOID) XENBUS_EVTCHN(Unmask,
+                             &Fdo->EvtchnInterface,
+                             Context->Channel,
+                             FALSE,
+                             TRUE);
     }
 
     Trace("< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
@@ -307,10 +309,11 @@ IoctlEvtchnBindInterdomain(
     *Info = sizeof(XENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT);
 
     if (!In->Mask) {
-        XENBUS_EVTCHN(Unmask,
-                      &Fdo->EvtchnInterface,
-                      Context->Channel,
-                      FALSE);
+        (VOID) XENBUS_EVTCHN(Unmask,
+                             &Fdo->EvtchnInterface,
+                             Context->Channel,
+                             FALSE,
+                             TRUE);
     }
 
     Trace("< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
@@ -474,10 +477,11 @@ IoctlEvtchnUnmask(
     if (Context == NULL)
         goto fail2;
 
-    XENBUS_EVTCHN(Unmask,
-                  &Fdo->EvtchnInterface,
-                  Context->Channel,
-                  FALSE);
+    (VOID) XENBUS_EVTCHN(Unmask,
+                         &Fdo->EvtchnInterface,
+                         Context->Channel,
+                         FALSE,
+                         TRUE);
 
     KeReleaseSpinLock(&Fdo->EvtchnLock, Irql);
 

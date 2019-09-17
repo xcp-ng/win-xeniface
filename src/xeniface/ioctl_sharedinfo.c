@@ -37,26 +37,32 @@
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlSharedInfoGetTime(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    __in  PXENIFACE_FDO                 Fdo,
+    __in  PCHAR                         Buffer,
+    __in  ULONG                         InLen,
+    __in  ULONG                         OutLen,
+    __out PULONG_PTR                    Info
     )
 {
-    NTSTATUS        status;
-    PLARGE_INTEGER  Value;
+    PXENIFACE_SHAREDINFO_GET_TIME_OUT   Out;
+    LARGE_INTEGER                       Time;
+    BOOLEAN                             Local;
+    NTSTATUS                            status;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != 0)
         goto fail1;
 
-    if (OutLen != sizeof(LARGE_INTEGER))
+    if (OutLen != sizeof(XENIFACE_SHAREDINFO_GET_TIME_OUT))
         goto fail2;
 
-    Value = (PLARGE_INTEGER)Buffer;
-    *Value = XENBUS_SHARED_INFO(GetTime, &Fdo->SharedInfoInterface); 
-    *Info = (ULONG_PTR)sizeof(LARGE_INTEGER);
+    Out = (PXENIFACE_SHAREDINFO_GET_TIME_OUT)Buffer;
+    XENBUS_SHARED_INFO(GetTime, &Fdo->SharedInfoInterface, &Time,
+                       &Local);
+    Out->Time.dwHighDateTime = Time.HighPart;
+    Out->Time.dwLowDateTime = Time.LowPart;
+    Out->Local = Local;
+    *Info = (ULONG_PTR)sizeof(XENIFACE_SHAREDINFO_GET_TIME_OUT);
 
     return STATUS_SUCCESS;
 

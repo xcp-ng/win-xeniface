@@ -86,13 +86,6 @@ typedef BOOLEAN
     IN  PVOID                       Argument
     );
 
-typedef BOOLEAN
-(*XENBUS_SHARED_INFO_EVTCHN_POLL_V1)(
-    IN  PINTERFACE  Interface,
-    IN  BOOLEAN     (*Function)(PVOID, ULONG),
-    IN  PVOID       Argument
-    );
-
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_ACK
     \brief Private method for EVTCHN inerface
 */  
@@ -120,35 +113,28 @@ typedef BOOLEAN
     IN  ULONG       Port
     );
 
+typedef LARGE_INTEGER
+(*XENBUS_SHARED_INFO_GET_TIME_V2)(
+    IN  PINTERFACE  Interface
+    );
+
 /*! \typedef XENBUS_SHARED_INFO_GET_TIME
-    \brief Return the wallclock time from the shared info
+    \brief Retrieve the wallclock time from the shared info
 
     \param Interface The interface header
-    \return The wallclock time in units of 100ns
+    \param Time The wallclock time
+    \param Local Set, on return, if the wallclock is in local time
 */  
-typedef LARGE_INTEGER
+typedef VOID
 (*XENBUS_SHARED_INFO_GET_TIME)(
-    IN  PINTERFACE  Interface
+    IN  PINTERFACE      Interface,
+    OUT PLARGE_INTEGER  Time,
+    OUT PBOOLEAN        Local
     );
 
 // {7E73C34F-1640-4649-A8F3-263BC930A004}
 DEFINE_GUID(GUID_XENBUS_SHARED_INFO_INTERFACE, 
 0x7e73c34f, 0x1640, 0x4649, 0xa8, 0xf3, 0x26, 0x3b, 0xc9, 0x30, 0xa0, 0x4);
-
-/*! \struct _XENBUS_SHARED_INFO_INTERFACE_V1
-    \brief SHARED_INFO interface version 1
-    \ingroup interfaces
-*/
-struct _XENBUS_SHARED_INFO_INTERFACE_V1 {
-    INTERFACE                           Interface;
-    XENBUS_SHARED_INFO_ACQUIRE          SharedInfoAcquire;
-    XENBUS_SHARED_INFO_RELEASE          SharedInfoRelease;
-    XENBUS_SHARED_INFO_EVTCHN_POLL_V1   SharedInfoEvtchnPollVersion1;
-    XENBUS_SHARED_INFO_EVTCHN_ACK       SharedInfoEvtchnAck;
-    XENBUS_SHARED_INFO_EVTCHN_MASK      SharedInfoEvtchnMask;
-    XENBUS_SHARED_INFO_EVTCHN_UNMASK    SharedInfoEvtchnUnmask;
-    XENBUS_SHARED_INFO_GET_TIME         SharedInfoGetTime;
-};
 
 /*! \struct _XENBUS_SHARED_INFO_INTERFACE_V2
     \brief SHARED_INFO interface version 2
@@ -163,10 +149,26 @@ struct _XENBUS_SHARED_INFO_INTERFACE_V2 {
     XENBUS_SHARED_INFO_EVTCHN_ACK       SharedInfoEvtchnAck;
     XENBUS_SHARED_INFO_EVTCHN_MASK      SharedInfoEvtchnMask;
     XENBUS_SHARED_INFO_EVTCHN_UNMASK    SharedInfoEvtchnUnmask;
+    XENBUS_SHARED_INFO_GET_TIME_V2      SharedInfoGetTimeVersion2;
+};
+
+/*! \struct _XENBUS_SHARED_INFO_INTERFACE_V3
+    \brief SHARED_INFO interface version 3
+    \ingroup interfaces
+*/
+struct _XENBUS_SHARED_INFO_INTERFACE_V3 {
+    INTERFACE                           Interface;
+    XENBUS_SHARED_INFO_ACQUIRE          SharedInfoAcquire;
+    XENBUS_SHARED_INFO_RELEASE          SharedInfoRelease;
+    XENBUS_SHARED_INFO_UPCALL_PENDING   SharedInfoUpcallPending;
+    XENBUS_SHARED_INFO_EVTCHN_POLL      SharedInfoEvtchnPoll;
+    XENBUS_SHARED_INFO_EVTCHN_ACK       SharedInfoEvtchnAck;
+    XENBUS_SHARED_INFO_EVTCHN_MASK      SharedInfoEvtchnMask;
+    XENBUS_SHARED_INFO_EVTCHN_UNMASK    SharedInfoEvtchnUnmask;
     XENBUS_SHARED_INFO_GET_TIME         SharedInfoGetTime;
 };
 
-typedef struct _XENBUS_SHARED_INFO_INTERFACE_V2 XENBUS_SHARED_INFO_INTERFACE, *PXENBUS_SHARED_INFO_INTERFACE;
+typedef struct _XENBUS_SHARED_INFO_INTERFACE_V3 XENBUS_SHARED_INFO_INTERFACE, *PXENBUS_SHARED_INFO_INTERFACE;
 
 /*! \def XENBUS_SHARED_INFO
     \brief Macro at assist in method invocation
@@ -176,7 +178,7 @@ typedef struct _XENBUS_SHARED_INFO_INTERFACE_V2 XENBUS_SHARED_INFO_INTERFACE, *P
 
 #endif  // _WINDLL
 
-#define XENBUS_SHARED_INFO_INTERFACE_VERSION_MIN    1
-#define XENBUS_SHARED_INFO_INTERFACE_VERSION_MAX    2
+#define XENBUS_SHARED_INFO_INTERFACE_VERSION_MIN    2
+#define XENBUS_SHARED_INFO_INTERFACE_VERSION_MAX    3
 
 #endif  // _XENBUS_SHARED_INFO_H

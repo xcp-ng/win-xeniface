@@ -379,44 +379,19 @@ void CXenIfaceCreator::AcquireShutdownPrivilege()
     CloseHandle(token);
 }
 
-bool CXenIfaceCreator::IsRTCInUTC()
-{
-    HKEY key;
-    std::string path;
-    DWORD val = 0;
-    DWORD length = sizeof(val);
-    LRESULT lr;
-
-    path = "SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation";
-
-    lr = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path.c_str(), 0, KEY_READ, &key);
-    if (lr != ERROR_SUCCESS)
-        return false;
-
-    lr = RegQueryValueEx(key, "RealTimeIsUniversal", NULL, NULL,
-                         (LPBYTE)&val, &length);
-    RegCloseKey(key);
-
-    // A non-present value -> false
-    if (lr != ERROR_SUCCESS)
-        return false;
-
-    return val;
-}
-
 void CXenIfaceCreator::SetXenTime()
 {
-    bool IsUTC = IsRTCInUTC();
-
-    SYSTEMTIME cur = { 0 };
-    if (IsUTC)
-        GetSystemTime(&cur);
-    else
-        GetLocalTime(&cur);
+    bool local;
 
     FILETIME now = { 0 };
-    if (!m_device->SharedInfoGetTime(&now))
+    if (!m_device->SharedInfoGetTime(&now, &local))
         return;
+
+    SYSTEMTIME cur = { 0 };
+    if (local)
+        GetLocalTime(&cur);
+    else
+        GetSystemTime(&cur);
 
     SYSTEMTIME sys = { 0 };
     if (!FileTimeToSystemTime(&now, &sys))
@@ -425,7 +400,7 @@ void CXenIfaceCreator::SetXenTime()
     if (memcmp(&cur, &sys, sizeof(SYSTEMTIME)) == 0)
         return;
 
-    CXenAgent::Log("RTC is in %s\n", IsUTC ? "UTC" : "local time");
+    CXenAgent::Log("RTC is in %s\n", local ? "local time" : "UTC");
     CXenAgent::Log("Time Now = %d/%d/%d %d:%02d:%02d.%d\n",
                    cur.wYear, cur.wMonth, cur.wDay,
                    cur.wHour, cur.wMinute, cur.wSecond, cur.wMilliseconds);
@@ -433,10 +408,10 @@ void CXenIfaceCreator::SetXenTime()
                    sys.wYear, sys.wMonth, sys.wDay,
                    sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
 
-    if (IsUTC)
-        SetSystemTime(&sys);
-    else
+    if (local)
         SetLocalTime(&sys);
+    else
+        SetSystemTime(&sys);
 }
 
 /* 317fc439-3f77-41c8-b09e-08ad63272aa3 */

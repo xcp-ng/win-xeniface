@@ -150,11 +150,16 @@ bool CXenIfaceDevice::SuspendGetCount(DWORD *count)
 }
 
 // sharedinfo interface
-bool CXenIfaceDevice::SharedInfoGetTime(FILETIME* time)
+bool CXenIfaceDevice::SharedInfoGetTime(FILETIME* time, bool* local)
 {
-    return Ioctl(IOCTL_XENIFACE_SHAREDINFO_GET_TIME,
-                 NULL, 0,
-                 time, sizeof(FILETIME));
+    XENIFACE_SHAREDINFO_GET_TIME_OUT out = { NULL };
+    if (!Ioctl(IOCTL_XENIFACE_SHAREDINFO_GET_TIME,
+               NULL, 0,
+               &out, sizeof(out)))
+        return false;
+    *time = out.Time;
+    *local = out.Local;
+    return true;
 }
 
 // logging

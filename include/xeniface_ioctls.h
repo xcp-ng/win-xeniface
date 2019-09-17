@@ -37,6 +37,8 @@
 #ifndef _XENIFACE_IOCTLS_H_
 #define _XENIFACE_IOCTLS_H_
 
+#include <windef.h>
+
 /*! \brief XENIFACE device GUID */
 DEFINE_GUID(GUID_INTERFACE_XENIFACE, \
     0xb2cfb085, 0xaa5e, 0x47e1, 0x8b, 0xf7, 0x97, 0x93, 0xf3, 0x15, 0x45, 0x65);
@@ -368,6 +370,12 @@ typedef struct _XENIFACE_SUSPEND_REGISTER_OUT {
 */
 #define IOCTL_XENIFACE_SHAREDINFO_GET_TIME \
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x840, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Output for IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES */
+typedef struct _XENIFACE_SHAREDINFO_GET_TIME_OUT {
+    FILETIME Time; /*!< Current wallclock time */
+    BOOLEAN Local; /*!< TRUE is wallclock is in local time, FALSE if it is in UTC */
+} XENIFACE_SHAREDINFO_GET_TIME_OUT, *PXENIFACE_SHAREDINFO_GET_TIME_OUT;
 
 /*! \brief Logs a message to Dom0
 
