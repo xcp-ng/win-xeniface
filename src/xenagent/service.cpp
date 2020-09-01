@@ -224,7 +224,7 @@ bool CXenIfaceCreator::CheckShutdown()
         if (!SetSystemPowerState(FALSE, FALSE)) {
             CXenAgent::Log("SetSystemPowerState failed %08x\n", GetLastError());
         }
-        return true;
+        return false;
     } else if (type == "s3") {
         m_device->StoreWrite("control/shutdown", "");
         m_agent.EventLog(EVENT_XENUSER_S3);
@@ -233,7 +233,7 @@ bool CXenIfaceCreator::CheckShutdown()
         if (!SetSuspendState(FALSE, TRUE, FALSE)) {
             CXenAgent::Log("SetSuspendState failed %08x\n", GetLastError());
         }
-        return true;
+        return false;
     }
 
     return false;
