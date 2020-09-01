@@ -107,9 +107,9 @@ void CXenIfaceCreator::OnPowerEvent(DWORD evt, LPVOID data)
 void CXenIfaceCreator::Log(const char* message)
 {
     // if possible, send to xeniface to forward to logs
-    CCritSec crit(&m_crit);
-    if (m_device) {
+    if (m_device && TryEnterCriticalSection(&m_crit)) {
         m_device->Log(message);
+        LeaveCriticalSection(&m_crit);
     }
 }
 
