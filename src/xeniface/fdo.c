@@ -1740,9 +1740,10 @@ __FdoSetSystemPowerUp(
         goto done;
 
     if (SystemState < PowerSystemHibernate &&
-        __FdoGetSystemPowerState(Fdo) >= PowerSystemHibernate)
+        __FdoGetSystemPowerState(Fdo) >= PowerSystemHibernate) {
         __FdoSetSystemPowerState(Fdo, PowerSystemHibernate);
         FdoS4ToS3(Fdo);
+    }
 
     Info("%s -> %s\n",
          PowerSystemStateName(__FdoGetSystemPowerState(Fdo)),
