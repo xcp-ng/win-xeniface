@@ -331,10 +331,10 @@ void CXenIfaceCreator::StopShutdownWatch()
     if (!m_ctxt_shutdown)
         return;
 
-    m_device->StoreRemove("control/feature-poweroff");
-    m_device->StoreRemove("control/feature-reboot");
-    m_device->StoreRemove("control/feature-s3");
-    m_device->StoreRemove("control/feature-s4");
+    m_device->StoreWrite("control/feature-poweroff", "");
+    m_device->StoreWrite("control/feature-reboot", "");
+    m_device->StoreWrite("control/feature-s3", "");
+    m_device->StoreWrite("control/feature-s4", "");
 
     m_device->StoreRemoveWatch(m_ctxt_shutdown);
     m_ctxt_shutdown = NULL;
