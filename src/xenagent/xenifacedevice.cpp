@@ -291,6 +291,7 @@ bool CXenIfaceDeviceList::CheckShutdown()
     if (type == "poweroff") {
         device->StoreWrite("control/shutdown", "");
         m_agent->EventLog(EVENT_XENUSER_POWEROFF);
+        LogIfRebootPending();
 
         AcquireShutdownPrivilege();
 #pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
@@ -304,6 +305,7 @@ bool CXenIfaceDeviceList::CheckShutdown()
     } else if (type == "reboot") {
         device->StoreWrite("control/shutdown", "");
         m_agent->EventLog(EVENT_XENUSER_REBOOT);
+        LogIfRebootPending();
 
         AcquireShutdownPrivilege();
 #pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */

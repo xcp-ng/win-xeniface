@@ -86,9 +86,9 @@ public:
     void CheckXenTime();
     void CheckSuspend();
     bool CheckSlateMode(std::string& mode);
+    void LogIfRebootPending();
 
 private:
-    void LogIfRebootPending();
     void StartShutdownWatch(CXenIfaceDevice* device);
     void StopShutdownWatch(CXenIfaceDevice* device);
     void StartSlateModeWatch(CXenIfaceDevice* device);
