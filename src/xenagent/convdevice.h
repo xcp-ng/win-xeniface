@@ -56,4 +56,26 @@ private:
     bool GetMode(DWORD *mode);
 };
 
+class CXenAgent;
+
+class CConvDeviceList : public CDeviceList
+{
+public:
+    CConvDeviceList(CXenAgent* agent);
+    virtual ~CConvDeviceList();
+
+protected: // CDeviceList
+    virtual CDevice* Create(const wchar_t* path);
+    virtual void OnDeviceAdded(CDevice* dev);
+    virtual void OnDeviceRemoved(CDevice* dev);
+    virtual void OnDeviceSuspend(CDevice* dev);
+    virtual void OnDeviceResume(CDevice* dev);
+
+public:
+    void SetSlateMode(std::string& mode);
+
+private:
+    CXenAgent*  m_agent;
+};
+
 #endif

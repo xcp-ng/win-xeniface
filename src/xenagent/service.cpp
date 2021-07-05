@@ -29,478 +29,14 @@
  * SUCH DAMAGE.
  */
 
-#define INITGUID
 #include <windows.h>
 #include <stdio.h>
 #include <powrprof.h>
 #include <winuser.h>
 
-#include <xeniface_ioctls.h>
-
 #include "service.h"
 #include "messages.h"
-
-class CCritSec
-{
-public:
-    CCritSec(LPCRITICAL_SECTION crit);
-    ~CCritSec();
-private:
-    LPCRITICAL_SECTION m_crit;
-};
-
-CCritSec::CCritSec(LPCRITICAL_SECTION crit) : m_crit(crit)
-{
-    EnterCriticalSection(m_crit);
-}
-CCritSec::~CCritSec()
-{
-    LeaveCriticalSection(m_crit);
-}
-
-CXenIfaceCreator::CXenIfaceCreator(CXenAgent& agent) :
-    m_devlist(GUID_INTERFACE_XENIFACE), m_device(NULL),
-    m_ctxt_shutdown(NULL), m_ctxt_suspend(NULL),
-    m_ctxt_slate_mode(NULL), m_agent(agent)
-{
-    m_evt_shutdown = CreateEvent(NULL, TRUE, FALSE, NULL);
-    m_evt_suspend = CreateEvent(NULL, TRUE, FALSE, NULL);
-    m_evt_slate_mode = CreateEvent(NULL, TRUE, FALSE, NULL);
-    m_count = 0;
-
-    InitializeCriticalSection(&m_crit);
-}
-
-CXenIfaceCreator::~CXenIfaceCreator()
-{
-    CloseHandle(m_evt_slate_mode);
-    CloseHandle(m_evt_suspend);
-    CloseHandle(m_evt_shutdown);
-
-    DeleteCriticalSection(&m_crit);
-}
-
-bool CXenIfaceCreator::Start(HANDLE svc)
-{
-    return m_devlist.Start(svc, this);
-}
-
-void CXenIfaceCreator::Stop()
-{
-    // Check if registry key is present, implies Windows Update
-    // require a reboot, which may spend time installing updates
-    LogIfRebootPending();
-
-    m_devlist.Stop();
-}
-
-void CXenIfaceCreator::OnDeviceEvent(DWORD evt, LPVOID data)
-{
-    m_devlist.OnDeviceEvent(evt, data);
-}
-
-void CXenIfaceCreator::OnPowerEvent(DWORD evt, LPVOID data)
-{
-    m_devlist.OnPowerEvent(evt, data);
-}
-
-void CXenIfaceCreator::Log(const char* message)
-{
-    // if possible, send to xeniface to forward to logs
-    if (m_device && TryEnterCriticalSection(&m_crit)) {
-        m_device->Log(message);
-        LeaveCriticalSection(&m_crit);
-    }
-}
-
-/*virtual*/ CDevice* CXenIfaceCreator::Create(const wchar_t* path)
-{
-    return new CXenIfaceDevice(path);
-}
-
-/*virtual*/ void CXenIfaceCreator::OnDeviceAdded(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceAdded(%ws)\n", dev->Path());
-
-    CCritSec crit(&m_crit);
-    if (m_device == NULL) {
-        m_device = (CXenIfaceDevice*)dev;
-
-        m_device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
-
-        StartShutdownWatch();
-
-        if (m_agent.ConvDevicePresent())
-            StartSlateModeWatch();
-
-        SetXenTime();
-    }
-}
-
-/*virtual*/ void CXenIfaceCreator::OnDeviceRemoved(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceRemoved(%ws)\n", dev->Path());
-
-    CCritSec crit(&m_crit);
-    if (m_device == dev) {
-        if (m_ctxt_suspend) {
-            m_device->SuspendDeregister(m_ctxt_suspend);
-            m_ctxt_suspend = NULL;
-        }
-
-        if (m_agent.ConvDevicePresent())
-            StopSlateModeWatch();
-
-        StopShutdownWatch();
-
-        m_device = NULL;
-    }
-}
-
-/*virtual*/ void CXenIfaceCreator::OnDeviceSuspend(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceSuspend(%ws)\n", dev->Path());
-
-    if (m_agent.ConvDevicePresent())
-        StopSlateModeWatch();
-
-    StopShutdownWatch();
-}
-
-/*virtual*/ void CXenIfaceCreator::OnDeviceResume(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceResume(%ws)\n", dev->Path());
-
-    StartShutdownWatch();
-
-    if (m_agent.ConvDevicePresent())
-        StartSlateModeWatch();
-}
-
-bool CXenIfaceCreator::CheckShutdown()
-{
-    CCritSec crit(&m_crit);
-    if (m_device == NULL)
-        return false;
-
-    std::string type;
-    if (!m_device->StoreRead("control/shutdown", type))
-        return false;
-
-    if (type != "")
-        CXenAgent::Log("Shutdown(%ws) = '%s'\n", m_device->Path(), type.c_str());
-
-    if (type == "poweroff") {
-        m_device->StoreWrite("control/shutdown", "");
-        m_agent.EventLog(EVENT_XENUSER_POWEROFF);
-
-        AcquireShutdownPrivilege();
-#pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
-        if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, FALSE,
-                                      SHTDN_REASON_MAJOR_OTHER |
-                                      SHTDN_REASON_MINOR_ENVIRONMENT |
-                                      SHTDN_REASON_FLAG_PLANNED)) {
-            CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
-        }
-        return true;
-    } else if (type == "reboot") {
-        m_device->StoreWrite("control/shutdown", "");
-        m_agent.EventLog(EVENT_XENUSER_REBOOT);
-
-        AcquireShutdownPrivilege();
-#pragma warning(suppress:28159) /* Consider using a design alternative... Rearchitect to avoid Reboot */
-        if (!InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE,
-                                      SHTDN_REASON_MAJOR_OTHER |
-                                      SHTDN_REASON_MINOR_ENVIRONMENT |
-                                      SHTDN_REASON_FLAG_PLANNED)) {
-            CXenAgent::Log("InitiateSystemShutdownEx failed %08x\n", GetLastError());
-        }
-        return true;
-    } else if (type == "s4") {
-        m_device->StoreWrite("control/shutdown", "");
-        m_agent.EventLog(EVENT_XENUSER_S4);
-
-        AcquireShutdownPrivilege();
-        if (!SetSystemPowerState(FALSE, FALSE)) {
-            CXenAgent::Log("SetSystemPowerState failed %08x\n", GetLastError());
-        }
-        return false;
-    } else if (type == "s3") {
-        m_device->StoreWrite("control/shutdown", "");
-        m_agent.EventLog(EVENT_XENUSER_S3);
-
-        AcquireShutdownPrivilege();
-        if (!SetSuspendState(FALSE, TRUE, FALSE)) {
-            CXenAgent::Log("SetSuspendState failed %08x\n", GetLastError());
-        }
-        return false;
-    }
-
-    return false;
-}
-
-void CXenIfaceCreator::CheckXenTime()
-{
-    CCritSec crit(&m_crit);
-    if (m_device == NULL)
-        return;
-
-    SetXenTime();
-}
-
-void CXenIfaceCreator::CheckSuspend()
-{
-    CCritSec crit(&m_crit);
-    if (m_device == NULL)
-        return;
-
-    DWORD count = 0;
-
-    if (!m_device->SuspendGetCount(&count))
-        return;
-
-    if (m_count == count)
-        return;
-
-    CXenAgent::Log("Suspend(%ws)\n", m_device->Path());
-
-    m_agent.EventLog(EVENT_XENUSER_UNSUSPENDED);
-
-    // recreate watches, as suspending deactivated the watch
-    if (m_agent.ConvDevicePresent())
-        StopSlateModeWatch();
-
-    StopShutdownWatch();
-
-    StartShutdownWatch();
-
-    if (m_agent.ConvDevicePresent())
-        StartSlateModeWatch();
-
-    m_count = count;
-}
-
-bool CXenIfaceCreator::CheckSlateMode(std::string *mode)
-{
-    CCritSec crit(&m_crit);
-    if (m_device == NULL)
-        return false;
-
-    if (!m_device->StoreRead("control/laptop-slate-mode", *mode))
-        return false;
-
-    if (*mode != "")
-        m_device->StoreWrite("control/laptop-slate-mode", "");
-
-    return true;
-}
-
-void CXenIfaceCreator::LogIfRebootPending()
-{
-    HKEY Key;
-    LONG lResult;
-
-    lResult = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                           "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired",
-                           0,
-                           KEY_READ,
-                           &Key);
-    if (lResult != ERROR_SUCCESS)
-        return; // key doesnt exist, dont log anything
-
-    RegCloseKey(Key);
-
-    CXenAgent::Log("RebootRequired detected\n");
-}
-
-void CXenIfaceCreator::StartShutdownWatch()
-{
-    if (m_ctxt_shutdown)
-        return;
-
-    m_device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
-
-    m_device->StoreWrite("control/feature-poweroff", "1");
-    m_device->StoreWrite("control/feature-reboot", "1");
-    m_device->StoreWrite("control/feature-s3", "1");
-    m_device->StoreWrite("control/feature-s4", "1");
-}
-
-void CXenIfaceCreator::StopShutdownWatch()
-{
-    if (!m_ctxt_shutdown)
-        return;
-
-    m_device->StoreWrite("control/feature-poweroff", "");
-    m_device->StoreWrite("control/feature-reboot", "");
-    m_device->StoreWrite("control/feature-s3", "");
-    m_device->StoreWrite("control/feature-s4", "");
-
-    m_device->StoreRemoveWatch(m_ctxt_shutdown);
-    m_ctxt_shutdown = NULL;
-}
-
-void CXenIfaceCreator::StartSlateModeWatch()
-{
-    if (m_ctxt_slate_mode)
-        return;
-
-    m_device->StoreAddWatch("control/laptop-slate-mode", m_evt_slate_mode, &m_ctxt_slate_mode);
-    m_device->StoreWrite("control/feature-laptop-slate-mode", "1");
-}
-
-void CXenIfaceCreator::StopSlateModeWatch()
-{
-    if (!m_ctxt_slate_mode)
-        return;
-
-    m_device->StoreRemove("control/feature-laptop-slate-mode");
-
-    m_device->StoreRemoveWatch(m_ctxt_slate_mode);
-    m_ctxt_slate_mode = NULL;
-}
-
-void CXenIfaceCreator::AcquireShutdownPrivilege()
-{
-    HANDLE          token;
-    TOKEN_PRIVILEGES tp;
-
-    LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME, &tp.Privileges[0].Luid);
-    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-    tp.PrivilegeCount = 1;
-
-    if (!OpenProcessToken(GetCurrentProcess(),
-                          TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
-                          &token))
-        return;
-
-    AdjustTokenPrivileges(token, FALSE, &tp, NULL, 0, NULL);
-    CloseHandle(token);
-}
-
-void CXenIfaceCreator::SetXenTime()
-{
-    bool local;
-
-    FILETIME now = { 0 };
-    if (!m_device->SharedInfoGetTime(&now, &local))
-        return;
-
-    SYSTEMTIME cur = { 0 };
-    if (local)
-        GetLocalTime(&cur);
-    else
-        GetSystemTime(&cur);
-
-    SYSTEMTIME sys = { 0 };
-    if (!FileTimeToSystemTime(&now, &sys))
-        return;
-
-    if (memcmp(&cur, &sys, sizeof(SYSTEMTIME)) == 0)
-        return;
-
-    CXenAgent::Log("RTC is in %s\n", local ? "local time" : "UTC");
-    CXenAgent::Log("Time Now = %d/%d/%d %d:%02d:%02d.%d\n",
-                   cur.wYear, cur.wMonth, cur.wDay,
-                   cur.wHour, cur.wMinute, cur.wSecond, cur.wMilliseconds);
-    CXenAgent::Log("New Time = %d/%d/%d %d:%02d:%02d.%d\n",
-                   sys.wYear, sys.wMonth, sys.wDay,
-                   sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
-
-    if (local)
-        SetLocalTime(&sys);
-    else
-        SetSystemTime(&sys);
-}
-
-/* 317fc439-3f77-41c8-b09e-08ad63272aa3 */
-DEFINE_GUID(GUID_GPIOBUTTONS_LAPTOPSLATE_INTERFACE, \
-            0x317fc439, 0x3f77, 0x41c8, 0xb0, 0x9e, 0x08, 0xad, 0x63, 0x27, 0x2a, 0xa3);
-
-CConvCreator::CConvCreator(CXenAgent& agent) :
-    m_devlist(GUID_GPIOBUTTONS_LAPTOPSLATE_INTERFACE), m_device(NULL),
-    m_agent(agent)
-{
-    InitializeCriticalSection(&m_crit);
-}
-
-CConvCreator::~CConvCreator()
-{
-    DeleteCriticalSection(&m_crit);
-}
-
-bool CConvCreator::Start(HANDLE svc)
-{
-    return m_devlist.Start(svc, this);
-}
-
-void CConvCreator::Stop()
-{
-    m_devlist.Stop();
-}
-
-void CConvCreator::OnDeviceEvent(DWORD evt, LPVOID data)
-{
-    m_devlist.OnDeviceEvent(evt, data);
-}
-
-void CConvCreator::OnPowerEvent(DWORD evt, LPVOID data)
-{
-    m_devlist.OnPowerEvent(evt, data);
-}
-
-void CConvCreator::SetSlateMode(std::string mode)
-{
-    CCritSec crit(&m_crit);
-    if (m_device == NULL)
-        return;
-
-    m_agent.EventLog(EVENT_XENUSER_MODE_SWITCH);
-
-    if (mode == "laptop")
-        m_device->SetMode(CCONV_DEVICE_LAPTOP_MODE);
-    else if (mode == "slate")
-        m_device->SetMode(CCONV_DEVICE_SLATE_MODE);
-}
-
-bool CConvCreator::DevicePresent()
-{
-    return m_device != NULL;
-}
-
-/*virtual*/ CDevice* CConvCreator::Create(const wchar_t* path)
-{
-    return new CConvDevice(path);
-}
-
-/*virtual*/ void CConvCreator::OnDeviceAdded(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceAdded(%ws)\n", dev->Path());
-
-    CCritSec crit(&m_crit);
-    if (m_device == NULL)
-        m_device = (CConvDevice*)dev;
-}
-
-/*virtual*/ void CConvCreator::OnDeviceRemoved(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceRemoved(%ws)\n", dev->Path());
-
-    CCritSec crit(&m_crit);
-    if (m_device == dev)
-        m_device = NULL;
-}
-
-/*virtual*/ void CConvCreator::OnDeviceSuspend(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceSuspend(%ws)\n", dev->Path());
-}
-
-/*virtual*/ void CConvCreator::OnDeviceResume(CDevice* dev)
-{
-    CXenAgent::Log("OnDeviceResume(%ws)\n", dev->Path());
-}
+#include "xeniface_ioctls.h"
 
 static CXenAgent s_service;
 
@@ -609,8 +145,8 @@ static CXenAgent s_service;
 #pragma warning(push)
 #pragma warning(disable:4355)
 
-CXenAgent::CXenAgent() noexcept : m_handle(NULL), m_evtlog(NULL), m_xeniface(*this),
-                         m_conv(*this)
+CXenAgent::CXenAgent() noexcept : m_handle(NULL), m_evtlog(NULL),
+    m_xeniface(this), m_conv(this)
 {
     m_status.dwServiceType        = SERVICE_WIN32;
     m_status.dwCurrentState       = SERVICE_START_PENDING;
@@ -635,20 +171,22 @@ CXenAgent::~CXenAgent()
 void CXenAgent::OnServiceStart()
 {
     CXenAgent::Log("OnServiceStart()\n");
-    m_conv.Start(m_handle);
-    m_xeniface.Start(m_handle);
+    m_xeniface.RegisterForDeviceChange(m_handle);
+    m_xeniface.EnumerateDevices();
+    m_conv.EnumerateDevices();
 }
 
 void CXenAgent::OnServiceStop()
 {
     CXenAgent::Log("OnServiceStop()\n");
-    m_xeniface.Stop();
-    m_conv.Stop();
+    m_xeniface.LogIfRebootPending();
+    m_xeniface.UnregisterForDeviceChange();
+    m_xeniface.CleanupDeviceList();
+    m_conv.CleanupDeviceList();
 }
 
 void CXenAgent::OnDeviceEvent(DWORD evt, LPVOID data)
 {
-    m_conv.OnDeviceEvent(evt, data);
     m_xeniface.OnDeviceEvent(evt, data);
 }
 
@@ -686,7 +224,7 @@ bool CXenAgent::ServiceMainLoop()
         std::string mode;
 
         ResetEvent(m_xeniface.m_evt_slate_mode);
-        if (m_xeniface.CheckSlateMode(&mode))
+        if (m_xeniface.CheckSlateMode(mode))
             m_conv.SetSlateMode(mode);
 
         return true; // continue loop
@@ -722,7 +260,7 @@ void CXenAgent::EventLog(DWORD evt)
 
 bool CXenAgent::ConvDevicePresent()
 {
-    return m_conv.DevicePresent();
+    return m_conv.GetFirstDevice() != NULL;
 }
 
 void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*= 0*/)
