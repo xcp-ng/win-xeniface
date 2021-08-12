@@ -38,6 +38,7 @@
 
 #include "assert.h"
 #include "wmi.h"
+#include "util.h"
 
 PDRIVER_OBJECT      DriverObject;
 
@@ -55,7 +56,8 @@ DriverUnload(
     Trace("====>\n");
 
     if (DriverParameters.RegistryPath.Buffer != NULL) {
-        ExFreePool(DriverParameters.RegistryPath.Buffer);
+        __FreePoolWithTag(DriverParameters.RegistryPath.Buffer,
+                          XENIFACE_POOL_TAG);
     }
 
     DriverObject = NULL;
@@ -154,7 +156,7 @@ DriverEntry(
 
     DriverParameters.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
     DriverParameters.RegistryPath.Length = RegistryPath->Length;
-    DriverParameters.RegistryPath.Buffer = ExAllocatePoolWithTag (PagedPool,
+    DriverParameters.RegistryPath.Buffer = __AllocatePoolWithTag(PagedPool,
                                                 DriverParameters.RegistryPath.MaximumLength,
                                                 XENIFACE_POOL_TAG);
     if (NULL == DriverParameters.RegistryPath.Buffer) {

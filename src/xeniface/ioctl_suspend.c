@@ -33,6 +33,7 @@
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
 #include "log.h"
+#include "util.h"
 
 DECLSPEC_NOINLINE
 NTSTATUS
@@ -91,7 +92,7 @@ IoctlSuspendRegister(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ExAllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_SUSPEND_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_SUSPEND_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 
@@ -119,7 +120,7 @@ IoctlSuspendRegister(
 fail3:
     Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_SUSPEND_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
     Error("Fail2\n");
@@ -141,7 +142,7 @@ SuspendFreeEvent(
 
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_SUSPEND_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE

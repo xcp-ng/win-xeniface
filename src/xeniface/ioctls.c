@@ -36,6 +36,7 @@
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
 #include "log.h"
+#include "util.h"
 
 NTSTATUS
 __CaptureUserBuffer(
@@ -53,7 +54,7 @@ __CaptureUserBuffer(
     }
 
     Status = STATUS_NO_MEMORY;
-    TempBuffer = ExAllocatePoolWithTag(NonPagedPool, Length, XENIFACE_POOL_TAG);
+    TempBuffer = __AllocatePoolWithTag(NonPagedPool, Length, XENIFACE_POOL_TAG);
     if (TempBuffer == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -65,7 +66,7 @@ __CaptureUserBuffer(
         RtlCopyMemory(TempBuffer, Buffer, Length);
     } except(EXCEPTION_EXECUTE_HANDLER) {
         Error("Exception while probing/reading buffer at %p, size 0x%lx\n", Buffer, Length);
-        ExFreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
+        __FreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
         TempBuffer = NULL;
         Status = GetExceptionCode();
     }
@@ -81,7 +82,7 @@ __FreeCapturedBuffer(
     )
 {
     if (CapturedBuffer != NULL) {
-        ExFreePoolWithTag(CapturedBuffer, XENIFACE_POOL_TAG);
+        __FreePoolWithTag(CapturedBuffer, XENIFACE_POOL_TAG);
     }
 }
 

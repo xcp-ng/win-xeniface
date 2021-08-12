@@ -34,6 +34,7 @@
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
 #include "log.h"
+#include "util.h"
 
 #define XENSTORE_ABS_PATH_MAX 3072
 #define XENSTORE_REL_PATH_MAX 2048
@@ -317,7 +318,7 @@ __ConvertPermissions(
     if (NumberPermissions > 255)
         goto fail1;
 
-    XenbusPermissions = ExAllocatePoolWithTag(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
+    XenbusPermissions = __AllocatePoolWithTag(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
     if (XenbusPermissions == NULL)
         goto fail2;
 
@@ -348,7 +349,7 @@ __ConvertPermissions(
 
 fail3:
     Error("Fail3\n");
-    ExFreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
 
 fail2:
     Error("Fail2\n");
@@ -364,7 +365,7 @@ __FreePermissions(
     __in  PXENBUS_STORE_PERMISSION    Permissions
     )
 {
-    ExFreePoolWithTag(Permissions, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Permissions, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE
@@ -515,7 +516,7 @@ IoctlStoreAddWatch(
     Path[In->PathLength - 1] = 0;
 
     status = STATUS_NO_MEMORY;
-    Context = ExAllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail4;
 
@@ -573,7 +574,7 @@ fail6:
 fail5:
     Error("Fail5\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail4:
     Error("Fail4\n");
@@ -617,7 +618,7 @@ StoreFreeWatch(
 
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE
