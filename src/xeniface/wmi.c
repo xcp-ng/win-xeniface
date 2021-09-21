@@ -49,6 +49,17 @@
 
 #define WMI_POOL_TAG    'XenP'
 
+#define UTF8MASK2 0x1FFF80
+#define UTF8MASK3 0x1FF800
+#define UTF8MASK4 0x1F0000
+
+#if (_MSC_VER <= 1922)
+typedef struct {
+    USHORT Length;
+    CHAR Buffer[1];
+} UTF8_STRING;
+#endif
+
 static FORCEINLINE PVOID
 WmiAllocate(
     IN  ULONG   Length
@@ -79,119 +90,102 @@ void UnlockSessions(
     ReleaseMutex(&fdoData->SessionLock);
 }
 
-void GetUnicodeString(UNICODE_STRING *unicode, USHORT maxlength, LPWSTR location)
-{
-    int i;
-    USHORT length=0;
-    unicode->MaximumLength=maxlength;
-    unicode->Buffer=location;
-    // No appropriate fucntion to determine the length of a possibly null
-    // terminated string withing a fixed sized buffer exists.
-    for (i=0; (i*sizeof(WCHAR))<maxlength; i++) {
-        if (location[i] != L'\0')
-            length+=sizeof(WCHAR);
-        else
-            break;
-    }
-    unicode->Length = (USHORT)length;
-}
-
-NTSTATUS GetAnsiString(ANSI_STRING *ansi, USHORT maxlength, LPWSTR location) {
-    UNICODE_STRING unicode;
-    NTSTATUS status;
-    GetUnicodeString(&unicode, maxlength, location);
-    status = RtlUnicodeStringToAnsiString(ansi, &unicode, TRUE);
-    return status;
-}
-
 // Rather inconveniently, xenstore needs UTF8 data, WMI works in UTF16
 // and windows doesn't provide conversion functions in any version
 // prior to Windows 7.
-
-USHORT Utf32FromUtf16(ULONG *utf32, const WCHAR* utf16) {
-    ULONG w;
-    ULONG u;
-    ULONG xa;
-    ULONG xb;
-    ULONG x;
+static USHORT
+Utf32FromUtf16(
+    OUT PULONG          utf32,
+    IN  const WCHAR*    utf16
+    )
+{
+    ULONG               w;
+    ULONG               u;
+    ULONG               xa;
+    ULONG               xb;
+    ULONG               x;
 
     if (((utf16[0]) & 0xFC00) == 0xD800) {
-        w = ((utf16[0]) & 0X03FF) >>6;
-        u = w+1;
+        w = ((utf16[0]) & 0X03FF) >> 6;
+        u = w + 1;
         xa = utf16[0] & 0x3F;
         xb = utf16[1] & 0x03FF;
-        x = (xa<<10) | xb;
-        *utf32 = (u<<16) + x;
+        x = (xa << 10) | xb;
+        *utf32 = (u << 16) + x;
         return 2;
-    }
-    else {
+    } else {
         *utf32 = *utf16;
         return 1;
     }
 }
 
-USHORT Utf32FromUtf8(ULONG *utf32, const CHAR *utf8) {
-    ULONG y;
-    ULONG x;
-    ULONG z;
-    ULONG ua;
-    ULONG ub;
-    ULONG u;
+static USHORT
+Utf32FromUtf8(
+    OUT PULONG      utf32,
+    IN  const CHAR* utf8
+    )
+{
+    ULONG           y;
+    ULONG           x;
+    ULONG           z;
+    ULONG           ua;
+    ULONG           ub;
+    ULONG           u;
 
     if ((utf8[0] & 0x80) == 0) {
         *utf32 = utf8[0];
         return 1;
-    }
-    else if ((utf8[0] & 0xE0) == 0xC0) {
+    } else if ((utf8[0] & 0xE0) == 0xC0) {
         y = utf8[0] & 0x1F;
         x = utf8[1] & 0x3F;
-        *utf32 = (y<<6) | x;
+        *utf32 = (y << 6) | x;
         return 2;
-    }
-    else if ((utf8[0] & 0xF0) == 0xE0) {
+    } else if ((utf8[0] & 0xF0) == 0xE0) {
         z = utf8[0] & 0x0F;
         y = utf8[1] & 0x3F;
         x = utf8[2] & 0x3F;
-       *utf32 = (z <<12) | (y<<6) | x;
+        *utf32 = (z << 12) | (y << 6) | x;
        return 3;
-    }
-    else {
+    } else {
         ua = utf8[0] & 0x7;
         ub = (utf8[1] & 0x30) >> 4;
         u = (ua << 2) | ub;
         z = utf8[1] & 0x0f;
         y = utf8[2] & 0x3f;
         x = utf8[3] & 0x3f;
-        *utf32 = (u<<16) | (z <<12) | (y <<6) | x;
+        *utf32 = (u << 16) | (z << 12) | (y << 6) | x;
         return 4;
     }
-
 }
 
-USHORT Utf16FromUtf32(WCHAR *utf16, const ULONG utf32) {
-    WCHAR u;
-    WCHAR w;
-    WCHAR x;
+static USHORT
+Utf16FromUtf32(
+    OUT PWCHAR  utf16,
+    IN  ULONG   utf32
+    )
+{
+    WCHAR       u;
+    WCHAR       w;
+    WCHAR       x;
+
     if ((utf32 > 0xFFFF)) {
         u = (utf32 & 0x1F0000) >> 16;
-        w = u-1;
+        w = u - 1;
         x = utf32 & 0xFFFF;
-        utf16[0] = 0xD800 | (w<<6) | (x>>10);
+        utf16[0] = 0xD800 | (w << 6) | (x >> 10);
         utf16[1] = 0xDC00 | (x & 0x3F);
         return 2;
-    }
-    else {
+    } else {
         utf16[0] = utf32 & 0xFFFF;
         return 1;
     }
 }
 
-
-#define UTF8MASK2 0x1FFF80
-#define UTF8MASK3 0x1FF800
-#define UTF8MASK4 0x1F0000
-
-USHORT CountUtf8FromUtf32(ULONG utf32) {
+static USHORT
+CountUtf8FromUtf32(
+    IN  ULONG   utf32
+    )
+{
     if (utf32 & UTF8MASK4)
         return 4;
     if (utf32 & UTF8MASK3)
@@ -201,31 +195,38 @@ USHORT CountUtf8FromUtf32(ULONG utf32) {
     return 1;
 }
 
-USHORT CountUtf16FromUtf32(ULONG utf32) {
-    if ((utf32 & 0xFF0000) > 0) {
+static USHORT
+CountUtf16FromUtf32(
+    IN  ULONG   utf32
+    )
+{
+    if (utf32 & 0xFF0000)
         return 2;
-    }
     return 1;
 }
 
-USHORT Utf8FromUtf32(CHAR *dest, ULONG utf32) {
-    CHAR u;
-    CHAR y;
-    CHAR x;
-    CHAR z;
+static USHORT
+Utf8FromUtf32(
+    OUT PCHAR   dest,
+    IN  ULONG   utf32
+    )
+{
+    CHAR        u;
+    CHAR        y;
+    CHAR        x;
+    CHAR        z;
 
     if (utf32 & UTF8MASK4) {
         x = utf32 & 0x3f;
         y = (utf32 >> 6) & 0x3f;
         z = (utf32 >> 12) & 0xf;
         u = (utf32 >> 16) & 0x1f;
-        dest[0] = 0xf0 | u>>2;
+        dest[0] = 0xf0 | u >> 2;
         dest[1] = 0x80 | (u & 0x3) << 4 | z;
         dest[2] = 0x80 | y;
         dest[3] = 0x80 | x;
         return 4;
-    }
-    else if (utf32 & UTF8MASK3) {
+    } else if (utf32 & UTF8MASK3) {
         x = utf32 & 0x3f;
         y = (utf32 >> 6) & 0x3f;
         z = (utf32 >> 12) & 0xf;
@@ -233,55 +234,101 @@ USHORT Utf8FromUtf32(CHAR *dest, ULONG utf32) {
         dest[1] = 0x80 | y;
         dest[2] = 0x80 | x;
         return 3;
-    }
-    else if (utf32 & UTF8MASK2) {
+    } else if (utf32 & UTF8MASK2) {
         x = utf32 & 0x3f;
         y = (utf32 >> 6) & 0x3f;
         dest[0] = 0xc0 | y;
         dest[1] = 0x80 | x;
         return 2;
-    }
-    else {
+    } else {
         x = utf32 & 0x7f;
         dest[0] = x;
         return 1;
     }
 }
 
-#if (_MSC_VER <= 1922)
-typedef struct {
-    USHORT Length;
-    CHAR Buffer[1];
-} UTF8_STRING;
-#endif
+static USHORT
+CountBytesUtf16FromUtf8String(
+    IN  const UTF8_STRING*  utf8
+    )
+{
+    ULONG                   utf32;
+    int                     i = 0;
+    USHORT                  bytecount = 0;
 
-USHORT CountBytesUtf16FromUtf8String(const UTF8_STRING *utf8) {
-    ULONG utf32;
-    int i = 0;
-    USHORT bytecount = 0;
-    while (i<utf8->Length && utf8->Buffer[i] !=0) {
+    while (i < utf8->Length && utf8->Buffer[i] != 0) {
         i += Utf32FromUtf8(&utf32, &utf8->Buffer[i]);
         bytecount += CountUtf16FromUtf32(utf32);
     }
+
     return bytecount * sizeof(WCHAR);
 }
-USHORT CountBytesUtf16FromUtf8(const UCHAR *utf8) {
-    ULONG utf32;
-    int i = 0;
-    USHORT bytecount = 0;
+
+static USHORT
+CountBytesUtf16FromUtf8(
+    IN  const CHAR*     utf8
+    )
+{
+    ULONG               utf32;
+    int                 i = 0;
+    USHORT              bytecount = 0;
+
     while (utf8[i] !=0) {
         i += Utf32FromUtf8(&utf32, &utf8[i]);
         bytecount += CountUtf16FromUtf32(utf32);
     }
+
     return bytecount * sizeof(WCHAR);
 }
-NTSTATUS GetUTF8String(UTF8_STRING** utf8, USHORT bufsize, LPWSTR ustring)
+
+static VOID
+GetUnicodeString(
+    OUT PUNICODE_STRING unicode,
+    IN  USHORT          maxlength,
+    IN  LPWSTR          location
+    )
 {
-    USHORT bytecount = 0;
-    USHORT i;
-    ULONG utf32;
-    i = 0;
-    while (i < (bufsize/sizeof(WCHAR))) {
+    USHORT              i;
+    USHORT              length = 0;
+
+    unicode->MaximumLength = maxlength;
+    unicode->Buffer = location;
+    // No appropriate function to determine the length of a possibly null
+    // terminated string within a fixed sized buffer exists.
+    for (i = 0; (i * sizeof(WCHAR)) < maxlength; i++) {
+        if (location[i] != L'\0')
+            length += sizeof(WCHAR);
+        else
+            break;
+    }
+    unicode->Length = length;
+}
+
+static NTSTATUS
+GetAnsiString(
+    OUT PANSI_STRING    ansi,
+    IN  USHORT          maxlength,
+    IN  LPWSTR          location
+    )
+{
+    UNICODE_STRING      unicode;
+
+    GetUnicodeString(&unicode, maxlength, location);
+    return RtlUnicodeStringToAnsiString(ansi, &unicode, TRUE);
+}
+
+static NTSTATUS
+GetUTF8String(
+    OUT UTF8_STRING**   utf8,
+    IN  USHORT          bufsize,
+    IN  LPWSTR          ustring
+    )
+{
+    ULONG               utf32;
+    USHORT              bytecount = 0;
+    USHORT              i = 0;
+
+    while (i < bufsize / sizeof(WCHAR)) {
         i += Utf32FromUtf16(&utf32, &ustring[i]);
         bytecount += CountUtf8FromUtf32(utf32);
     }
@@ -291,10 +338,9 @@ NTSTATUS GetUTF8String(UTF8_STRING** utf8, USHORT bufsize, LPWSTR ustring)
         return STATUS_INSUFFICIENT_RESOURCES;
 
     (*utf8)->Length = bytecount;
-    (*utf8)->Buffer[bytecount]=0;
 
     bytecount = 0;
-    i=0;
+    i = 0;
     while (i < bufsize/sizeof(WCHAR)) {
         i += Utf32FromUtf16(&utf32, &ustring[i]);
         bytecount += Utf8FromUtf32(&((*utf8)->Buffer[bytecount]), utf32);
@@ -303,30 +349,216 @@ NTSTATUS GetUTF8String(UTF8_STRING** utf8, USHORT bufsize, LPWSTR ustring)
     return STATUS_SUCCESS;
 }
 
-void FreeUTF8String(UTF8_STRING *utf8) {
+static FORCEINLINE VOID
+FreeUTF8String(
+    IN  UTF8_STRING*    utf8
+    )
+{
     WmiFree(utf8);
 }
 
-NTSTATUS GetCountedUTF8String(UTF8_STRING **utf8, UCHAR *location)
+static NTSTATUS
+GetCountedUTF8String(
+    OUT UTF8_STRING**   utf8,
+    IN  PUCHAR          location
+    )
 {
     USHORT bufsize = *(USHORT*)location;
-    LPWSTR ustring = (LPWSTR)(location+sizeof(USHORT));
+    LPWSTR ustring = (LPWSTR)(location + sizeof(USHORT));
     return GetUTF8String(utf8, bufsize, ustring);
-
 }
 
-void GetCountedUnicodeString(UNICODE_STRING *unicode, UCHAR *location)
+static VOID
+GetCountedUnicodeString(
+    OUT PUNICODE_STRING unicode,
+    IN  PUCHAR          location
+    )
 {
     USHORT bufsize = *(USHORT*)location;
-    LPWSTR ustring = (LPWSTR)(location+sizeof(USHORT));
+    LPWSTR ustring = (LPWSTR)(location + sizeof(USHORT));
     GetUnicodeString(unicode, bufsize, ustring);
 }
 
-NTSTATUS GetCountedAnsiString(ANSI_STRING *ansi, UCHAR *location)
+static NTSTATUS
+GetCountedAnsiString(
+    OUT PANSI_STRING    ansi,
+    IN  PUCHAR          location
+    )
 {
     USHORT bufsize = *(USHORT*)location;
-    LPWSTR ustring = (LPWSTR)(location+sizeof(USHORT));
+    LPWSTR ustring = (LPWSTR)(location + sizeof(USHORT));
     return GetAnsiString(ansi, bufsize, ustring);
+}
+
+static FORCEINLINE size_t
+GetCountedUtf8Size(
+    IN  const CHAR* utf8
+    )
+{
+    return sizeof(USHORT) + CountBytesUtf16FromUtf8(utf8);
+}
+
+static FORCEINLINE size_t
+GetCountedUnicodeStringSize(
+    IN  PCUNICODE_STRING    string
+    )
+{
+    return sizeof(USHORT) + string->Length;
+}
+
+static VOID
+WriteCountedUnicodeString(
+    IN  PCUNICODE_STRING    ustr,
+    IN  PUCHAR              location
+    )
+{
+    *((USHORT*)location) = ustr->Length;
+    RtlCopyMemory(location + sizeof(USHORT),
+                  ustr->Buffer,
+                  ustr->Length);
+}
+
+static NTSTATUS
+WriteCountedUTF8String(
+    IN  const CHAR*     string,
+    IN  PUCHAR          location
+    )
+{
+    UNICODE_STRING      unicode;
+    USHORT              i;
+    USHORT              b;
+    USHORT              bytesize;
+    ULONG               utf32;
+    PWCHAR              buffer;
+
+    bytesize = CountBytesUtf16FromUtf8(string);
+    buffer = WmiAllocate(bytesize + sizeof(WCHAR));
+    if (buffer == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    i = 0;
+    b = 0;
+    while (string[i] != 0) {
+        i += Utf32FromUtf8(&utf32, &string[i]);
+        b += Utf16FromUtf32(&buffer[b], utf32);
+    }
+
+    RtlInitUnicodeString(&unicode, buffer);
+    WriteCountedUnicodeString(&unicode, location);
+    WmiFree(buffer);
+
+    return STATUS_SUCCESS;
+}
+
+static VOID
+AllocUnicodeStringBuffer(
+    OUT PUNICODE_STRING string,
+    IN  USHORT          buffersize
+    )
+{
+    string->Length = 0;
+    string->MaximumLength = 0;
+    string->Buffer = WmiAllocate(buffersize);
+    if (string->Buffer == NULL)
+        return;
+
+    string->MaximumLength = buffersize;
+}
+
+static FORCEINLINE VOID
+FreeUnicodeStringBuffer(
+    IN  PUNICODE_STRING string
+    )
+{
+    if (string->Buffer)
+        WmiFree(string->Buffer);
+    string->Length = 0;
+    string->MaximumLength = 0;
+    string->Buffer = NULL;
+}
+
+static NTSTATUS
+CloneUnicodeString(
+    OUT PUNICODE_STRING     dest,
+    IN  PCUNICODE_STRING    src
+    )
+{
+    NTSTATUS                status;
+
+    AllocUnicodeStringBuffer(dest, src->Length);
+    if (dest->Buffer == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    status = RtlUnicodeStringCopy(dest, src);
+    if (!NT_SUCCESS(status))
+        FreeUnicodeStringBuffer(dest);
+
+    return status;
+}
+
+static NTSTATUS
+GetInstanceName(
+    OUT PUNICODE_STRING dest,
+    IN  PXENIFACE_FDO   FdoData,
+    IN  const CHAR*     string
+    )
+{
+    ANSI_STRING         ansi;
+    UNICODE_STRING      unicode;
+    NTSTATUS            status;
+    size_t              destsz;
+
+    RtlInitAnsiString(&ansi, string);
+    status = RtlAnsiStringToUnicodeString(&unicode, &ansi, TRUE);
+    if (!NT_SUCCESS(status))
+        goto fail1;
+
+    destsz = FdoData->SuggestedInstanceName.Length +
+             sizeof(WCHAR) +
+             unicode.Length;
+
+    status = STATUS_INSUFFICIENT_RESOURCES;
+    AllocUnicodeStringBuffer(dest, (USHORT)destsz);
+    if (dest->Buffer == NULL)
+        goto fail2;
+
+    status = RtlUnicodeStringPrintf(dest,
+                                    L"%s\\%s",
+                                    FdoData->SuggestedInstanceName.Buffer,
+                                    unicode.Buffer);
+    if (!NT_SUCCESS(status))
+        goto fail3;
+
+    RtlFreeUnicodeString(&unicode);
+    return STATUS_SUCCESS;
+
+fail3:
+    FreeUnicodeStringBuffer(dest);
+
+fail2:
+    RtlFreeUnicodeString(&unicode);
+
+fail1:
+    return status;
+}
+
+static NTSTATUS
+WriteInstanceName(
+    IN  PXENIFACE_FDO   FdoData,
+    IN  const CHAR*     string,
+    IN  PUCHAR          location
+    )
+{
+    UNICODE_STRING      destination;
+    NTSTATUS            status;
+
+    status = GetInstanceName(&destination, FdoData, string);
+    if (!NT_SUCCESS(status))
+        return status;
+
+    WriteCountedUnicodeString(&destination, location);
+    FreeUnicodeStringBuffer(&destination);
+    return STATUS_SUCCESS;
 }
 
 typedef enum {
@@ -497,186 +729,6 @@ int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
     if (overflow)
         return FALSE;
     return TRUE;
-}
-
-
-NTSTATUS
-WriteCountedUnicodeString(
-    const UNICODE_STRING *ustr,
-    UCHAR *location
-    )
-{
-    *((USHORT*)location) = ustr->Length;
-    RtlCopyMemory(location+sizeof(USHORT), ustr->Buffer,
-                  ustr->Length);
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-WriteCountedUTF8String(const char * string, UCHAR *location) {
-    UNICODE_STRING unicode;
-
-    int i=0;
-    USHORT b;
-    USHORT bytesize=0;
-    ULONG utf32;
-    NTSTATUS status = STATUS_SUCCESS;
-    WCHAR *buffer;
-    bytesize = CountBytesUtf16FromUtf8(string);
-    buffer = WmiAllocate(bytesize + sizeof(WCHAR));
-    if (buffer == NULL)
-        return STATUS_INSUFFICIENT_RESOURCES;
-
-    buffer[bytesize/sizeof(WCHAR)] = 0;
-
-    i=0;
-    b=0;
-    while (string[i] != 0) {
-        i += Utf32FromUtf8(&utf32, &string[i]);
-        b += Utf16FromUtf32(&buffer[b], utf32);
-    }
-    RtlInitUnicodeString(&unicode, buffer);
-    status = WriteCountedUnicodeString(&unicode, location);
-    WmiFree(buffer);
-
-    return status;
-}
-
-NTSTATUS
-WriteCountedString(
-    const char * string,
-    UCHAR * location
-    )
-{
-    ANSI_STRING ansi;
-    UNICODE_STRING unicode;
-    NTSTATUS status;
-
-    RtlInitAnsiString(&ansi, string);
-
-    status = RtlAnsiStringToUnicodeString(&unicode, &ansi, TRUE);
-    if (NT_SUCCESS(status)) {
-
-        status = WriteCountedUnicodeString(&unicode, location);
-        RtlFreeUnicodeString(&unicode);
-    }
-
-    return status;
-}
-
-void AllocUnicodeStringBuffer(UNICODE_STRING *string, USHORT buffersize) {
-    string->Buffer = WmiAllocate(buffersize);
-    string->Length = 0;
-    if (string->Buffer == NULL) {
-        string->MaximumLength=0;
-        return;
-    }
-    string->MaximumLength=(USHORT)buffersize;
-    string->Buffer[0]=0;
-    return;
-}
-void FreeUnicodeStringBuffer(UNICODE_STRING *string) {
-    if (string->Buffer)
-        WmiFree(string->Buffer);
-    string->Length=0;
-    string->MaximumLength=0;
-    string->Buffer = NULL;
-}
-
-NTSTATUS
-CloneUnicodeString(UNICODE_STRING *dest, UNICODE_STRING *src) {
-    NTSTATUS status;
-    AllocUnicodeStringBuffer(dest, src->Length);
-    if (dest->Buffer == NULL)
-        return STATUS_INSUFFICIENT_RESOURCES;
-    status = RtlUnicodeStringCopy(dest, src);
-    if (!NT_SUCCESS(status)) {
-        FreeUnicodeStringBuffer(dest);
-    }
-    return status;
-}
-
-NTSTATUS
-StringToUnicode(UNICODE_STRING *ustr, const char * str) {
-    ANSI_STRING ansi;
-    RtlInitAnsiString(&ansi, str);
-    return RtlAnsiStringToUnicodeString(ustr, &ansi, TRUE);
-}
-
-size_t
-GetCountedSize(const char * string) {
-    ANSI_STRING ansi;
-    RtlInitAnsiString(&ansi, string);
-    return sizeof(USHORT)+sizeof(WCHAR)*ansi.Length;
-}
-
-size_t
-GetCountedUtf8Size(const char *utf8) {
-    return sizeof(USHORT) + CountBytesUtf16FromUtf8(utf8);
-}
-
-size_t
-GetCountedUnicodeStringSize(UNICODE_STRING *string) {
-    return sizeof(USHORT)+string->Length;
-}
-
-size_t
-GetInstanceNameSize(XENIFACE_FDO* FdoData, const char *string) {
-    ANSI_STRING ansi;
-    RtlInitAnsiString(&ansi, string);
-    return sizeof(USHORT) +
-            FdoData->SuggestedInstanceName.Length +
-            sizeof(WCHAR) +
-            sizeof(WCHAR)*ansi.Length;
-
-}
-
-
-NTSTATUS
-GetInstanceName(UNICODE_STRING *dest, XENIFACE_FDO* FdoData, const char *string) {
-    ANSI_STRING ansi;
-    UNICODE_STRING unicode;
-    NTSTATUS status;
-    size_t destsz;
-
-    RtlInitAnsiString(&ansi, string);
-    status = RtlAnsiStringToUnicodeString(&unicode, &ansi, TRUE);
-    if (!NT_SUCCESS(status)) {
-        return status;
-    }
-    destsz = FdoData->SuggestedInstanceName.Length +
-                sizeof(WCHAR) +
-                unicode.Length;
-
-    AllocUnicodeStringBuffer(dest, (USHORT)destsz);
-    if (dest->Buffer == NULL ) {
-        RtlFreeUnicodeString(&unicode);
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-    status = RtlUnicodeStringPrintf(dest, L"%s\\%s",
-                FdoData->SuggestedInstanceName.Buffer,
-                unicode.Buffer);
-    if (!NT_SUCCESS(status)) {
-        RtlFreeUnicodeString(&unicode);
-        FreeUnicodeStringBuffer(dest);
-        return status;
-    }
-    RtlFreeUnicodeString(&unicode);
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-WriteInstanceName(XENIFACE_FDO* FdoData, const char *string, UCHAR *location)
-{
-    UNICODE_STRING destination;
-    NTSTATUS status;
-    status = GetInstanceName(&destination, FdoData, string);
-    if (!NT_SUCCESS(status))
-        return status;
-    status = WriteCountedUnicodeString(&destination, location);
-    FreeUnicodeStringBuffer(&destination);
-    return status;
 }
 
 #define MAX_WATCH_COUNT (MAXIMUM_WAIT_OBJECTS -1)
