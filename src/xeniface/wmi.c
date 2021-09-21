@@ -53,13 +53,6 @@
 #define UTF8MASK3 0x1FF800
 #define UTF8MASK4 0x1F0000
 
-#if (_MSC_VER <= 1922)
-typedef struct {
-    USHORT Length;
-    CHAR Buffer[1];
-} UTF8_STRING;
-#endif
-
 static FORCEINLINE PVOID
 WmiAllocate(
     IN  ULONG   Length
@@ -249,7 +242,7 @@ Utf8FromUtf32(
 
 static USHORT
 CountBytesUtf16FromUtf8String(
-    IN  const UTF8_STRING*  utf8
+    IN  PCOEM_STRING        utf8
     )
 {
     ULONG                   utf32;
@@ -319,7 +312,7 @@ GetAnsiString(
 
 static NTSTATUS
 GetUTF8String(
-    OUT UTF8_STRING**   utf8,
+    OUT POEM_STRING     utf8,
     IN  USHORT          bufsize,
     IN  LPWSTR          ustring
     )
@@ -333,17 +326,20 @@ GetUTF8String(
         bytecount += CountUtf8FromUtf32(utf32);
     }
 
-    *utf8 = WmiAllocate(sizeof(UTF8_STRING) + bytecount);
-    if ((*utf8) == NULL)
+    utf8->Length = 0;
+    utf8->MaximumLength = 0;
+    utf8->Buffer = WmiAllocate(bytecount + sizeof(WCHAR));
+    if (utf8->Buffer == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
 
-    (*utf8)->Length = bytecount;
+    utf8->Length = bytecount;
+    utf8->MaximumLength = bytecount + sizeof(WCHAR);
 
     bytecount = 0;
     i = 0;
-    while (i < bufsize/sizeof(WCHAR)) {
+    while (i < bufsize / sizeof(WCHAR)) {
         i += Utf32FromUtf16(&utf32, &ustring[i]);
-        bytecount += Utf8FromUtf32(&((*utf8)->Buffer[bytecount]), utf32);
+        bytecount += Utf8FromUtf32(&(utf8->Buffer[bytecount]), utf32);
     }
 
     return STATUS_SUCCESS;
@@ -351,15 +347,19 @@ GetUTF8String(
 
 static FORCEINLINE VOID
 FreeUTF8String(
-    IN  UTF8_STRING*    utf8
+    IN  POEM_STRING utf8
     )
 {
-    WmiFree(utf8);
+    if (utf8->Buffer)
+        WmiFree(utf8->Buffer);
+    utf8->Buffer = NULL;
+    utf8->Length = 0;
+    utf8->MaximumLength = 0;
 }
 
 static NTSTATUS
 GetCountedUTF8String(
-    OUT UTF8_STRING**   utf8,
+    OUT POEM_STRING     utf8,
     IN  PUCHAR          location
     )
 {
@@ -1523,7 +1523,7 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
     ULONG RequiredSize;
     NTSTATUS status;
     UCHAR* upathname;
-    UTF8_STRING *pathname;
+    OEM_STRING pathname;
     XenStoreSession *session;
     char *tmpbuffer;
 
@@ -1541,12 +1541,12 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
         return status;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmpbuffer = WmiAllocate(pathname->Length + 1);
+    tmpbuffer = WmiAllocate(pathname.Length + 1);
     if (!tmpbuffer) {
         goto fail1;
     }
 
-    RtlCopyBytes(tmpbuffer,pathname->Buffer, pathname->Length);
+    RtlCopyBytes(tmpbuffer, pathname.Buffer, pathname.Length);
 
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
@@ -1560,7 +1560,7 @@ fail2:
     WmiFree(tmpbuffer);
 
 fail1:
-    FreeUTF8String(pathname);
+    FreeUTF8String(&pathname);
     return status;
 
 }
@@ -1696,8 +1696,8 @@ SessionExecuteSetValue(UCHAR *InBuffer,
     NTSTATUS status;
     UCHAR* upathname;
     UCHAR* uvalue;
-    UTF8_STRING* pathname;
-    UTF8_STRING* value;
+    OEM_STRING pathname;
+    OEM_STRING value;
     XenStoreSession *session;
     char *tmppath;
     char* tmpvalue;
@@ -1716,23 +1716,24 @@ SessionExecuteSetValue(UCHAR *InBuffer,
         return status;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = WmiAllocate(pathname->Length + 1);
+    tmppath = WmiAllocate(pathname.Length + 1);
     if (!tmppath) {
         goto fail1;
     }
 
-    RtlCopyBytes(tmppath,pathname->Buffer, pathname->Length);
+    RtlCopyBytes(tmppath, pathname.Buffer, pathname.Length);
+
     status = GetCountedUTF8String(&value, uvalue);
     if (!NT_SUCCESS(status)){
         goto fail2;
     }
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmpvalue = WmiAllocate(value->Length + 1);
+    tmpvalue = WmiAllocate(value.Length + 1);
     if (!tmpvalue) {
         goto fail3;
     }
 
-    RtlCopyBytes(tmpvalue,value->Buffer, value->Length);
+    RtlCopyBytes(tmpvalue, value.Buffer, value.Length);
 
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
@@ -1747,13 +1748,13 @@ fail4:
     WmiFree(tmpvalue);
 
 fail3:
-    FreeUTF8String(value);
+    FreeUTF8String(&value);
 
 fail2:
     WmiFree(tmppath);
 
 fail1:
-    FreeUTF8String(pathname);
+    FreeUTF8String(&pathname);
 
     *byteswritten = 0;
     return status;
@@ -1770,7 +1771,7 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     ULONG RequiredSize;
     UCHAR *uloc;
     NTSTATUS status;
-    UTF8_STRING* path;
+    OEM_STRING path;
     PCHAR listresults;
     size_t stringarraysize;
     UCHAR *valuepos;
@@ -1792,12 +1793,12 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     }
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = WmiAllocate(path->Length + 1);
+    tmppath = WmiAllocate(path.Length + 1);
     if (!tmppath) {
         goto fail1;
     }
 
-    RtlCopyBytes(tmppath,path->Buffer, path->Length);
+    RtlCopyBytes(tmppath, path.Buffer, path.Length);
 
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
@@ -1812,16 +1813,15 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     }
 
     stringarraysize = 0;
-    if ((listresults != NULL ) && (listresults[0]!=0)) {
-        stringarraysize+=CountBytesUtf16FromUtf8String(path);
-        if ((path->Length!=1)||(path->Buffer[0]!='/')) {
+    if ((listresults != NULL) && (listresults[0] != 0)) {
+        stringarraysize += CountBytesUtf16FromUtf8String(&path);
+        if ((path.Length != 1) || (path.Buffer[0] != '/')) {
             // If the path isn't '/', we need to insert a
             // '/' between pathname and nodename;
-            stringarraysize+=sizeof(WCHAR);
+            stringarraysize += sizeof(WCHAR);
         }
-        stringarraysize+=GetCountedUtf8Size(listresults);
-    }
-    else {
+        stringarraysize += GetCountedUtf8Size(listresults);
+    } else {
         stringarraysize+=GetCountedUtf8Size("");
     }
 
@@ -1835,12 +1835,10 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     status = STATUS_SUCCESS;
     if ((listresults != NULL) && (listresults[0] != 0)) {
         PSTR fullpath;
-        if ((path->Length==1) && (path->Buffer[0]=='/')) {
+        if ((path.Length == 1) && (path.Buffer[0] == '/')) {
             fullpath = Xmasprintf("/%s", listresults);
-        }
-        else {
-            fullpath = Xmasprintf("%s/%s",
-                                    path->Buffer, listresults);
+        } else {
+            fullpath = Xmasprintf("%s/%s", path.Buffer, listresults);
         }
 
         if (fullpath == NULL) {
@@ -1866,7 +1864,7 @@ fail2:
     WmiFree(tmppath);
 
 fail1:
-    FreeUTF8String(path);
+    FreeUTF8String(&path);
 
     return status;
 
@@ -1883,7 +1881,7 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     ULONG RequiredSize;
     UCHAR *uloc;
     NTSTATUS status;
-    UTF8_STRING* path;
+    OEM_STRING path;
     ANSI_STRING checkleaf;
     PCHAR listresults;
     PCHAR nextresult;
@@ -1910,13 +1908,13 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     }
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = WmiAllocate(path->Length + 1);
+    tmppath = WmiAllocate(path.Length + 1);
 
     if (!tmppath) {
         goto fail1;
     }
 
-    tmpleaf = WmiAllocate(path->Length + 1);
+    tmpleaf = WmiAllocate(path.Length + 1);
     if (!tmpleaf) {
         goto fail2;
     }
@@ -1928,28 +1926,22 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     }
 
     leafoffset = 0;
-    if (path->Length>1) {
-        leafoffset = path->Length;
-        while ((leafoffset!=0) && (path->Buffer[leafoffset] != '/'))
+    if (path.Length > 1) {
+        leafoffset = path.Length;
+        while ((leafoffset != 0) && (path.Buffer[leafoffset] != '/'))
             leafoffset--;
     }
-    if (leafoffset != 0){
+    if (leafoffset != 0) {
 #pragma warning(suppress:6386) // buffer overrun
-        RtlCopyBytes(tmppath,path->Buffer, leafoffset);
-        RtlCopyBytes(tmpleaf, path->Buffer+leafoffset+1, path->Length-leafoffset-1);
-    }
-    else {
-
-        if (path->Buffer[0] == '/') {
-            if (path->Length>1)
-                RtlCopyBytes(tmpleaf, path->Buffer+1, path->Length-1);
-            tmppath[0]='/';
-        }
-        else {
+        RtlCopyBytes(tmppath, path.Buffer, leafoffset);
+        RtlCopyBytes(tmpleaf, path.Buffer + leafoffset + 1, path.Length - leafoffset - 1);
+    } else if (path.Buffer[0] == '/') {
+        if (path.Length>1)
+            RtlCopyBytes(tmpleaf, path.Buffer + 1, path.Length - 1);
+        tmppath[0] = '/';
+    } else {
 #pragma warning(suppress:6386) // buffer overrun
-            RtlCopyBytes(tmpleaf, path->Buffer, path->Length);
-        }
-
+        RtlCopyBytes(tmpleaf, path.Buffer, path.Length);
     }
 
     status = XENBUS_STORE(Directory,&fdoData->StoreInterface, session->transaction, NULL, tmppath, &listresults);
@@ -1986,17 +1978,16 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
         attemptstring = nextresult;
     }
 
-    if (attemptstring!=NULL) {
-        stringarraysize+=CountBytesUtf16FromUtf8(tmppath); //sizeof(WCHAR)*leafoffset;
-        if ((path->Length!=1)||(path->Buffer[0]!='/')) {
+    if (attemptstring != NULL) {
+        stringarraysize += CountBytesUtf16FromUtf8(tmppath); //sizeof(WCHAR)*leafoffset;
+        if ((path.Length != 1) || (path.Buffer[0] != '/')) {
             // If the path isn't '/', we need to insert a
             // '/' between pathname and nodename;
-            stringarraysize+=sizeof(WCHAR);
+            stringarraysize += sizeof(WCHAR);
         }
-        stringarraysize+=GetCountedUtf8Size(attemptstring);
-    }
-    else {
-        stringarraysize+=GetCountedUtf8Size("");
+        stringarraysize += GetCountedUtf8Size(attemptstring);
+    } else {
+        stringarraysize += GetCountedUtf8Size("");
     }
 
     status = STATUS_BUFFER_TOO_SMALL;
@@ -2009,12 +2000,10 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     status = STATUS_SUCCESS;
     if (attemptstring != NULL) {
         PSTR fullpath;
-        if ((leafoffset==1) && (path->Buffer[0]=='/')) {
+        if ((leafoffset == 1) && (path.Buffer[0] == '/')) {
             fullpath = Xmasprintf("/%s", attemptstring);
-        }
-        else {
-            fullpath = Xmasprintf("%s/%s",
-                                    tmppath, attemptstring);
+        } else {
+            fullpath = Xmasprintf("%s/%s", tmppath, attemptstring);
         }
 
         if (fullpath == NULL) {
@@ -2042,7 +2031,7 @@ fail2:
     WmiFree(tmppath);
 
 fail1:
-    FreeUTF8String(path);
+    FreeUTF8String(&path);
     *byteswritten = RequiredSize;
     return status;
 
@@ -2060,7 +2049,7 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
     ULONG RequiredSize;
     UCHAR *uloc;
     NTSTATUS status;
-    UTF8_STRING* path;
+    OEM_STRING path;
     PCHAR listresults;
     PCHAR nextresults;
     ULONG *noofnodes;
@@ -2084,12 +2073,12 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
     }
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = WmiAllocate(path->Length + 1);
+    tmppath = WmiAllocate(path.Length + 1);
     if (!tmppath) {
         goto fail1;
     }
 
-    RtlCopyBytes(tmppath,path->Buffer, path->Length);
+    RtlCopyBytes(tmppath, path.Buffer, path.Length);
 
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
@@ -2105,16 +2094,18 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
 
     stringarraysize = 0;
 
-    nextresults=listresults;
+    nextresults = listresults;
     while (*nextresults != 0) {
-        stringarraysize+=sizeof(WCHAR)*path->Length;
-        if ((path->Length!=1)||(path->Buffer[0]!='/')) {
+        stringarraysize += sizeof(WCHAR) * path.Length;
+        if ((path.Length != 1) || (path.Buffer[0] != '/')) {
             // If the path isn't '/', we need to insert a
             // '/' between pathname and nodename;
-            stringarraysize+=sizeof(WCHAR);
+            stringarraysize += sizeof(WCHAR);
         }
-        stringarraysize+=GetCountedUtf8Size(nextresults);
-        for (;*nextresults!=0;nextresults++);
+        stringarraysize += GetCountedUtf8Size(nextresults);
+
+        while (*nextresults != 0)
+            nextresults++;
         nextresults++;
     }
 
@@ -2128,15 +2119,13 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
 
     status = STATUS_SUCCESS;
     nextresults = listresults;
-    i=0;
-    while(*nextresults!=0) {
+    i = 0;
+    while (*nextresults != 0) {
         PSTR fullpath;
-        if ((path->Length==1) && (path->Buffer[0]=='/')) {
+        if ((path.Length == 1) && (path.Buffer[0] == '/')) {
             fullpath = Xmasprintf("/%s", nextresults);
-        }
-        else {
-            fullpath = Xmasprintf("%s/%s",
-                                    path->Buffer, nextresults);
+        } else {
+            fullpath = Xmasprintf("%s/%s", path.Buffer, nextresults);
         }
 
         if (fullpath == NULL) {
@@ -2145,13 +2134,13 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
         }
 
         WriteCountedUTF8String(fullpath, valuepos);
-        valuepos+=GetCountedUtf8Size(fullpath);
+        valuepos += GetCountedUtf8Size(fullpath);
         WmiFree(fullpath);
-        for (;*nextresults!=0;nextresults++);
+
+        while (*nextresults != 0)
+            nextresults++;
         nextresults++;
         i++;
-
-
     }
     *noofnodes = i;
 
@@ -2163,7 +2152,7 @@ fail2:
     WmiFree(tmppath);
 
 fail1:
-    FreeUTF8String(path);
+    FreeUTF8String(&path);
     *byteswritten = RequiredSize;
     return status;
 }
@@ -2329,7 +2318,7 @@ SessionExecuteGetValue(UCHAR *InBuffer,
                         UNICODE_STRING *instance,
                         OUT ULONG_PTR *byteswritten) {
     NTSTATUS status;
-    UTF8_STRING* path;
+    OEM_STRING path;
     UCHAR *uloc;
     char *value;
     UCHAR *valuepos;
@@ -2352,12 +2341,12 @@ SessionExecuteGetValue(UCHAR *InBuffer,
         return status;;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = WmiAllocate(path->Length + 1);
+    tmppath = WmiAllocate(path.Length + 1);
     if (!tmppath) {
         goto fail1;
     }
 
-    RtlCopyBytes(tmppath,path->Buffer, path->Length);
+    RtlCopyBytes(tmppath, path.Buffer, path.Length);
 
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     if ((session = FindSessionByInstanceAndLock(fdoData, instance)) ==
@@ -2387,7 +2376,7 @@ fail2:
     WmiFree(tmppath);
 
 fail1:
-    FreeUTF8String(path);
+    FreeUTF8String(&path);
     return status;
 }
 NTSTATUS
