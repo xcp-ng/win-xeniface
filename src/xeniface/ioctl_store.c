@@ -218,6 +218,7 @@ IoctlStoreDirectory(
     PCHAR       Value;
     ULONG       Length;
     ULONG       Count;
+    BOOLEAN     SquashError = FALSE;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0)
@@ -228,14 +229,17 @@ IoctlStoreDirectory(
         goto fail2;
 
     status = XENBUS_STORE(Directory, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(status)) {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)
+            SquashError = TRUE;
         goto fail3;
+    }
 
     Length = __MultiSzLen(Value, &Count) + 1;
 
     status = STATUS_BUFFER_OVERFLOW;
     if (OutLen == 0) {
-        Trace("(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
+        Trace("(\"%s\")=(%d bytes)(%d items)\n", Buffer, Length, Count);
         goto done;
     }
 
@@ -243,7 +247,7 @@ IoctlStoreDirectory(
     if (OutLen < Length)
         goto fail4;
 
-    Info("(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
+    Trace("(\"%s\")=(%d bytes)(%d items)\n", Buffer, Length, Count);
 #if DBG
     __DisplayMultiSz(Value);
 #endif
@@ -262,11 +266,14 @@ fail4:
     Error("Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
     XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
-    Error("Fail3 (\"%s\")\n", Buffer);
+    if (!SquashError)
+        Error("Fail3 (\"%s\")\n", Buffer);
 fail2:
-    Error("Fail2\n");
+    if (!SquashError)
+        Error("Fail2\n");
 fail1:
-    Error("Fail1 (%08x)\n", status);
+    if (!SquashError)
+        Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -310,7 +317,7 @@ PXENBUS_STORE_PERMISSION
 __ConvertPermissions(
     __in  ULONG                       NumberPermissions,
     __in  PXENIFACE_STORE_PERMISSION  XenifacePermissions
-)
+    )
 {
     PXENBUS_STORE_PERMISSION          XenbusPermissions;
     ULONG                             Index;
@@ -411,7 +418,9 @@ IoctlStoreSetPermissions(
 
     for (Index = 0; Index < In->NumberPermissions; Index++) {
         Trace("> %lu: Domain %d, Mask 0x%x\n",
-                           Index, Permissions[Index].Domain, Permissions[Index].Mask);
+              Index,
+              Permissions[Index].Domain,
+              Permissions[Index].Mask);
     }
 
     status = XENBUS_STORE(PermissionsSet,

@@ -130,7 +130,7 @@ ThreadCreate(
 
     (*Thread) = __ThreadAllocate(sizeof (XENIFACE_THREAD));
 
-    Warning("Create thread %p %p\n", Function, Thread);
+    Trace("Create thread %p %p\n", Function, Thread);
 
     status = STATUS_NO_MEMORY;
     if (*Thread == NULL)
