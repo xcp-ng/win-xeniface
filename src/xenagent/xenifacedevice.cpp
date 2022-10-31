@@ -104,7 +104,7 @@ bool CXenIfaceDevice::StoreRemove(const std::string& path)
 bool CXenIfaceDevice::StoreAddWatch(const std::string& path, HANDLE evt, void** ctxt)
 {
     XENIFACE_STORE_ADD_WATCH_IN  in  = { (PCHAR)path.c_str(), (DWORD)path.length() + 1, evt };
-    XENIFACE_STORE_ADD_WATCH_OUT out = { NULL };
+    XENIFACE_STORE_ADD_WATCH_OUT out = { };
     if (!Ioctl(IOCTL_XENIFACE_STORE_ADD_WATCH,
                &in, (DWORD)sizeof(in),
                &out, (DWORD)sizeof(out)))
@@ -125,7 +125,7 @@ bool CXenIfaceDevice::StoreRemoveWatch(void* ctxt)
 bool CXenIfaceDevice::SuspendRegister(HANDLE evt, void** ctxt)
 {
     XENIFACE_SUSPEND_REGISTER_IN  in  = { evt };
-    XENIFACE_SUSPEND_REGISTER_OUT out = { NULL };
+    XENIFACE_SUSPEND_REGISTER_OUT out = { };
     if (!Ioctl(IOCTL_XENIFACE_SUSPEND_REGISTER,
                &in, (DWORD)sizeof(in),
                &out, (DWORD)sizeof(out)))
@@ -156,7 +156,7 @@ bool CXenIfaceDevice::SuspendGetCount(DWORD *count)
 // sharedinfo interface
 bool CXenIfaceDevice::SharedInfoGetTime(FILETIME* time, bool* local)
 {
-    XENIFACE_SHAREDINFO_GET_TIME_OUT out = { NULL };
+    XENIFACE_SHAREDINFO_GET_TIME_OUT out = { };
     if (!Ioctl(IOCTL_XENIFACE_SHAREDINFO_GET_TIME,
                NULL, 0,
                &out, sizeof(out)))
