@@ -121,4 +121,3 @@ DiskId1 = "@PRODUCT_NAME@ Interface Package"
 XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME@ Interface"
 XENAGENT_FLAGS= 0x00000800
 xenagent.SVCDESC= "@PRODUCT_NAME@ Agent"
-

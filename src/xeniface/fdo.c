@@ -2825,5 +2825,3 @@ FdoDestroy(
 
     IoDeleteDevice(FunctionDeviceObject);
 }
-
-

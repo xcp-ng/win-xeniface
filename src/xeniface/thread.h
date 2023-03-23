@@ -73,4 +73,3 @@ ThreadJoin(
     );
 
 #endif  // _XENIFACE_THREAD_H
-
