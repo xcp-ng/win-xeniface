@@ -42,7 +42,7 @@
 #define NTSTRSAFE_LIB
 #include <ntstrsafe.h>
 
-#pragma warning(disable:4100 4057)
+#pragma warning(disable: 4057)
 
 #include <wmilib.h>
 #include <ntifs.h>

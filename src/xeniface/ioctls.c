@@ -117,6 +117,8 @@ IoctlLog(
     NTSTATUS    status;
 	PCHAR		ptr;
 
+    UNREFERENCED_PARAMETER(Fdo);
+
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0 || InLen > XENIFACE_LOG_MAX_LENGTH || OutLen != 0)
         goto fail1;

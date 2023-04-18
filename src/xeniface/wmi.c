@@ -1398,6 +1398,9 @@ SessionExecuteRemoveValue(
     PXENSTORE_SESSION   session;
     char*               tmpbuffer;
 
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
+
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
@@ -1465,6 +1468,10 @@ SessionExecuteRemoveWatch(
     UNICODE_STRING      unicpath_notbacked;
     PXENSTORE_SESSION   session;
 
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
+
+
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
@@ -1514,6 +1521,10 @@ SessionExecuteSetWatch(
     PXENSTORE_SESSION   Session;
     UNICODE_STRING      unicpath_notbacked;
     UNICODE_STRING      unicpath_backed;
+
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
+
 
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1567,6 +1578,12 @@ SessionExecuteEndSession(
     PXENSTORE_SESSION   Session;
     NTSTATUS            status;
 
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferSize);
+
+
     *BytesWritten = 0;
     status = STATUS_WMI_INSTANCE_NOT_FOUND;
     Session = FindSessionByInstanceAndLock(Fdo, instance);
@@ -1602,6 +1619,9 @@ SessionExecuteSetValue(
     PXENSTORE_SESSION       session;
     char*                   tmppath;
     char*                   tmpvalue;
+
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
 
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1690,6 +1710,8 @@ SessionExecuteGetFirstChild(
     UCHAR*                  valuepos;
     PXENSTORE_SESSION       session;
     char*                   tmppath;
+
+    UNREFERENCED_PARAMETER(OutBuffer);
 
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1809,6 +1831,8 @@ SessionExecuteGetNextSibling(
     char*                   tmpleaf;
     int                     leafoffset;
     char*                   attemptstring;
+
+    UNREFERENCED_PARAMETER(OutBuffer);
 
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1973,6 +1997,8 @@ SessionExecuteGetChildren(
     PXENSTORE_SESSION       session;
     char*                   tmppath;
 
+    UNREFERENCED_PARAMETER(OutBuffer);
+
     status = STATUS_INVALID_DEVICE_REQUEST;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
                          WMI_STRING, &uloc,
@@ -2091,6 +2117,12 @@ SessionExecuteLog(
     NTSTATUS            status;
     ANSI_STRING         message;
 
+
+    UNREFERENCED_PARAMETER(Fdo);
+    UNREFERENCED_PARAMETER(instance);
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
+
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
     if (!AccessWmiBuffer(InBuffer, TRUE, &RequiredSize, InBufferSize,
@@ -2126,6 +2158,11 @@ SessionExecuteStartTransaction(
 {
     NTSTATUS            status;
     PXENSTORE_SESSION   session;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferSize);
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
 
     *BytesWritten = 0;
     status = STATUS_INSUFFICIENT_RESOURCES;
@@ -2167,6 +2204,12 @@ SessionExecuteCommitTransaction(
 {
     NTSTATUS            status;
     PXENSTORE_SESSION   session;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferSize);
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
+
 
     *BytesWritten = 0;
     status = STATUS_INSUFFICIENT_RESOURCES;
@@ -2213,6 +2256,12 @@ SessionExecuteAbortTransaction(
 {
     NTSTATUS            status;
     PXENSTORE_SESSION   session;
+
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferSize);
+    UNREFERENCED_PARAMETER(OutBuffer);
+    UNREFERENCED_PARAMETER(OutBufferSize);
 
     *BytesWritten = 0;
     status = STATUS_INSUFFICIENT_RESOURCES;

@@ -424,6 +424,8 @@ IoctlGnttabRevokeForeignAccess(
     PIRP PendingIrp;
     PXENIFACE_CONTEXT_ID ContextId;
 
+    UNREFERENCED_PARAMETER(OutLen);
+
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN))
         goto fail1;

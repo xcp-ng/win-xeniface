@@ -141,6 +141,8 @@ SuspendFreeEvent(
     Trace("Context %p, FO %p\n",
                        Context, Context->FileObject);
 
+    UNREFERENCED_PARAMETER(Fdo);
+
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_SUSPEND_CONTEXT));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
