@@ -5,3 +5,15 @@
 
 # Output
 /xeniface
+*.tlog
+src/xeniface/wmi_generated.h
+src/xeniface/wmi.mof
+include/version.h
+vs2019/version/.revision
+vs2019/Windows10Release/
+vs2019/x64/Windows10Release/
+vs2019/xeniface/Windows10Release/
+vs2019/xenagent/x64/
+vs2019/xencontrol/x64/
+vs2019/xeniface_coinst/x64/
+vs2019/xeniface.inf
