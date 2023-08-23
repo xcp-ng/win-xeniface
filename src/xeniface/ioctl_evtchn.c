@@ -170,7 +170,7 @@ IoctlEvtchnBindUnbound(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ExAllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
+    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 
@@ -264,7 +264,7 @@ IoctlEvtchnBindInterdomain(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ExAllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
+    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 

@@ -154,7 +154,7 @@ DriverEntry(
 
     DriverParameters.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
     DriverParameters.RegistryPath.Length = RegistryPath->Length;
-    DriverParameters.RegistryPath.Buffer = ExAllocatePoolWithTag (PagedPool,
+    DriverParameters.RegistryPath.Buffer = ALLOCATE_POOL (PagedPool,
                                                 DriverParameters.RegistryPath.MaximumLength,
                                                 XENIFACE_POOL_TAG);
     if (NULL == DriverParameters.RegistryPath.Buffer) {

@@ -91,7 +91,7 @@ IoctlSuspendRegister(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ExAllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_SUSPEND_CONTEXT), XENIFACE_POOL_TAG);
+    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_SUSPEND_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 

@@ -317,7 +317,7 @@ __ConvertPermissions(
     if (NumberPermissions > 255)
         goto fail1;
 
-    XenbusPermissions = ExAllocatePoolWithTag(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
+    XenbusPermissions = ALLOCATE_POOL(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
     if (XenbusPermissions == NULL)
         goto fail2;
 
@@ -515,7 +515,7 @@ IoctlStoreAddWatch(
     Path[In->PathLength - 1] = 0;
 
     status = STATUS_NO_MEMORY;
-    Context = ExAllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
+    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail4;
 

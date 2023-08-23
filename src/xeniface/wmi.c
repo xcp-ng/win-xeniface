@@ -264,7 +264,7 @@ NTSTATUS GetUTF8String(UTF8_STRING** utf8, USHORT bufsize, LPWSTR ustring)
         bytecount += CountUtf8FromUtf32(utf32);
     }
 
-    *utf8 = ExAllocatePoolWithTag(NonPagedPool, sizeof(UTF8_STRING)+bytecount, 'XIU8');
+    *utf8 = ALLOCATE_POOL(NonPagedPool, sizeof(UTF8_STRING)+bytecount, 'XIU8');
     if ((*utf8) == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -502,7 +502,7 @@ WriteCountedUTF8String(const char * string, UCHAR *location) {
     NTSTATUS status = STATUS_SUCCESS;
     WCHAR *buffer;
     bytesize = CountBytesUtf16FromUtf8(string);
-    buffer = ExAllocatePoolWithTag(NonPagedPool, bytesize+sizeof(WCHAR), 'XSUc');
+    buffer = ALLOCATE_POOL(NonPagedPool, bytesize+sizeof(WCHAR), 'XSUc');
 
     if (buffer == NULL) {
         return STATUS_INSUFFICIENT_RESOURCES;
@@ -545,7 +545,7 @@ WriteCountedString(
 }
 
 void AllocUnicodeStringBuffer(UNICODE_STRING *string, USHORT buffersize) {
-    string->Buffer = ExAllocatePoolWithTag(NonPagedPool, buffersize, 'XIUC');
+    string->Buffer = ALLOCATE_POOL(NonPagedPool, buffersize, 'XIUC');
     string->Length = 0;
     if (string->Buffer == NULL) {
         string->MaximumLength=0;
@@ -774,7 +774,7 @@ void FireWatch(XenStoreWatch* watch) {
                 &sesbuf,
             WMI_DONE);
 
-    eventdata = ExAllocatePoolWithTag(NonPagedPool, RequiredSize,'XIEV');
+    eventdata = ALLOCATE_POOL(NonPagedPool, RequiredSize,'XIEV');
     if (eventdata!=NULL) {
         AccessWmiBuffer(eventdata, FALSE, &RequiredSize, RequiredSize,
             WMI_STRING, GetCountedUnicodeStringSize(&watch->path),
@@ -806,7 +806,7 @@ StartWatch(XENIFACE_FDO *fdoData, XenStoreWatch *watch)
     if (!NT_SUCCESS(status)) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-    tmppath = ExAllocatePoolWithTag(NonPagedPool, ansipath.Length+1, 'XenP');
+    tmppath = ALLOCATE_POOL(NonPagedPool, ansipath.Length+1, 'XenP');
     if (!tmppath) {
         RtlFreeAnsiString(&ansipath);
         return STATUS_INSUFFICIENT_RESOURCES;
@@ -925,7 +925,7 @@ SessionAddWatchLocked(XenStoreSession *session,
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    *watch = ExAllocatePoolWithTag(NonPagedPool, sizeof(XenStoreWatch), 'XenP');
+    *watch = ALLOCATE_POOL(NonPagedPool, sizeof(XenStoreWatch), 'XenP');
     if (*watch == NULL) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -1050,7 +1050,7 @@ PSTR Xmasprintf(const char *fmt, ...) {
     va_start(argv, fmt);
     do{
         basesize = basesize * 2;
-        out =  ExAllocatePoolWithTag(NonPagedPool, basesize, 'XenP');
+        out =  ALLOCATE_POOL(NonPagedPool, basesize, 'XenP');
         if (out == NULL)
             return NULL;
 
@@ -1059,7 +1059,7 @@ PSTR Xmasprintf(const char *fmt, ...) {
         ExFreePool(out);
     }while (status != STATUS_SUCCESS);
 
-    out = ExAllocatePoolWithTag(NonPagedPool, basesize-unused +1, 'XenP');
+    out = ALLOCATE_POOL(NonPagedPool, basesize-unused +1, 'XenP');
     if (out == NULL)
         return NULL;
 
@@ -1083,7 +1083,7 @@ CreateNewSession(XENIFACE_FDO *fdoData,
     if (fdoData->Sessions == MAX_SESSIONS) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-    session = ExAllocatePoolWithTag(NonPagedPool, sizeof(XenStoreSession), 'XenP');
+    session = ALLOCATE_POOL(NonPagedPool, sizeof(XenStoreSession), 'XenP');
     if (session == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
     RtlZeroMemory(session, sizeof(XenStoreSession));
@@ -1470,7 +1470,7 @@ SessionExecuteRemoveValue(UCHAR *InBuffer,
         return status;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmpbuffer = ExAllocatePoolWithTag(NonPagedPool, pathname->Length+1, 'XenP');
+    tmpbuffer = ALLOCATE_POOL(NonPagedPool, pathname->Length+1, 'XenP');
     if (!tmpbuffer) {
         goto fail1;
     }
@@ -1645,7 +1645,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
         return status;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = ExAllocatePoolWithTag(NonPagedPool, pathname->Length+1, 'XenP');
+    tmppath = ALLOCATE_POOL(NonPagedPool, pathname->Length+1, 'XenP');
     if (!tmppath) {
         goto fail1;
     }
@@ -1656,7 +1656,7 @@ SessionExecuteSetValue(UCHAR *InBuffer,
         goto fail2;
     }
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmpvalue = ExAllocatePoolWithTag(NonPagedPool,value->Length+1,'XenP');
+    tmpvalue = ALLOCATE_POOL(NonPagedPool,value->Length+1,'XenP');
     if (!tmpvalue) {
         goto fail3;
     }
@@ -1721,7 +1721,7 @@ SessionExecuteGetFirstChild(UCHAR *InBuffer,
     }
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = ExAllocatePoolWithTag(NonPagedPool,path->Length+1, 'XenP');
+    tmppath = ALLOCATE_POOL(NonPagedPool,path->Length+1, 'XenP');
     if (!tmppath) {
         goto fail1;
     }
@@ -1839,13 +1839,13 @@ SessionExecuteGetNextSibling(UCHAR *InBuffer,
     }
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = ExAllocatePoolWithTag(NonPagedPool,path->Length+1,'XenP');
+    tmppath = ALLOCATE_POOL(NonPagedPool,path->Length+1,'XenP');
 
     if (!tmppath) {
         goto fail1;
     }
     RtlZeroMemory(tmppath, path->Length+1);
-    tmpleaf = ExAllocatePoolWithTag(NonPagedPool,path->Length+1,'XenP');
+    tmpleaf = ALLOCATE_POOL(NonPagedPool,path->Length+1,'XenP');
     if (!tmpleaf) {
         goto fail2;
     }
@@ -2014,7 +2014,7 @@ SessionExecuteGetChildren(UCHAR *InBuffer,
     }
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = ExAllocatePoolWithTag(NonPagedPool,path->Length+1,'XenP');
+    tmppath = ALLOCATE_POOL(NonPagedPool,path->Length+1,'XenP');
     if (!tmppath) {
         goto fail1;
     }
@@ -2282,7 +2282,7 @@ SessionExecuteGetValue(UCHAR *InBuffer,
         return status;;
 
     status = STATUS_INSUFFICIENT_RESOURCES;
-    tmppath = ExAllocatePoolWithTag(NonPagedPool,path->Length+1,'XenP');
+    tmppath = ALLOCATE_POOL(NonPagedPool,path->Length+1,'XenP');
     if (!tmppath) {
         goto fail1;
     }
