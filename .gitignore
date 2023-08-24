@@ -17,3 +17,5 @@ vs2019/xenagent/x64/
 vs2019/xencontrol/x64/
 vs2019/xeniface_coinst/x64/
 vs2019/xeniface.inf
+vs2019/.vs/xeniface/v16/.suo
+*.db
