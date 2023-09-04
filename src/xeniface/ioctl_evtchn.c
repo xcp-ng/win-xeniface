@@ -35,6 +35,7 @@
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
 #include "log.h"
+#include "util.h"
 
 _Function_class_(KDEFERRED_ROUTINE)
 _IRQL_requires_(DISPATCH_LEVEL)

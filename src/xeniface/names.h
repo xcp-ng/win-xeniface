@@ -124,6 +124,7 @@ PowerActionName(
     _POWER_ACTION_NAME(ShutdownReset);
     _POWER_ACTION_NAME(ShutdownOff);
     _POWER_ACTION_NAME(WarmEject);
+    _POWER_ACTION_NAME(DisplayOff);
     default:
         break;
     }
@@ -266,6 +267,10 @@ DeviceUsageTypeName(
     _DEVICE_USAGE_TYPE_NAME(Paging);
     _DEVICE_USAGE_TYPE_NAME(Hibernation);
     _DEVICE_USAGE_TYPE_NAME(DumpFile);
+    _DEVICE_USAGE_TYPE_NAME(Undefined);
+    _DEVICE_USAGE_TYPE_NAME(Boot);
+    _DEVICE_USAGE_TYPE_NAME(PostDisplay);
+    _DEVICE_USAGE_TYPE_NAME(GuestAssigned);
     default:
         break;
     }

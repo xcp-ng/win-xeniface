@@ -45,6 +45,7 @@
 #include "log.h"
 #include "xeniface_ioctls.h"
 #include <version.h>
+#include "util.h"
 
 void LockSessions(
         XENIFACE_FDO* fdoData)
@@ -228,10 +229,12 @@ USHORT Utf8FromUtf32(CHAR *dest, ULONG utf32) {
     }
 }
 
+/*
 typedef struct {
     USHORT Length;
     CHAR Buffer[1];
 } UTF8_STRING;
+*/
 
 USHORT CountBytesUtf16FromUtf8String(const UTF8_STRING *utf8) {
     ULONG utf32;
@@ -462,7 +465,8 @@ int AccessWmiBuffer(PUCHAR Buffer, int readbuffer, ULONG * RequiredSize,
                         position += sizeof(WCHAR)*25;
                     }
                     break;
-                default:
+				case WMI_DONE:
+				default:
                     return FALSE;
             }
         }

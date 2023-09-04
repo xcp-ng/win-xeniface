@@ -38,6 +38,7 @@
 
 #include "assert.h"
 #include "wmi.h"
+#include "util.h"
 
 PDRIVER_OBJECT      DriverObject;
 
@@ -110,10 +111,9 @@ Dispatch(
 
         Irp->IoStatus.Status = status;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        goto done;
+        return status;
     }
 
-    status = STATUS_NOT_SUPPORTED;
     switch (Dx->Type) {
     case FUNCTION_DEVICE_OBJECT: {
         PXENIFACE_FDO Fdo = Dx->Fdo;
@@ -121,12 +121,13 @@ Dispatch(
         status = FdoDispatch(Fdo, Irp);
         break;
     }
+	case PHYSICAL_DEVICE_OBJECT:
     default:
         ASSERT(FALSE);
+		status = STATUS_NOT_SUPPORTED;
         break;
     }
 
-done:
     return status;
 }
 

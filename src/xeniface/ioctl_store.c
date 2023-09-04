@@ -34,6 +34,7 @@
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
 #include "log.h"
+#include "util.h"
 
 #define XENSTORE_ABS_PATH_MAX 3072
 #define XENSTORE_REL_PATH_MAX 2048

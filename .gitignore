@@ -19,3 +19,8 @@ vs2019/xeniface_coinst/x64/
 vs2019/xeniface.inf
 vs2019/.vs/xeniface/v16/.suo
 *.db
+*.db-shm
+*.db-wal
+*.opendb
+*.ipch
+*.recipe

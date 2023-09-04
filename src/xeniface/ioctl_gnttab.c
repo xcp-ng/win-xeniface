@@ -34,6 +34,7 @@
 #include "xeniface_ioctls.h"
 #include "log.h"
 #include "irp_queue.h"
+#include "util.h"
 
 // Complete a canceled gnttab IRP, cleanup associated grant/map.
 _Function_class_(IO_WORKITEM_ROUTINE)

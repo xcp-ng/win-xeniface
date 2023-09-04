@@ -64,6 +64,7 @@ class IDeviceCreator
 {
 public:
     virtual CDevice* Create(const wchar_t* path) = 0;
+    virtual ~IDeviceCreator() = default;
     virtual void OnDeviceAdded(CDevice* dev) = 0;
     virtual void OnDeviceRemoved(CDevice* dev) = 0;
     virtual void OnDeviceSuspend(CDevice* dev) = 0;

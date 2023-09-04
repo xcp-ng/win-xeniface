@@ -36,6 +36,7 @@
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
 #include "log.h"
+#include "util.h"
 
 NTSTATUS
 __CaptureUserBuffer(

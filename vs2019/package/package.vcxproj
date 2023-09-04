@@ -38,6 +38,11 @@
   <PropertyGroup Condition="'$(Platform)'=='x64'">
     <ArchiveDir>..\..\$(SolutionName)\x64</ArchiveDir>
   </PropertyGroup>
+  <ItemDefinitionGroup>
+    <DriverSign>
+      <AdditionalOptions>/fdws %(AdditionalOptions)</AdditionalOptions>
+    </DriverSign>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\xeniface\xeniface.vcxproj">
       <Project>{22166290-65D8-49D2-BB88-33201797C7D8}</Project>
@@ -64,9 +69,6 @@
     <PackageFiles Include="$(OutDir)\$(ProjectName)\*" />
   </ItemGroup>
   <Target Name="Archive" AfterTargets="TestSign">
-    <Copy
-      SourceFiles="@(PackageFiles)"
-      DestinationFiles="@(PackageFiles->'$(ArchiveDir)\%(FileName)%(Extension)')"
-    />
+    <Copy SourceFiles="@(PackageFiles)" DestinationFiles="@(PackageFiles->'$(ArchiveDir)\%(FileName)%(Extension)')" />
   </Target>
 </Project>
