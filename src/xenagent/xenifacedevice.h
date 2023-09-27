@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -59,6 +60,49 @@ public: // sharedinfo interface
 
 public: // logging
     bool Log(const std::string& msg);
+};
+
+class CXenAgent;
+
+class CXenIfaceDeviceList : public CDeviceList
+{
+public:
+    CXenIfaceDeviceList(CXenAgent* agent);
+    virtual ~CXenIfaceDeviceList();
+
+protected: // CDeviceList
+    virtual CDevice* Create(const wchar_t* path);
+    virtual void OnDeviceAdded(CDevice* dev);
+    virtual void OnDeviceRemoved(CDevice* dev);
+    virtual void OnDeviceSuspend(CDevice* dev);
+    virtual void OnDeviceResume(CDevice* dev);
+
+public:
+    HANDLE  m_evt_shutdown;
+    HANDLE  m_evt_suspend;
+    HANDLE  m_evt_slate_mode;
+
+    void Log(const char* message);
+    bool CheckShutdown();
+    void CheckXenTime();
+    void CheckSuspend();
+    bool CheckSlateMode(std::string& mode);
+    void LogIfRebootPending();
+
+private:
+    void StartShutdownWatch(CXenIfaceDevice* device);
+    void StopShutdownWatch(CXenIfaceDevice* device);
+    void StartSlateModeWatch(CXenIfaceDevice* device);
+    void StopSlateModeWatch(CXenIfaceDevice* device);
+    void AcquireShutdownPrivilege();
+    void SetXenTime(CXenIfaceDevice* device);
+
+private:
+    CXenAgent*  m_agent;
+    DWORD       m_count;
+    void*       m_ctxt_suspend;
+    void*       m_ctxt_shutdown;
+    void*       m_ctxt_slate_mode;
 };
 
 #endif

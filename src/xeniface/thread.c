@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, 
@@ -130,7 +131,7 @@ ThreadCreate(
 
     (*Thread) = __ThreadAllocate(sizeof (XENIFACE_THREAD));
 
-    Warning("Create thread %p %p\n", Function, Thread);
+    Trace("Create thread %p %p\n", Function, Thread);
 
     status = STATUS_NO_MEMORY;
     if (*Thread == NULL)
@@ -225,4 +226,3 @@ ThreadJoin(
 
     __ThreadFree(Thread);
 }
-

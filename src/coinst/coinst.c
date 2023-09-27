@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -216,7 +217,7 @@ AllowUpdate(
                          KEY_READ,
                          &ServiceKey);
     if (Error != ERROR_SUCCESS) {
-        if (Error == ERROR_FILE_NOT_FOUND) {
+        if (Error == (HRESULT)ERROR_FILE_NOT_FOUND) {
             Value = 1;
             goto done;
         }
@@ -234,7 +235,7 @@ AllowUpdate(
                             (LPBYTE)&Value,
                             &ValueLength);
     if (Error != ERROR_SUCCESS) {
-        if (Error == ERROR_FILE_NOT_FOUND) {
+        if (Error == (HRESULT)ERROR_FILE_NOT_FOUND) {
             Type = REG_DWORD;
             Value = 1;
         } else {

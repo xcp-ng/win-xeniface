@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -34,8 +35,17 @@
 
 #include <windows.h>
 #include <dbt.h>
-#include <map>
+#include <vector>
 #include <string>
+
+class CCritSec
+{
+public:
+    CCritSec(LPCRITICAL_SECTION crit);
+    ~CCritSec();
+private:
+    LPCRITICAL_SECTION m_crit;
+};
 
 class CDevice
 {
@@ -44,10 +54,11 @@ public:
     virtual ~CDevice();
 
     const wchar_t* Path() const;
+    HDEVNOTIFY Notify() const;
 
     bool Open();
     void Close();
-    HDEVNOTIFY Register(HANDLE svc);
+    bool Register(HANDLE svc);
     void Unregister();
 
 protected:
@@ -60,28 +71,31 @@ private:
     HDEVNOTIFY      m_notify;
 };
 
-class IDeviceCreator
-{
-public:
-    virtual CDevice* Create(const wchar_t* path) = 0;
-    virtual ~IDeviceCreator() = default;
-    virtual void OnDeviceAdded(CDevice* dev) = 0;
-    virtual void OnDeviceRemoved(CDevice* dev) = 0;
-    virtual void OnDeviceSuspend(CDevice* dev) = 0;
-    virtual void OnDeviceResume(CDevice* dev) = 0;
-};
-
 class CDeviceList
 {
-public:
+protected:
     CDeviceList(const GUID& itf);
-    ~CDeviceList();
 
-    bool Start(HANDLE svc, IDeviceCreator* impl);
-    void Stop();
+    virtual CDevice* Create(const wchar_t* path) = 0;
+    virtual void OnDeviceAdded(CDevice* dev)     = 0;
+    virtual void OnDeviceRemoved(CDevice* dev)   = 0;
+    virtual void OnDeviceSuspend(CDevice* dev)   = 0;
+    virtual void OnDeviceResume(CDevice* dev)    = 0;
+
+    CRITICAL_SECTION    m_crit;
+
+public:
+    virtual ~CDeviceList();
+
+    CDevice* GetFirstDevice();
+
+    bool RegisterForDeviceChange(HANDLE svc);
+    void UnregisterForDeviceChange();
+    void EnumerateDevices();
+    void CleanupDeviceList();
+
     void OnDeviceEvent(DWORD evt, LPVOID data);
     void OnPowerEvent(DWORD evt, LPVOID data);
-    CDevice* GetFirstDevice();
 
 private:
     void DeviceArrival(const std::wstring& path);
@@ -89,13 +103,12 @@ private:
     void DeviceRemovePending(HDEVNOTIFY nfy);
     void DeviceRemoveFailed(HDEVNOTIFY nfy);
 
-    typedef std::map< HDEVNOTIFY, CDevice* > DeviceMap;
+    typedef std::vector< CDevice* > DeviceMap;
 
-    GUID        m_guid;
-    DeviceMap   m_devs;
-    HDEVNOTIFY  m_notify;
-    HANDLE      m_handle;
-    IDeviceCreator* m_impl;
+    GUID                m_guid;
+    DeviceMap           m_devs;
+    HDEVNOTIFY          m_notify;
+    HANDLE              m_handle;
 };
 
 #endif

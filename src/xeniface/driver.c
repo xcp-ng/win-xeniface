@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, 
@@ -56,7 +57,8 @@ DriverUnload(
     Trace("====>\n");
 
     if (DriverParameters.RegistryPath.Buffer != NULL) {
-        ExFreePool(DriverParameters.RegistryPath.Buffer);
+        __FreePoolWithTag(DriverParameters.RegistryPath.Buffer,
+                          XENIFACE_POOL_TAG);
     }
 
     DriverObject = NULL;
@@ -107,13 +109,26 @@ Dispatch(
     ASSERT3P(Dx->DeviceObject, ==, DeviceObject);
 
     if (Dx->DevicePnpState == Deleted) {
+        PIO_STACK_LOCATION  StackLocation = IoGetCurrentIrpStackLocation(Irp);
+        UCHAR               MajorFunction = StackLocation->MajorFunction;
+        UCHAR               MinorFunction = StackLocation->MinorFunction;
+
         status = STATUS_NO_SUCH_DEVICE;
+
+        if (MajorFunction == IRP_MJ_PNP) {
+            /* FDO and PDO deletions can block after being marked deleted, but before IoDeleteDevice */
+            if (MinorFunction == IRP_MN_SURPRISE_REMOVAL || MinorFunction == IRP_MN_REMOVE_DEVICE)
+                status = STATUS_SUCCESS;
+
+            ASSERT((MinorFunction != IRP_MN_CANCEL_REMOVE_DEVICE) && (MinorFunction != IRP_MN_CANCEL_STOP_DEVICE));
+        }
 
         Irp->IoStatus.Status = status;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return status;
+        goto done;
     }
 
+    status = STATUS_NOT_SUPPORTED;
     switch (Dx->Type) {
     case FUNCTION_DEVICE_OBJECT: {
         PXENIFACE_FDO Fdo = Dx->Fdo;
@@ -121,13 +136,12 @@ Dispatch(
         status = FdoDispatch(Fdo, Irp);
         break;
     }
-	case PHYSICAL_DEVICE_OBJECT:
     default:
         ASSERT(FALSE);
-		status = STATUS_NOT_SUPPORTED;
         break;
     }
 
+done:
     return status;
 }
 
@@ -155,7 +169,7 @@ DriverEntry(
 
     DriverParameters.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
     DriverParameters.RegistryPath.Length = RegistryPath->Length;
-    DriverParameters.RegistryPath.Buffer = ALLOCATE_POOL (PagedPool,
+    DriverParameters.RegistryPath.Buffer = __AllocatePoolWithTag(PagedPool,
                                                 DriverParameters.RegistryPath.MaximumLength,
                                                 XENIFACE_POOL_TAG);
     if (NULL == DriverParameters.RegistryPath.Buffer) {

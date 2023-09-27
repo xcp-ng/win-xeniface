@@ -178,7 +178,7 @@ IoctlGnttabPermitForeignAccess(
         goto fail5;
 
     status = STATUS_NO_MEMORY;
-    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_GRANT_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_GRANT_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail6;
 
@@ -205,7 +205,7 @@ IoctlGnttabPermitForeignAccess(
         goto fail7;
 
     status = STATUS_NO_MEMORY;
-    Context->Grants = ALLOCATE_POOL(NonPagedPool, Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY), XENIFACE_POOL_TAG);
+    Context->Grants = __AllocatePoolWithTag(NonPagedPool, Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY), XENIFACE_POOL_TAG);
     if (Context->Grants == NULL)
         goto fail8;
 
@@ -213,7 +213,7 @@ IoctlGnttabPermitForeignAccess(
 
     // allocate memory to share
     status = STATUS_NO_MEMORY;
-    Context->KernelVa = ALLOCATE_POOL(NonPagedPool, Context->NumberPages * PAGE_SIZE, XENIFACE_POOL_TAG);
+    Context->KernelVa = __AllocatePoolWithTag(NonPagedPool, Context->NumberPages * PAGE_SIZE, XENIFACE_POOL_TAG);
     if (Context->KernelVa == NULL)
         goto fail9;
 
@@ -322,11 +322,11 @@ fail11:
 
 fail10:
     Error("Fail10\n");
-    ExFreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
 
 fail9:
     Error("Fail9\n");
-    ExFreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
 
 fail8:
     Error("Fail8\n");
@@ -334,7 +334,7 @@ fail8:
 fail7:
     Error("Fail7\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_GRANT_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail6:
     Error("Fail6\n");
@@ -399,13 +399,13 @@ GnttabFreeGrant(
     IoFreeMdl(Context->Mdl);
 
     RtlZeroMemory(Context->KernelVa, Context->NumberPages * PAGE_SIZE);
-    ExFreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
 
     RtlZeroMemory(Context->Grants, Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY));
-    ExFreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
 
     RtlZeroMemory(Context, sizeof(XENIFACE_GRANT_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE
@@ -423,6 +423,8 @@ IoctlGnttabRevokeForeignAccess(
     XENIFACE_CONTEXT_ID Id;
     PIRP PendingIrp;
     PXENIFACE_CONTEXT_ID ContextId;
+
+    UNREFERENCED_PARAMETER(OutLen);
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN))
@@ -506,7 +508,7 @@ IoctlGnttabMapForeignPages(
         goto fail5;
 
     status = STATUS_NO_MEMORY;
-    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_MAP_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_MAP_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail6;
 
@@ -629,7 +631,7 @@ fail8:
 fail7:
     Error("Fail7\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_MAP_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail6:
     Error("Fail6\n");
@@ -693,7 +695,7 @@ GnttabFreeMap(
     ASSERT(NT_SUCCESS(status));
 
     RtlZeroMemory(Context, sizeof(XENIFACE_MAP_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE

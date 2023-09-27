@@ -14,7 +14,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <IncludePath>$(IncludePath)</IncludePath>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis Condition="'$(EnterpriseWDK)' != 'True'">true</RunCodeAnalysis>
+	<RunCodeAnalysis Condition="'$(EnterpriseWDK)' == 'True'">false</RunCodeAnalysis>
     <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <PropertyGroup>

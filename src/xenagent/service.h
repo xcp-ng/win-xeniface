@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -45,88 +46,6 @@
 #include "xenifacedevice.h"
 #include "convdevice.h"
 
-class CXenAgent;
-
-class CXenIfaceCreator : public IDeviceCreator
-{
-public:
-    CXenIfaceCreator(CXenAgent&);
-    virtual ~CXenIfaceCreator();
-    CXenIfaceCreator& operator=(const CXenIfaceCreator&);
-
-    bool Start(HANDLE svc);
-    void Stop();
-    void OnDeviceEvent(DWORD evt, LPVOID data);
-    void OnPowerEvent(DWORD evt, LPVOID data);
-    void Log(const char *message);
-
-public: // IDeviceCreator
-    virtual CDevice* Create(const wchar_t* path);
-    virtual void OnDeviceAdded(CDevice* dev);
-    virtual void OnDeviceRemoved(CDevice* dev);
-    virtual void OnDeviceSuspend(CDevice* dev);
-    virtual void OnDeviceResume(CDevice* dev);
-
-public:
-    bool CheckShutdown();
-    void CheckXenTime();
-    void CheckSuspend();
-    bool CheckSlateMode(std::string *mode);
-
-public:
-    HANDLE  m_evt_shutdown;
-    HANDLE  m_evt_suspend;
-    HANDLE  m_evt_slate_mode;
-
-private:
-    void LogIfRebootPending();
-    void StartShutdownWatch();
-    void StopShutdownWatch();
-    void StartSlateModeWatch();
-    void StopSlateModeWatch();
-    void AcquireShutdownPrivilege();
-    bool IsRTCInUTC();
-    void SetXenTime();
-
-private:
-    CXenAgent&          m_agent;
-    CDeviceList         m_devlist;
-    CXenIfaceDevice*    m_device;
-    CRITICAL_SECTION    m_crit;
-    void*               m_ctxt_shutdown;
-    void*               m_ctxt_suspend;
-    void*               m_ctxt_slate_mode;
-    DWORD               m_count;
-};
-
-class CConvCreator : public IDeviceCreator
-{
-public:
-    CConvCreator(CXenAgent&);
-    virtual ~CConvCreator();
-    CConvCreator& operator=(const CConvCreator&);
-
-    bool Start(HANDLE svc);
-    void Stop();
-    void OnDeviceEvent(DWORD evt, LPVOID data);
-    void OnPowerEvent(DWORD evt, LPVOID data);
-    void SetSlateMode(std::string mode);
-    bool DevicePresent();
-
-public:
-    virtual CDevice* Create(const wchar_t* path);
-    virtual void OnDeviceAdded(CDevice* dev);
-    virtual void OnDeviceRemoved(CDevice* dev);
-    virtual void OnDeviceSuspend(CDevice* dev);
-    virtual void OnDeviceResume(CDevice* dev);
-
-private:
-    CXenAgent&          m_agent;
-    CDeviceList         m_devlist;
-    CConvDevice*        m_device;
-    CRITICAL_SECTION    m_crit;
-};
-
 class CXenAgent
 {
 public: // statics
@@ -165,8 +84,8 @@ private: // service support
     SERVICE_STATUS_HANDLE   m_handle;
     HANDLE                  m_evtlog;
     HANDLE                  m_svc_stop;
-    CXenIfaceCreator        m_xeniface;
-    CConvCreator            m_conv;
+    CXenIfaceDeviceList     m_xeniface;
+    CConvDeviceList         m_conv;
 };
 
 #endif

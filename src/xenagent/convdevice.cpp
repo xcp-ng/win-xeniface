@@ -29,6 +29,7 @@
  * SUCH DAMAGE.
  */
 
+#define INITGUID
 #include <windows.h>
 #include <stdio.h>
 #include <powrprof.h>
@@ -37,6 +38,11 @@
 #include "service.h"
 #include "convdevice.h"
 #include "devicelist.h"
+#include "messages.h"
+
+/* 317fc439-3f77-41c8-b09e-08ad63272aa3 */
+DEFINE_GUID(GUID_GPIOBUTTONS_LAPTOPSLATE_INTERFACE, \
+            0x317fc439, 0x3f77, 0x41c8, 0xb0, 0x9e, 0x08, 0xad, 0x63, 0x27, 0x2a, 0xa3);
 
 CConvDevice::CConvDevice(const wchar_t* path) : CDevice(path)
 {
@@ -65,7 +71,11 @@ void CConvDevice::SetMode(DWORD new_mode)
         if (current_mode == new_mode)
             break;
 
-        Write(&buffer, sizeof(buffer));
+        if (Open()) {
+            Write(&buffer, sizeof(buffer));
+            Close();
+        }
+
         Sleep(1000); // yield
     }
 }
@@ -134,4 +144,51 @@ fail2:
     RegCloseKey(key);
 fail1:
     return false;
+}
+
+CConvDeviceList::CConvDeviceList(CXenAgent* agent) : CDeviceList(GUID_GPIOBUTTONS_LAPTOPSLATE_INTERFACE), m_agent(agent)
+{}
+
+/*virtual*/ CConvDeviceList::~CConvDeviceList()
+{}
+
+/*virtual*/ CDevice* CConvDeviceList::Create(const wchar_t* path)
+{
+    return new CConvDevice(path);
+}
+
+/*virtual*/ void CConvDeviceList::OnDeviceAdded(CDevice* dev)
+{
+    UNREFERENCED_PARAMETER(dev);
+}
+
+/*virtual*/ void CConvDeviceList::OnDeviceRemoved(CDevice* dev)
+{
+    UNREFERENCED_PARAMETER(dev);
+}
+
+/*virtual*/ void CConvDeviceList::OnDeviceSuspend(CDevice* dev)
+{
+    UNREFERENCED_PARAMETER(dev);
+}
+
+/*virtual*/ void CConvDeviceList::OnDeviceResume(CDevice* dev)
+{
+    UNREFERENCED_PARAMETER(dev);
+}
+
+void CConvDeviceList::SetSlateMode(std::string& mode)
+{
+    CCritSec crit(&m_crit);
+    CConvDevice* device = (CConvDevice*)GetFirstDevice();
+
+    if (device == NULL)
+        return;
+
+    m_agent->EventLog(EVENT_XENUSER_MODE_SWITCH);
+
+    if (mode == "laptop")
+        device->SetMode(CCONV_DEVICE_LAPTOP_MODE);
+    else if (mode == "slate")
+        device->SetMode(CCONV_DEVICE_SLATE_MODE);
 }

@@ -58,11 +58,20 @@ static void DebugPrint(const wchar_t* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    _vsnwprintf(buffer, BUFFER_SIZE, fmt, args);
+    _vsnwprintf_s(buffer, BUFFER_SIZE, _TRUNCATE, fmt, args);
     va_end(args);
 
     buffer[BUFFER_SIZE] = 0;
     OutputDebugStringW(buffer);
+}
+
+CCritSec::CCritSec(LPCRITICAL_SECTION crit) : m_crit(crit)
+{
+    EnterCriticalSection(m_crit);
+}
+CCritSec::~CCritSec()
+{
+    LeaveCriticalSection(m_crit);
 }
 
 CDevice::CDevice(const wchar_t* path) :
@@ -79,6 +88,11 @@ CDevice::CDevice(const wchar_t* path) :
 const wchar_t* CDevice::Path() const
 {
     return m_path.c_str();
+}
+
+HDEVNOTIFY CDevice::Notify() const
+{
+    return m_notify;
 }
 
 bool CDevice::Open()
@@ -104,7 +118,7 @@ void CDevice::Close()
     m_handle = INVALID_HANDLE_VALUE;
 }
 
-HDEVNOTIFY CDevice::Register(HANDLE svc)
+bool CDevice::Register(HANDLE svc)
 {
     Unregister();
 
@@ -114,7 +128,7 @@ HDEVNOTIFY CDevice::Register(HANDLE svc)
     devhdl.dbch_handle = m_handle;
 
     m_notify = RegisterDeviceNotification(svc, &devhdl, DEVICE_NOTIFY_SERVICE_HANDLE);
-    return m_notify;
+    return (m_notify != NULL);
 }
 
 void CDevice::Unregister()
@@ -162,24 +176,32 @@ bool CDevice::Ioctl(DWORD ioctl, void* in, DWORD insz, void* out, DWORD outsz, D
 }
 
 CDeviceList::CDeviceList(const GUID& itf) :
-    m_guid(itf), m_notify(NULL), m_handle(NULL), m_impl(NULL)
+    m_guid(itf), m_notify(NULL), m_handle(NULL)
 {
+    InitializeCriticalSection(&m_crit);
 }
 
 CDeviceList::~CDeviceList()
 {
-    Stop();
+    UnregisterForDeviceChange();
+    CleanupDeviceList();
+
+    DeleteCriticalSection(&m_crit);
 }
 
-#pragma warning(push)
-#pragma warning(disable:6102) // Using value from failed function call
-
-bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
+CDevice* CDeviceList::GetFirstDevice()
 {
-    Stop();
+    DeviceMap::iterator it = m_devs.begin();
+    if (it == m_devs.end())
+        return NULL;
+    return *it;
+}
+
+bool CDeviceList::RegisterForDeviceChange(HANDLE handle)
+{
+    UnregisterForDeviceChange();
 
     m_handle = handle;
-    m_impl = impl;
 
     DEV_BROADCAST_DEVICEINTERFACE dev = { 0 };
     dev.dbcc_size = sizeof(dev);
@@ -187,9 +209,21 @@ bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
     dev.dbcc_classguid = m_guid;
 
     m_notify = RegisterDeviceNotificationA(handle, &dev, DEVICE_NOTIFY_SERVICE_HANDLE);
-    if (m_notify == NULL)
-        return false;
+    return m_notify != NULL;
+}
 
+void CDeviceList::UnregisterForDeviceChange()
+{
+    if (m_notify != NULL)
+        UnregisterDeviceNotification(m_notify);
+    m_notify = NULL;
+}
+
+#pragma warning(push)
+#pragma warning(disable:6102) // Using value from failed function call
+
+void CDeviceList::EnumerateDevices()
+{
     HDEVINFO                            info;
     SP_DEVICE_INTERFACE_DATA            itf;
     PSP_DEVICE_INTERFACE_DETAIL_DATA    detail;
@@ -201,7 +235,7 @@ bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
                                NULL,
                                DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (info == INVALID_HANDLE_VALUE)
-        return true; // non fatal, just missing already present device(s)
+        return; // non fatal, just missing already present device(s)
 
     itf.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
     for (idx = 0;
@@ -229,23 +263,17 @@ bool CDeviceList::Start(HANDLE handle, IDeviceCreator* impl)
         itf.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
     }
     SetupDiDestroyDeviceInfoList(info);
-    return true;
 }
 
 #pragma warning(pop)
 
-void CDeviceList::Stop()
+void CDeviceList::CleanupDeviceList()
 {
-    if (m_notify != NULL)
-        UnregisterDeviceNotification(m_notify);
-    m_notify = NULL;
-
     for (DeviceMap::iterator it = m_devs.begin();
          it != m_devs.end();
          ++it) {
-        if (m_impl)
-            m_impl->OnDeviceRemoved(it->second);
-        delete it->second;
+        OnDeviceRemoved(*it);
+        delete *it;
     }
     m_devs.clear();
 }
@@ -302,14 +330,14 @@ void CDeviceList::OnPowerEvent(DWORD evt, LPVOID data)
         for (DeviceMap::iterator it = m_devs.begin();
              it != m_devs.end();
              ++it)
-            m_impl->OnDeviceResume(it->second);
+            OnDeviceResume(*it);
         break;
 
     case PBT_APMSUSPEND:
         for (DeviceMap::iterator it = m_devs.begin();
              it != m_devs.end();
              ++it)
-            m_impl->OnDeviceSuspend(it->second);
+            OnDeviceSuspend(*it);
         break;
 
     default:
@@ -317,37 +345,25 @@ void CDeviceList::OnPowerEvent(DWORD evt, LPVOID data)
     }
 }
 
-CDevice* CDeviceList::GetFirstDevice()
-{
-    DeviceMap::iterator it = m_devs.begin();
-    if (it == m_devs.end())
-        return NULL;
-    return it->second;
-}
-
 void CDeviceList::DeviceArrival(const std::wstring& path)
 {
     DebugPrint(L"DeviceArrival(%ws)\n", path.c_str());
-    CDevice* dev;
-    if (m_impl)
-        dev = m_impl->Create(path.c_str());
-    else
-        dev = new CDevice(path.c_str());
+    CDevice* dev = Create(path.c_str());
     if (dev == NULL)
         goto fail1;
+
+    if (m_handle == NULL)
+        goto done;
 
     if (!dev->Open())
         goto fail2;
 
-    HDEVNOTIFY nfy = dev->Register(m_handle);
-    if (nfy == NULL)
+    if (!dev->Register(m_handle))
         goto fail3;
 
-    m_devs[nfy] = dev;
-
-    if (m_impl)
-        m_impl->OnDeviceAdded(dev);
-
+done:
+    OnDeviceAdded(dev);
+    m_devs.push_back(dev);
     return;
 
 fail3:
@@ -362,44 +378,60 @@ fail1:
 
 void CDeviceList::DeviceRemoved(HDEVNOTIFY nfy)
 {
-    DeviceMap::iterator it = m_devs.find(nfy);
-    if (it == m_devs.end())
-        return; // spurious event?
+    for (DeviceMap::iterator it = m_devs.begin();
+         it != m_devs.end();
+         ++it) {
+        CDevice* dev = *it;
 
-    CDevice* dev = it->second;
-    DebugPrint(L"DeviceRemoved(%ws)\n", dev->Path());
+        if (dev->Notify() != nfy)
+            continue;
 
-    delete dev; // handles unregister()
-    m_devs.erase(it);
+        DebugPrint(L"DeviceRemoved(%ws)\n", dev->Path());
+
+        delete dev; // handles unregister()
+        m_devs.erase(it);
+        return;
+    }
+    // Spurious event?
 }
 
 void CDeviceList::DeviceRemovePending(HDEVNOTIFY nfy)
 {
-    DeviceMap::iterator it = m_devs.find(nfy);
-    if (it == m_devs.end())
-        return; // spurious event?
+    for (DeviceMap::iterator it = m_devs.begin();
+         it != m_devs.end();
+         ++it) {
+        CDevice* dev = *it;
 
-    CDevice* dev = it->second;
-    DebugPrint(L"DeviceRemovePending(%ws)\n", dev->Path());
+        if (dev->Notify() != nfy)
+            continue;
 
-    if (m_impl)
-        m_impl->OnDeviceRemoved(dev);
+        DebugPrint(L"DeviceRemovePending(%ws)\n", dev->Path());
 
-    dev->Close();
+        OnDeviceRemoved(dev);
+
+        dev->Close();
+        return;
+    }
+    // Spurious event?
 }
 
 void CDeviceList::DeviceRemoveFailed(HDEVNOTIFY nfy)
 {
-    DeviceMap::iterator it = m_devs.find(nfy);
-    if (it == m_devs.end())
-        return; // spurious event?
+    for (DeviceMap::iterator it = m_devs.begin();
+         it != m_devs.end();
+         ++it) {
+        CDevice* dev = *it;
 
-    CDevice* dev = it->second;
-    DebugPrint(L"DeviceRemoveFailed(%ws)\n", dev->Path());
+        if (dev->Notify() != nfy)
+            continue;
 
-    if (!dev->Open())
-        DeviceRemoved(nfy);
+        DebugPrint(L"DeviceRemoveFailed(%ws)\n", dev->Path());
 
-    if (m_impl)
-        m_impl->OnDeviceAdded(dev);
+        if (!dev->Open())
+            DeviceRemoved(nfy);
+
+        OnDeviceAdded(dev);
+        return;
+    }
+    // Spurious event?
 }

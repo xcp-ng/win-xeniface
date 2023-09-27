@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -1740,9 +1741,10 @@ __FdoSetSystemPowerUp(
         goto done;
 
     if (SystemState < PowerSystemHibernate &&
-        __FdoGetSystemPowerState(Fdo) >= PowerSystemHibernate)
+        __FdoGetSystemPowerState(Fdo) >= PowerSystemHibernate) {
         __FdoSetSystemPowerState(Fdo, PowerSystemHibernate);
         FdoS4ToS3(Fdo);
+    }
 
     Info("%s -> %s\n",
          PowerSystemStateName(__FdoGetSystemPowerState(Fdo)),
@@ -2823,5 +2825,3 @@ FdoDestroy(
 
     IoDeleteDevice(FunctionDeviceObject);
 }
-
-

@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms,
@@ -92,7 +93,7 @@ IoctlSuspendRegister(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_SUSPEND_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_SUSPEND_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 
@@ -120,7 +121,7 @@ IoctlSuspendRegister(
 fail3:
     Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_SUSPEND_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
     Error("Fail2\n");
@@ -140,9 +141,11 @@ SuspendFreeEvent(
     Trace("Context %p, FO %p\n",
                        Context, Context->FileObject);
 
+    UNREFERENCED_PARAMETER(Fdo);
+
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_SUSPEND_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE

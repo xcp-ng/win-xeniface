@@ -83,7 +83,7 @@ EvtchnInterruptHandler(
 
     ASSERT(Context != NULL);
 
-    KeGetCurrentProcessorNumberEx(&ProcNumber);
+    (VOID) KeGetCurrentProcessorNumberEx(&ProcNumber);
     ProcIndex = KeGetProcessorIndexFromNumber(&ProcNumber);
 
     (VOID) KeInsertQueueDpc(&Context->Dpc, NULL, NULL);
@@ -113,7 +113,7 @@ EvtchnFree(
 
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 _Requires_exclusive_lock_held_(Fdo->EvtchnLock)
@@ -171,11 +171,10 @@ IoctlEvtchnBindUnbound(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 
-    RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
     Context->FileObject = FileObject;
 
     Trace("> RemoteDomain %d, Mask %d, FO %p\n",
@@ -232,7 +231,7 @@ fail4:
 fail3:
     Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
     Error("Fail2\n");
@@ -265,11 +264,10 @@ IoctlEvtchnBindInterdomain(
     }
 
     status = STATUS_NO_MEMORY;
-    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_EVTCHN_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail2;
 
-    RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
     Context->FileObject = FileObject;
 
     Trace("> RemoteDomain %d, RemotePort %lu, Mask %d, FO %p\n",
@@ -328,7 +326,7 @@ fail4:
 fail3:
     Error("Fail3\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_EVTCHN_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail2:
     Error("Fail2\n");

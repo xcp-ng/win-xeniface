@@ -1,4 +1,5 @@
-; Copyright (c) Citrix Systems Inc.
+; Copyright (c) Xen Project.
+; Copyright (c) Cloud Software Group, Inc.
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, 
@@ -49,9 +50,9 @@ ServiceDestDir.Copy = 11
 ; DisplayName		    Section	      DeviceID
 ; -----------		    -------	      --------
 
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_09000006
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_09000006
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_09000006
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_09000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_09000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_09000009
 
 [XenIface_Device]
 CopyFiles=XenIface_Device.Copy
@@ -120,4 +121,3 @@ DiskId1 = "@PRODUCT_NAME@ Interface Package"
 XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME@ Interface"
 XENAGENT_FLAGS= 0x00000800
 xenagent.SVCDESC= "@PRODUCT_NAME@ Agent"
-

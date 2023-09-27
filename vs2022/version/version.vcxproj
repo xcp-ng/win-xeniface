@@ -5,13 +5,15 @@
     <ProjectGuid>{65FA97EA-A569-4FC1-BFE7-D68E109143F7}</ProjectGuid>
   </PropertyGroup>
   <PropertyGroup>
-    <Script>..\..\scripts\genfiles.ps1</Script>
+    <Script>..\..\..\tools\genfiles.ps1</Script>
     <SolutionDir>..</SolutionDir>
     <IncludeDir>..\..\include</IncludeDir>
     <SourceDir>..\..\src</SourceDir>
+	<SpecificFileIn>$(SourceDir)\xeniface.mof</SpecificFileIn>
+    <SpecificFileOut>$(SourceDir)\xeniface\wmi.mof</SpecificFileOut>
   </PropertyGroup>
   <Target Name="Build">
-    <Exec Command="powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File $(Script) $(Platform) $(SolutionDir) $(IncludeDir) $(SourceDir)" />
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File $(Script) xeniface $(Platform) $(SolutionDir) $(IncludeDir) $(SourceDir) $(SpecificFileIn) $(SpecificFileOut)" />
   </Target>
   <Target Name="GetProjectInfoForReference"
           Returns="@(ProjectInfoForReference)">

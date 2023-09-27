@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * Copyright (c) Rafal Wojdyla <omeg@invisiblethingslab.com>
  * All rights reserved.
  *
@@ -218,6 +219,7 @@ IoctlStoreDirectory(
     PCHAR       Value;
     ULONG       Length;
     ULONG       Count;
+    BOOLEAN     SquashError = FALSE;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0)
@@ -228,14 +230,17 @@ IoctlStoreDirectory(
         goto fail2;
 
     status = XENBUS_STORE(Directory, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(status)) {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)
+            SquashError = TRUE;
         goto fail3;
+    }
 
     Length = __MultiSzLen(Value, &Count) + 1;
 
     status = STATUS_BUFFER_OVERFLOW;
     if (OutLen == 0) {
-        Trace("(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
+        Trace("(\"%s\")=(%d bytes)(%d items)\n", Buffer, Length, Count);
         goto done;
     }
 
@@ -243,7 +248,7 @@ IoctlStoreDirectory(
     if (OutLen < Length)
         goto fail4;
 
-    Info("(\"%s\")=(%d)(%d)\n", Buffer, Length, Count);
+    Trace("(\"%s\")=(%d bytes)(%d items)\n", Buffer, Length, Count);
 #if DBG
     __DisplayMultiSz(Value);
 #endif
@@ -262,11 +267,14 @@ fail4:
     Error("Fail4 (\"%s\")=(%d < %d)\n", Buffer, OutLen, Length);
     XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 fail3:
-    Error("Fail3 (\"%s\")\n", Buffer);
+    if (!SquashError)
+        Error("Fail3 (\"%s\")\n", Buffer);
 fail2:
-    Error("Fail2\n");
+    if (!SquashError)
+        Error("Fail2\n");
 fail1:
-    Error("Fail1 (%08x)\n", status);
+    if (!SquashError)
+        Error("Fail1 (%08x)\n", status);
     return status;
 }
 
@@ -310,7 +318,7 @@ PXENBUS_STORE_PERMISSION
 __ConvertPermissions(
     __in  ULONG                       NumberPermissions,
     __in  PXENIFACE_STORE_PERMISSION  XenifacePermissions
-)
+    )
 {
     PXENBUS_STORE_PERMISSION          XenbusPermissions;
     ULONG                             Index;
@@ -318,7 +326,7 @@ __ConvertPermissions(
     if (NumberPermissions > 255)
         goto fail1;
 
-    XenbusPermissions = ALLOCATE_POOL(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
+    XenbusPermissions = __AllocatePoolWithTag(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
     if (XenbusPermissions == NULL)
         goto fail2;
 
@@ -349,7 +357,7 @@ __ConvertPermissions(
 
 fail3:
     Error("Fail3\n");
-    ExFreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
 
 fail2:
     Error("Fail2\n");
@@ -365,7 +373,7 @@ __FreePermissions(
     __in  PXENBUS_STORE_PERMISSION    Permissions
     )
 {
-    ExFreePoolWithTag(Permissions, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Permissions, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE
@@ -411,7 +419,9 @@ IoctlStoreSetPermissions(
 
     for (Index = 0; Index < In->NumberPermissions; Index++) {
         Trace("> %lu: Domain %d, Mask 0x%x\n",
-                           Index, Permissions[Index].Domain, Permissions[Index].Mask);
+              Index,
+              Permissions[Index].Domain,
+              Permissions[Index].Mask);
     }
 
     status = XENBUS_STORE(PermissionsSet,
@@ -516,7 +526,7 @@ IoctlStoreAddWatch(
     Path[In->PathLength - 1] = 0;
 
     status = STATUS_NO_MEMORY;
-    Context = ALLOCATE_POOL(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
         goto fail4;
 
@@ -574,7 +584,7 @@ fail6:
 fail5:
     Error("Fail5\n");
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail4:
     Error("Fail4\n");
@@ -618,7 +628,7 @@ StoreFreeWatch(
 
     ObDereferenceObject(Context->Event);
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
-    ExFreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE

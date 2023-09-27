@@ -1,4 +1,5 @@
-/* Copyright (c) Citrix Systems Inc.
+/* Copyright (c) Xen Project.
+ * Copyright (c) Cloud Software Group, Inc.
  * Copyright (c) Rafal Wojdyla <omeg@invisiblethingslab.com>
  * All rights reserved.
  *
@@ -54,7 +55,7 @@ __CaptureUserBuffer(
     }
 
     Status = STATUS_NO_MEMORY;
-    TempBuffer = ALLOCATE_POOL(NonPagedPool, Length, XENIFACE_POOL_TAG);
+    TempBuffer = __AllocatePoolWithTag(NonPagedPool, Length, XENIFACE_POOL_TAG);
     if (TempBuffer == NULL)
         return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -66,7 +67,7 @@ __CaptureUserBuffer(
         RtlCopyMemory(TempBuffer, Buffer, Length);
     } except(EXCEPTION_EXECUTE_HANDLER) {
         Error("Exception while probing/reading buffer at %p, size 0x%lx\n", Buffer, Length);
-        ExFreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
+        __FreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
         TempBuffer = NULL;
         Status = GetExceptionCode();
     }
@@ -82,7 +83,7 @@ __FreeCapturedBuffer(
     )
 {
     if (CapturedBuffer != NULL) {
-        ExFreePoolWithTag(CapturedBuffer, XENIFACE_POOL_TAG);
+        __FreePoolWithTag(CapturedBuffer, XENIFACE_POOL_TAG);
     }
 }
 
@@ -115,6 +116,8 @@ IoctlLog(
 {
     NTSTATUS    status;
 	PCHAR		ptr;
+
+    UNREFERENCED_PARAMETER(Fdo);
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0 || InLen > XENIFACE_LOG_MAX_LENGTH || OutLen != 0)
@@ -352,4 +355,3 @@ done:
 
     return status;
 }
-
