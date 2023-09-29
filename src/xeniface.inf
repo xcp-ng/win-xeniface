@@ -37,10 +37,10 @@ Provider=%Vendor%
 DriverVer=@INF_DATE@,@MAJOR_VERSION@.@MINOR_VERSION@.@MICRO_VERSION@.@BUILD_NUMBER@
 CatalogFile=xeniface.cat
 DriverPackageDisplayName=%DiskId1%
+PnpLockdown=1
 
 [DestinationDirs]
 DefaultDestDir = 12
-Coinst.Copy = 11
 ServiceDestDir.Copy = 11
 
 [Manufacturer]
@@ -50,9 +50,9 @@ ServiceDestDir.Copy = 11
 ; DisplayName		    Section	      DeviceID
 ; -----------		    -------	      --------
 
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_09000009
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_09000009
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_09000009
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_0900000A
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_0900000A
+%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_0900000A
 
 [XenIface_Device]
 CopyFiles=XenIface_Device.Copy
@@ -60,9 +60,6 @@ CopyFiles=ServiceDestDir.Copy
 
 [XenIFace_Device.Copy]
 xeniface.sys
-
-[CoInst.Copy]
-xeniface_coinst_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xeniface_coinst.dll
 
 [ServiceDestDir.Copy]
 xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.exe,xenagent.exe
@@ -83,13 +80,6 @@ AddReg = Xeniface_Parameters
 
 [Xeniface_Parameters]
 HKR,"Parameters",,0x00000010
-
-[Xeniface_Device.Coinstallers]
-CopyFiles=CoInst.Copy
-AddReg=CoInst_AddReg
-
-[CoInst_AddReg]
-HKR,,CoInstallers32,0x00010000,"xeniface_coinst_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,Entry"
 
 [xenagent_Service_Inst]
 DisplayName    = %xenagent.SVCDESC%
@@ -112,7 +102,6 @@ HKR,,TypesSupported,0x00010001,7
 xeniface.sys  = 1,,
 xenagent.exe = 1,,
 xenagent.dll = 1,,
-xeniface_coinst.dll=1,,
 
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
