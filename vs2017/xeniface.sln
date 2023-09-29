@@ -4,11 +4,6 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "version", "version\version.vcxproj", "{65FA97EA-A569-4FC1-BFE7-D68E109143F7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xeniface_coinst", "xeniface_coinst\xeniface_coinst.vcxproj", "{85C731AD-2EA2-4049-A542-D2D38EDE938C}"
-	ProjectSection(ProjectDependencies) = postProject
-		{65FA97EA-A569-4FC1-BFE7-D68E109143F7} = {65FA97EA-A569-4FC1-BFE7-D68E109143F7}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xeniface", "xeniface\xeniface.vcxproj", "{22166290-65D8-49D2-BB88-33201797C7D8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{65FA97EA-A569-4FC1-BFE7-D68E109143F7} = {65FA97EA-A569-4FC1-BFE7-D68E109143F7}
@@ -28,7 +23,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "package", "package\package.
 	ProjectSection(ProjectDependencies) = postProject
 		{65FA97EA-A569-4FC1-BFE7-D68E109143F7} = {65FA97EA-A569-4FC1-BFE7-D68E109143F7}
 		{22166290-65D8-49D2-BB88-33201797C7D8} = {22166290-65D8-49D2-BB88-33201797C7D8}
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C} = {85C731AD-2EA2-4049-A542-D2D38EDE938C}
 		{2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B} = {2E61D2CC-865E-442C-8C83-B8DAFD7BBD3B}
 		{D386D8E9-D015-4AD2-A5C2-4F845A803FA2} = {D386D8E9-D015-4AD2-A5C2-4F845A803FA2}
 	EndProjectSection
@@ -61,30 +55,6 @@ Global
 		{65FA97EA-A569-4FC1-BFE7-D68E109143F7}.Windows 8 Release|Win32.Build.0 = Windows 8 Release|Win32
 		{65FA97EA-A569-4FC1-BFE7-D68E109143F7}.Windows 8 Release|x64.ActiveCfg = Windows 8 Release|x64
 		{65FA97EA-A569-4FC1-BFE7-D68E109143F7}.Windows 8 Release|x64.Build.0 = Windows 8 Release|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Debug|Win32.ActiveCfg = Windows 8 Debug|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Debug|Win32.Build.0 = Windows 8 Debug|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Debug|Win32.Deploy.0 = Windows 8 Debug|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Debug|x64.ActiveCfg = Windows 8 Debug|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Debug|x64.Build.0 = Windows 8 Debug|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Debug|x64.Deploy.0 = Windows 8 Debug|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Release|Win32.ActiveCfg = Windows 8 Release|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Release|Win32.Build.0 = Windows 8 Release|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Release|Win32.Deploy.0 = Windows 8 Release|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Release|x64.ActiveCfg = Windows 8 Release|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Release|x64.Build.0 = Windows 8 Release|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 8 Release|x64.Deploy.0 = Windows 8 Release|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Debug|Win32.ActiveCfg = Windows 10 Debug|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Debug|Win32.Build.0 = Windows 10 Debug|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Debug|Win32.Deploy.0 = Windows 10 Debug|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Debug|x64.ActiveCfg = Windows 10 Debug|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Debug|x64.Build.0 = Windows 10 Debug|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Debug|x64.Deploy.0 = Windows 10 Debug|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Release|Win32.ActiveCfg = Windows 10 Release|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Release|Win32.Build.0 = Windows 10 Release|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Release|Win32.Deploy.0 = Windows 10 Release|Win32
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Release|x64.ActiveCfg = Windows 10 Release|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Release|x64.Build.0 = Windows 10 Release|x64
-		{85C731AD-2EA2-4049-A542-D2D38EDE938C}.Windows 10 Release|x64.Deploy.0 = Windows 10 Release|x64
 		{22166290-65D8-49D2-BB88-33201797C7D8}.Windows 8 Debug|Win32.ActiveCfg = Windows 8 Debug|Win32
 		{22166290-65D8-49D2-BB88-33201797C7D8}.Windows 8 Debug|Win32.Build.0 = Windows 8 Debug|Win32
 		{22166290-65D8-49D2-BB88-33201797C7D8}.Windows 8 Debug|Win32.Deploy.0 = Windows 8 Debug|Win32
