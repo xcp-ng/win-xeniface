@@ -79,7 +79,7 @@ __CaptureUserBuffer(
 
 VOID
 __FreeCapturedBuffer(
-    __in  PVOID CapturedBuffer
+    __in_opt  PVOID CapturedBuffer
     )
 {
     if (CapturedBuffer != NULL) {
