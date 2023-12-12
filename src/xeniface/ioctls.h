@@ -36,17 +36,6 @@
 
 #include "xeniface_ioctls.h"
 
-typedef enum _XENIFACE_CONTEXT_TYPE {
-    XENIFACE_CONTEXT_GRANT = 1,
-    XENIFACE_CONTEXT_MAP
-} XENIFACE_CONTEXT_TYPE;
-
-typedef struct _XENIFACE_CONTEXT_ID {
-    XENIFACE_CONTEXT_TYPE  Type;
-    ULONG                  RequestId;
-    PEPROCESS              Process;
-} XENIFACE_CONTEXT_ID, *PXENIFACE_CONTEXT_ID;
-
 typedef struct _XENIFACE_STORE_CONTEXT {
     LIST_ENTRY             Entry;
     PCHAR                  Path;
@@ -72,33 +61,33 @@ typedef struct _XENIFACE_SUSPEND_CONTEXT {
     PVOID                   FileObject;
 } XENIFACE_SUSPEND_CONTEXT, *PXENIFACE_SUSPEND_CONTEXT;
 
-typedef struct _XENIFACE_GRANT_CONTEXT {
-    XENIFACE_CONTEXT_ID        Id;
-    LIST_ENTRY                 Entry;
-    PXENBUS_GNTTAB_ENTRY       *Grants;
-    USHORT                     RemoteDomain;
-    ULONG                      NumberPages;
-    XENIFACE_GNTTAB_PAGE_FLAGS Flags;
-    ULONG                      NotifyOffset;
-    ULONG                      NotifyPort;
-    PVOID                      KernelVa;
-    PVOID                      UserVa;
-    PMDL                       Mdl;
-} XENIFACE_GRANT_CONTEXT, *PXENIFACE_GRANT_CONTEXT;
+typedef enum _XENIFACE_GNTTAB_CONTEXT_TYPE {
+    XENIFACE_GNTTAB_CONTEXT_GRANT = 1,
+    XENIFACE_GNTTAB_CONTEXT_MAP
+} XENIFACE_GNTTAB_CONTEXT_TYPE;
 
-typedef struct _XENIFACE_MAP_CONTEXT {
-    XENIFACE_CONTEXT_ID        Id;
-    LIST_ENTRY                 Entry;
-    USHORT                     RemoteDomain;
-    ULONG                      NumberPages;
-    XENIFACE_GNTTAB_PAGE_FLAGS Flags;
-    ULONG                      NotifyOffset;
-    ULONG                      NotifyPort;
-    PHYSICAL_ADDRESS           Address;
-    PVOID                      KernelVa;
-    PVOID                      UserVa;
-    PMDL                       Mdl;
-} XENIFACE_MAP_CONTEXT, *PXENIFACE_MAP_CONTEXT;
+#pragma warning(push)
+#pragma warning(disable:4201) // nonstandard extension used: nameless struct/union
+typedef struct _XENIFACE_GNTTAB_CONTEXT {
+    LIST_ENTRY                   Entry;
+    XENIFACE_GNTTAB_CONTEXT_TYPE Type;
+    BOOLEAN                      UseRequestId; // true for legacy IOCTLs
+    ULONG                        RequestId;
+    PEPROCESS                    Process;
+    USHORT                       RemoteDomain;
+    ULONG                        NumberPages;
+    XENIFACE_GNTTAB_PAGE_FLAGS   Flags;
+    ULONG                        NotifyOffset;
+    ULONG                        NotifyPort;
+    union {
+        PXENBUS_GNTTAB_ENTRY     *Grants; // permit
+        PHYSICAL_ADDRESS         Address; // map
+    };
+    PVOID                        KernelVa;
+    PVOID                        UserVa;
+    PMDL                         Mdl;
+} XENIFACE_GNTTAB_CONTEXT, *PXENIFACE_GNTTAB_CONTEXT;
+#pragma warning(pop)
 
 NTSTATUS
 __CaptureUserBuffer(
@@ -295,7 +284,8 @@ IoctlGnttabRevokeForeignAccess(
     __in  PXENIFACE_FDO     Fdo,
     __in  PVOID             Buffer,
     __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    __in  ULONG             OutLen,
+    __in  ULONG             ControlCode
     );
 
 DECLSPEC_NOINLINE
@@ -314,7 +304,8 @@ IoctlGnttabUnmapForeignPages(
     __in  PXENIFACE_FDO     Fdo,
     __in  PVOID             Buffer,
     __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    __in  ULONG             OutLen,
+    __in  ULONG             ControlCode
     );
 
 _Acquires_exclusive_lock_(((PXENIFACE_FDO)Argument)->GnttabCacheLock)
@@ -342,14 +333,14 @@ _IRQL_requires_max_(APC_LEVEL)
 VOID
 GnttabFreeGrant(
     __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_GRANT_CONTEXT Context
+    __inout  PXENIFACE_GNTTAB_CONTEXT Context
     );
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
 GnttabFreeMap(
     __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_MAP_CONTEXT Context
+    __inout  PXENIFACE_GNTTAB_CONTEXT Context
     );
 
 NTSTATUS

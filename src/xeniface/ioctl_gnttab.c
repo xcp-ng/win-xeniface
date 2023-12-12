@@ -47,35 +47,35 @@ CompleteGnttabIrp(
     PXENIFACE_DX Dx = (PXENIFACE_DX)DeviceObject->DeviceExtension;
     PXENIFACE_FDO Fdo = Dx->Fdo;
     PIRP Irp = Context;
-    PXENIFACE_CONTEXT_ID Id;
+    PXENIFACE_GNTTAB_CONTEXT GnttabContext;
     PIO_WORKITEM WorkItem;
     KAPC_STATE ApcState;
     BOOLEAN ChangeProcess;
 
     ASSERT(Context != NULL);
 
-    Id = Irp->Tail.Overlay.DriverContext[0];
+    GnttabContext = Irp->Tail.Overlay.DriverContext[0];
     WorkItem = Irp->Tail.Overlay.DriverContext[1];
 
     // We are not guaranteed to be in the context of the process that initiated the IRP,
     // but we need to be there to unmap memory.
-    ChangeProcess = PsGetCurrentProcess() != Id->Process;
+    ChangeProcess = PsGetCurrentProcess() != GnttabContext->Process;
     if (ChangeProcess) {
-        Trace("Changing process from %p to %p\n", PsGetCurrentProcess(), Id->Process);
-        KeStackAttachProcess(Id->Process, &ApcState);
+        Trace("Changing process from %p to %p\n", PsGetCurrentProcess(), GnttabContext->Process);
+        KeStackAttachProcess(GnttabContext->Process, &ApcState);
     }
 
     Trace("Irp %p, Process %p, Id %lu, Type %d, IRQL %d\n",
-          Irp, Id->Process, Id->RequestId, Id->Type, KeGetCurrentIrql());
+          Irp, GnttabContext->Process, GnttabContext->RequestId, GnttabContext->Type, KeGetCurrentIrql());
 
-    switch (Id->Type) {
+    switch (GnttabContext->Type) {
 
-    case XENIFACE_CONTEXT_GRANT:
-        GnttabFreeGrant(Fdo, CONTAINING_RECORD(Id, XENIFACE_GRANT_CONTEXT, Id));
+    case XENIFACE_GNTTAB_CONTEXT_GRANT:
+        GnttabFreeGrant(Fdo, GnttabContext);
         break;
 
-    case XENIFACE_CONTEXT_MAP:
-        GnttabFreeMap(Fdo, CONTAINING_RECORD(Id, XENIFACE_MAP_CONTEXT, Id));
+    case XENIFACE_GNTTAB_CONTEXT_MAP:
+        GnttabFreeMap(Fdo, GnttabContext);
         break;
 
     default:
@@ -125,16 +125,192 @@ static
 PIRP
 FindGnttabIrp(
     __in  PXENIFACE_FDO Fdo,
-    __in  PXENIFACE_CONTEXT_ID Id
+    __in  PXENIFACE_GNTTAB_CONTEXT Context
     )
 {
     KIRQL Irql;
     PIRP Irp;
 
     CsqAcquireLock(&Fdo->IrpQueue, &Irql);
-    Irp = CsqPeekNextIrp(&Fdo->IrpQueue, NULL, Id);
+    Irp = CsqPeekNextIrp(&Fdo->IrpQueue, NULL, Context);
     CsqReleaseLock(&Fdo->IrpQueue, Irql);
     return Irp;
+}
+
+// Undo (possibly partially done) sharing, free/clear associated context fields.
+// Does not trigger notifications if the flags are set.
+static
+void
+GnttabStopSharing(
+    __in     PXENIFACE_FDO             Fdo,
+    __inout  PXENIFACE_GNTTAB_CONTEXT  Context,
+    __in     ULONG                     NumberPages
+)
+{
+    if (Context->Grants != NULL) {
+        for (ULONG Page = 0; Page < NumberPages; Page++) {
+            ASSERT(NT_SUCCESS(XENBUS_GNTTAB(RevokeForeignAccess,
+                                            &Fdo->GnttabInterface,
+                                            Fdo->GnttabCache,
+                                            FALSE,
+                                            Context->Grants[Page])));
+        }
+
+        RtlZeroMemory(Context->Grants, Context->NumberPages * sizeof(Context->Grants[0]));
+        __FreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
+        Context->Grants = NULL;
+    }
+
+    if (Context->Mdl != NULL) {
+        if (Context->KernelVa != NULL) {
+            // driver-allocated memory
+            MmUnmapLockedPages(Context->UserVa, Context->Mdl);
+        } else {
+            // user-supplied memory
+            try {
+                MmUnlockPages(Context->Mdl);
+            } except(EXCEPTION_EXECUTE_HANDLER) {
+                Error("Failed to unlock user pages: 0x%x\n", GetExceptionCode());
+                // this shouldn't happen and will BSOD the system when the user process exits with locked pages
+            }
+        }
+
+        IoFreeMdl(Context->Mdl);
+        Context->Mdl = NULL;
+    }
+
+    if (Context->KernelVa != NULL) {
+        __FreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
+        Context->KernelVa = NULL;
+    }
+}
+
+static
+NTSTATUS
+GnttabPermitForeignAccess(
+    __in     PXENIFACE_FDO             Fdo,
+    __inout  PXENIFACE_GNTTAB_CONTEXT  Context
+    )
+{
+    NTSTATUS Status;
+    ULONG Page = 0;
+    size_t GrantsSize = 0;
+    ULONG SharedSize = 0;
+
+    Trace("> RemoteDomain %d, UserVa %p, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
+          Context->RemoteDomain, Context->UserVa, Context->NumberPages, Context->Flags,
+          Context->NotifyOffset, Context->NotifyPort, Context->Process, Context->RequestId);
+
+    // Check if the request ID/address is unique for this process.
+    // This doesn't protect us from simultaneous requests with the same ID arriving here
+    // but another check for duplicate ID is performed when the context/IRP is queued at the end.
+    // Ideally we would lock the whole section but that's not really an option since we touch user memory.
+    Status = STATUS_INVALID_PARAMETER;
+    if (FindGnttabIrp(Fdo, Context) != NULL)
+        goto fail1;
+
+    GrantsSize = Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY);
+    SharedSize = Context->NumberPages * PAGE_SIZE;
+    Status = STATUS_NO_MEMORY;
+    Context->Grants = __AllocatePoolWithTag(NonPagedPool, GrantsSize, XENIFACE_POOL_TAG);
+    if (Context->Grants == NULL)
+        goto fail2;
+
+    if (Context->UserVa == NULL) {
+        // sharing driver-allocated pages
+        Status = STATUS_NO_MEMORY;
+        Context->KernelVa = __AllocatePoolWithTag(NonPagedPool, SharedSize, XENIFACE_POOL_TAG);
+        if (Context->KernelVa == NULL)
+            goto fail3;
+
+        Context->Mdl = IoAllocateMdl(Context->KernelVa, SharedSize, FALSE, FALSE, NULL);
+        if (Context->Mdl == NULL)
+            goto fail4;
+
+        MmBuildMdlForNonPagedPool(Context->Mdl);
+        ASSERT(MmGetMdlByteCount(Context->Mdl) == SharedSize);
+    } else {
+        // sharing existing memory
+        Context->KernelVa = NULL;
+        Context->Mdl = IoAllocateMdl(Context->UserVa, SharedSize, FALSE, FALSE, NULL);
+        if (Context->Mdl == NULL)
+            goto fail4;
+
+        try {
+            MmProbeAndLockPages(Context->Mdl,
+                                UserMode,
+                                (Context->Flags & XENIFACE_GNTTAB_READONLY) != 0 ? IoReadAccess : IoWriteAccess);
+        } except(EXCEPTION_EXECUTE_HANDLER) {
+            Status = GetExceptionCode();
+            Error("Failed to lock user pages: 0x%x\n", Status);
+            Page = 0;
+            goto fail5;
+        }
+    }
+
+    // perform sharing
+    for (Page = 0; Page < Context->NumberPages; Page++) {
+        Status = XENBUS_GNTTAB(PermitForeignAccess,
+                               &Fdo->GnttabInterface,
+                               Fdo->GnttabCache,
+                               FALSE,
+                               Context->RemoteDomain,
+                               MmGetMdlPfnArray(Context->Mdl)[Page],
+                               (Context->Flags & XENIFACE_GNTTAB_READONLY) != 0,
+                               &(Context->Grants[Page]));
+#if DBG
+        Info("Grants[%lu] = %p\n", Page, Context->Grants[Page]);
+#endif
+        if (!NT_SUCCESS(Status))
+            goto fail5;
+    }
+
+    if (Context->KernelVa != NULL) {
+        // map driver-allocated memory into user mode
+#pragma prefast(suppress:6320) // we want to catch all exceptions
+        try {
+            Context->UserVa = MmMapLockedPagesSpecifyCache(Context->Mdl,
+                                                           UserMode,
+                                                           MmCached,
+                                                           NULL,
+                                                           FALSE,
+                                                           NormalPagePriority);
+        } except (EXCEPTION_EXECUTE_HANDLER) {
+            Status = GetExceptionCode();
+            goto fail6;
+        }
+    }
+
+    Trace("< Context %p, KernelVa %p, UserVa %p\n",
+          Context, Context->KernelVa, Context->UserVa);
+
+    return STATUS_SUCCESS;
+
+fail6:
+    Error("Fail6\n");
+
+fail5:
+    Error("Fail5\n");
+
+fail4:
+    Error("Fail4\n");
+
+fail3:
+    Error("Fail3\n");
+
+fail2:
+    Error("Fail2\n");
+
+fail1:
+    Error("Fail1\n");
+    GnttabStopSharing(Fdo, Context, Page);
+
+    if (Context != NULL) {
+        RtlZeroMemory(Context, sizeof(*Context));
+        __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
+    }
+
+    return Status;
 }
 
 DECLSPEC_NOINLINE
@@ -147,123 +323,91 @@ IoctlGnttabPermitForeignAccess(
     __inout  PIRP           Irp
     )
 {
-    NTSTATUS status;
-    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN In;
+    NTSTATUS Status;
+    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN In1 = NULL;
+    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2 In = NULL;
+    // XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2 is the same as XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT
     PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT Out = Irp->UserBuffer;
-    PXENIFACE_GRANT_CONTEXT Context;
+    PXENIFACE_GNTTAB_CONTEXT Context;
     ULONG Page;
+    ULONG ControlCode = IoGetCurrentIrpStackLocation(Irp)->Parameters.DeviceIoControl.IoControlCode;
 
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen != sizeof(XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN))
+    Status = STATUS_INVALID_BUFFER_SIZE;
+    if ((InLen != sizeof(XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN) && ControlCode == IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS)
+        || (InLen != sizeof(XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2) && ControlCode == IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2))
         goto fail1;
 
     // This IOCTL uses METHOD_NEITHER so we directly access user memory.
-    status = __CaptureUserBuffer(Buffer, InLen, &In);
-    if (!NT_SUCCESS(status))
-        goto fail2;
+    if (ControlCode == IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS) {
+        // legacy IOCTL, convert the input to v2
+        Status = __CaptureUserBuffer(Buffer, InLen, &In1);
+        if (!NT_SUCCESS(Status))
+            goto fail2;
 
-    status = STATUS_INVALID_PARAMETER;
-    if (In->NumberPages == 0 ||
-        In->NumberPages > 1024 * 1024) {
-        goto fail3;
+        Status = STATUS_NO_MEMORY;
+        In = __AllocatePoolWithTag(NonPagedPool, sizeof(*In), XENIFACE_POOL_TAG);
+        if (!In)
+            goto fail3;
+
+        In->RemoteDomain = In1->RemoteDomain;
+        In->Address = NULL;
+        In->NumberPages = In->NumberPages;
+        In->Flags = In1->Flags;
+        In->NotifyOffset = In1->NotifyOffset;
+        In->NotifyPort = In1->NotifyPort;
+    } else {
+        Status = __CaptureUserBuffer(Buffer, InLen, &In);
+        if (!NT_SUCCESS(Status))
+            goto fail2;
+    }
+
+    Status = STATUS_INVALID_PARAMETER;
+    if (In->NumberPages == 0 || In->NumberPages > 1024 * 1024) {
+        goto fail4;
     }
 
     if ((In->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) &&
         (In->NotifyOffset >= In->NumberPages * PAGE_SIZE)) {
-        goto fail4;
+        goto fail5;
     }
 
-    status = STATUS_INVALID_BUFFER_SIZE;
+    Status = STATUS_INVALID_BUFFER_SIZE;
     if (OutLen != (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT, References[In->NumberPages]))
-        goto fail5;
-
-    status = STATUS_NO_MEMORY;
-    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_GRANT_CONTEXT), XENIFACE_POOL_TAG);
-    if (Context == NULL)
         goto fail6;
 
-    RtlZeroMemory(Context, sizeof(XENIFACE_GRANT_CONTEXT));
-    Context->Id.Type = XENIFACE_CONTEXT_GRANT;
-    Context->Id.Process = PsGetCurrentProcess();
-    Context->Id.RequestId = In->RequestId;
+    Status = STATUS_NO_MEMORY;
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_GNTTAB_CONTEXT), XENIFACE_POOL_TAG);
+    if (Context == NULL)
+        goto fail7;
+
+    Context->Type = XENIFACE_GNTTAB_CONTEXT_GRANT;
+    Context->Process = PsGetCurrentProcess();
     Context->RemoteDomain = In->RemoteDomain;
+    Context->UserVa = In->Address;
     Context->NumberPages = In->NumberPages;
     Context->Flags = In->Flags;
     Context->NotifyOffset = In->NotifyOffset;
     Context->NotifyPort = In->NotifyPort;
 
-    Trace("> RemoteDomain %d, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
-                       Context->RemoteDomain, Context->NumberPages, Context->Flags, Context->NotifyOffset, Context->NotifyPort,
-                       Context->Id.Process, Context->Id.RequestId);
+    __FreeCapturedBuffer(In);
+    In = NULL;
 
-    // Check if the request ID is unique for this process.
-    // This doesn't protect us from simultaneous requests with the same ID arriving here
-    // but another check for duplicate ID is performed when the context/IRP is queued at the end.
-    // Ideally we would lock the whole section but that's not really an option since we touch user memory.
-    status = STATUS_INVALID_PARAMETER;
-    if (FindGnttabIrp(Fdo, &Context->Id) != NULL)
-        goto fail7;
+    if (ControlCode == IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS) {
+        Context->UseRequestId = TRUE;
+        Context->RequestId = In1->RequestId;
+        __FreeCapturedBuffer(In1);
+        In1 = NULL;
+    } else {
+        Context->UseRequestId = FALSE;
+        Context->RequestId = 0;
+    }
 
-    status = STATUS_NO_MEMORY;
-    Context->Grants = __AllocatePoolWithTag(NonPagedPool, Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY), XENIFACE_POOL_TAG);
-    if (Context->Grants == NULL)
+    Status = GnttabPermitForeignAccess(Fdo, Context);
+    if (!NT_SUCCESS(Status))
         goto fail8;
 
-    RtlZeroMemory(Context->Grants, Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY));
-
-    // allocate memory to share
-    status = STATUS_NO_MEMORY;
-    Context->KernelVa = __AllocatePoolWithTag(NonPagedPool, Context->NumberPages * PAGE_SIZE, XENIFACE_POOL_TAG);
-    if (Context->KernelVa == NULL)
-        goto fail9;
-
-    RtlZeroMemory(Context->KernelVa, Context->NumberPages * PAGE_SIZE);
-    Context->Mdl = IoAllocateMdl(Context->KernelVa, Context->NumberPages * PAGE_SIZE, FALSE, FALSE, NULL);
-    if (Context->Mdl == NULL)
-        goto fail10;
-
-    MmBuildMdlForNonPagedPool(Context->Mdl);
-    ASSERT(MmGetMdlByteCount(Context->Mdl) == Context->NumberPages * PAGE_SIZE);
-
-    // perform sharing
-    for (Page = 0; Page < Context->NumberPages; Page++) {
-        status = XENBUS_GNTTAB(PermitForeignAccess,
-                               &Fdo->GnttabInterface,
-                               Fdo->GnttabCache,
-                               FALSE,
-                               Context->RemoteDomain,
-                               MmGetMdlPfnArray(Context->Mdl)[Page],
-                               (Context->Flags & XENIFACE_GNTTAB_READONLY) != 0,
-                               &(Context->Grants[Page]));
-
-// prefast somehow thinks that this call can modify Page...
-#pragma prefast(suppress:6385)
-        Info("Grants[%lu] = %p\n", Page, Context->Grants[Page]);
-        if (!NT_SUCCESS(status))
-            goto fail11;
-    }
-
-    // map into user mode
-#pragma prefast(suppress:6320) // we want to catch all exceptions
-    __try {
-        Context->UserVa = MmMapLockedPagesSpecifyCache(Context->Mdl,
-                                                       UserMode,
-                                                       MmCached,
-                                                       NULL,
-                                                       FALSE,
-                                                       NormalPagePriority);
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER) {
-        status = GetExceptionCode();
-        goto fail12;
-    }
-
-    status = STATUS_UNSUCCESSFUL;
-    if (Context->UserVa == NULL)
-        goto fail13;
-
     Trace("< Context %p, Irp %p, KernelVa %p, UserVa %p\n",
-                       Context, Irp, Context->KernelVa, Context->UserVa);
+          Context, Irp, Context->KernelVa, Context->UserVa);
 
     // Pass the result to user mode.
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
@@ -277,64 +421,34 @@ IoctlGnttabPermitForeignAccess(
                                                   Context->Grants[Page]);
         }
     } except(EXCEPTION_EXECUTE_HANDLER) {
-        status = GetExceptionCode();
-        Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", status, Out, OutLen);
-        goto fail14;
+        Status = GetExceptionCode();
+        Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", Status, Out, OutLen);
+        goto fail9;
     }
 
     // Insert the IRP/context into the pending queue.
-    // This also checks (again) if the request ID is unique for the calling process.
-    Irp->Tail.Overlay.DriverContext[0] = &Context->Id;
-    status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, &Context->Id);
-    if (!NT_SUCCESS(status))
-        goto fail15;
-
-    __FreeCapturedBuffer(In);
+    // This also checks (again) if the request ID/address is unique for the calling process.
+    Irp->Tail.Overlay.DriverContext[0] = Context;
+    Status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, Context);
+    if (!NT_SUCCESS(Status))
+        goto fail10;
 
     return STATUS_PENDING;
 
-fail15:
-    Error("Fail15\n");
-
-fail14:
-    Error("Fail14\n");
-    MmUnmapLockedPages(Context->UserVa, Context->Mdl);
-
-fail13:
-    Error("Fail13\n");
-
-fail12:
-    Error("Fail12\n");
-
-fail11:
-    Error("Fail11: Page = %lu\n", Page);
-
-    while (Page > 0) {
-        ASSERT(NT_SUCCESS(XENBUS_GNTTAB(RevokeForeignAccess,
-                                        &Fdo->GnttabInterface,
-                                        Fdo->GnttabCache,
-                                        FALSE,
-                                        Context->Grants[Page - 1])));
-
-        --Page;
-    }
-    IoFreeMdl(Context->Mdl);
-
 fail10:
     Error("Fail10\n");
-    __FreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
 
 fail9:
     Error("Fail9\n");
-    __FreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
+    GnttabStopSharing(Fdo, Context, Context->NumberPages);
 
 fail8:
     Error("Fail8\n");
+    RtlZeroMemory(Context, sizeof(*Context));
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail7:
     Error("Fail7\n");
-    RtlZeroMemory(Context, sizeof(XENIFACE_GRANT_CONTEXT));
-    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail6:
     Error("Fail6\n");
@@ -344,32 +458,33 @@ fail5:
 
 fail4:
     Error("Fail4\n");
+    __FreeCapturedBuffer(In);
 
 fail3:
     Error("Fail3\n");
-    __FreeCapturedBuffer(In);
+    __FreeCapturedBuffer(In1); // NULL-safe
 
 fail2:
     Error("Fail2\n");
 
 fail1:
-    Error("Fail1 (%08x)\n", status);
-    return status;
+    Error("Fail1 (%08x)\n", Status);
+    return Status;
 }
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
 GnttabFreeGrant(
-    __in     PXENIFACE_FDO            Fdo,
-    __inout  PXENIFACE_GRANT_CONTEXT  Context
+    __in     PXENIFACE_FDO             Fdo,
+    __inout  PXENIFACE_GNTTAB_CONTEXT  Context
 )
 {
     NTSTATUS status;
-    ULONG Page;
-
-    ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
 
     Trace("Context %p\n", Context);
+
+    ASSERT(Context->Type == XENIFACE_GNTTAB_CONTEXT_GRANT);
+    ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
 
     if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) {
         ((PCHAR)Context->KernelVa)[Context->NotifyOffset] = 0;
@@ -382,67 +497,56 @@ GnttabFreeGrant(
             Error("failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
     }
 
-    // unmap from user address space
-    MmUnmapLockedPages(Context->UserVa, Context->Mdl);
+    GnttabStopSharing(Fdo, Context, Context->NumberPages);
 
-    // stop sharing
-    for (Page = 0; Page < Context->NumberPages; Page++) {
-        status = XENBUS_GNTTAB(RevokeForeignAccess,
-                               &Fdo->GnttabInterface,
-                               Fdo->GnttabCache,
-                               FALSE,
-                               Context->Grants[Page]);
-
-        ASSERT(NT_SUCCESS(status)); // failure here is fatal, something must've gone catastrophically wrong
-    }
-
-    IoFreeMdl(Context->Mdl);
-
-    RtlZeroMemory(Context->KernelVa, Context->NumberPages * PAGE_SIZE);
-    __FreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
-
-    RtlZeroMemory(Context->Grants, Context->NumberPages * sizeof(PXENBUS_GNTTAB_ENTRY));
-    __FreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
-
-    RtlZeroMemory(Context, sizeof(XENIFACE_GRANT_CONTEXT));
+    RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabRevokeForeignAccess(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    __in  PXENIFACE_FDO  Fdo,
+    __in  PVOID          Buffer,
+    __in  ULONG          InLen,
+    __in  ULONG          OutLen,
+    __in  ULONG          ControlCode
     )
 {
-    NTSTATUS status;
-    PXENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN In = Buffer;
-    PXENIFACE_GRANT_CONTEXT Context = NULL;
-    XENIFACE_CONTEXT_ID Id;
+    NTSTATUS Status;
+    XENIFACE_GNTTAB_CONTEXT SeekContext;
     PIRP PendingIrp;
-    PXENIFACE_CONTEXT_ID ContextId;
+    PXENIFACE_GNTTAB_CONTEXT Context = NULL;
 
     UNREFERENCED_PARAMETER(OutLen);
 
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen != sizeof(XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN))
-        goto fail1;
+    Status = STATUS_INVALID_BUFFER_SIZE;
 
-    Id.Type = XENIFACE_CONTEXT_GRANT;
-    Id.Process = PsGetCurrentProcess();
-    Id.RequestId = In->RequestId;
+    SeekContext.Type = XENIFACE_GNTTAB_CONTEXT_GRANT;
+    SeekContext.Process = PsGetCurrentProcess();
 
-    Trace("> Process %p, Id %lu\n", Id.Process, Id.RequestId);
+    if (ControlCode == IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS) {
+        if (InLen != sizeof(XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN))
+            goto fail1;
 
-    status = STATUS_NOT_FOUND;
-    PendingIrp = IoCsqRemoveNextIrp(&Fdo->IrpQueue, &Id);
+        SeekContext.UseRequestId = TRUE;
+        SeekContext.RequestId = ((PXENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN)Buffer)->RequestId;
+        Trace("> Process %p, Id %lu\n", SeekContext.Process, SeekContext.RequestId);
+    } else {
+        if (InLen != sizeof(XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2))
+            goto fail1;
+
+        SeekContext.UseRequestId = FALSE;
+        SeekContext.UserVa = ((PXENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2)Buffer)->Address;
+        Trace("> Process %p, Address %p\n", SeekContext.Process, SeekContext.UserVa);
+    }
+
+    Status = STATUS_NOT_FOUND;
+    PendingIrp = IoCsqRemoveNextIrp(&Fdo->IrpQueue, &SeekContext);
     if (PendingIrp == NULL)
         goto fail2;
 
-    ContextId = PendingIrp->Tail.Overlay.DriverContext[0];
-    Context = CONTAINING_RECORD(ContextId, XENIFACE_GRANT_CONTEXT, Id);
+    Context = PendingIrp->Tail.Overlay.DriverContext[0];
     GnttabFreeGrant(Fdo, Context);
 
     PendingIrp->IoStatus.Status = STATUS_SUCCESS;
@@ -455,67 +559,103 @@ fail2:
     Error("Fail2\n");
 
 fail1:
-    Error("Fail1 (%08x)\n", status);
-    return status;
+    Error("Fail1 (%08x)\n", Status);
+    return Status;
 }
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabMapForeignPages(
-    __in     PXENIFACE_FDO     Fdo,
-    __in     PVOID             Buffer,
-    __in     ULONG             InLen,
-    __in     ULONG             OutLen,
-    __inout  PIRP              Irp
+    __in     PXENIFACE_FDO  Fdo,
+    __in     PVOID          Buffer,
+    __in     ULONG          InLen,
+    __in     ULONG          OutLen,
+    __inout  PIRP           Irp
     )
 {
     NTSTATUS status;
-    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN In = Buffer;
+    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN In1 = NULL;
+    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2 In = NULL;
+    // XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2 is the same as XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT
     PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT Out = Irp->UserBuffer;
     ULONG NumberPages;
-    ULONG PageIndex;
-    PXENIFACE_MAP_CONTEXT Context;
+    PXENIFACE_GNTTAB_CONTEXT Context;
+    ULONG ControlCode = IoGetCurrentIrpStackLocation(Irp)->Parameters.DeviceIoControl.IoControlCode;
 
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen < sizeof(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN) ||
-        OutLen != sizeof(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT)) {
+    ASSERT(ControlCode == IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES || ControlCode == IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2);
+
+    status = STATUS_NO_MEMORY;
+    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(*Context), XENIFACE_POOL_TAG);
+    if (Context == NULL)
         goto fail1;
-    }
+
+    Context->Type = XENIFACE_GNTTAB_CONTEXT_MAP;
+    Context->Process = PsGetCurrentProcess();
 
     // This IOCTL uses METHOD_NEITHER so we directly access user memory.
+    if (ControlCode == IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES) {
+        status = STATUS_INVALID_BUFFER_SIZE;
+        if (InLen < sizeof(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN)
+            || OutLen != sizeof(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT))
+            goto fail2;
 
-    // Calculate the expected number of pages based on input buffer size.
-    NumberPages = (InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References)) / sizeof(In->References[0]);
+        In1 = Buffer;
+        NumberPages = (InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References)) / sizeof(ULONG);
+        status = __CaptureUserBuffer(Buffer, InLen, &In1);
+        if (!NT_SUCCESS(status))
+            goto fail3;
 
-    status = __CaptureUserBuffer(Buffer, InLen, &In);
-    if (!NT_SUCCESS(status))
-        goto fail2;
+        Context->UseRequestId = TRUE;
+        Context->RequestId = In1->RequestId;
 
+        // legacy IOCTL, convert the input to v2
+        status = STATUS_NO_MEMORY;
+        In = __AllocatePoolWithTag(NonPagedPool, sizeof(*In), XENIFACE_POOL_TAG);
+        if (In == NULL)
+            goto fail4;
+
+        In->RemoteDomain = In1->RemoteDomain;
+        In->NumberPages = In1->NumberPages;
+        In->NotifyOffset = In1->NotifyOffset;
+        In->NotifyPort = In1->NotifyPort;
+        In->Flags = In1->Flags;
+        memcpy(&In->References, &In1->References, NumberPages * sizeof(ULONG));
+
+        __FreeCapturedBuffer(In1);
+        In1 = NULL;
+    } else {
+        status = STATUS_INVALID_BUFFER_SIZE;
+        if (InLen < sizeof(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2)
+            || OutLen != sizeof(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2))
+            goto fail2;
+
+        In = Buffer;
+        NumberPages = (InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References)) / sizeof(ULONG);
+        status = __CaptureUserBuffer(Buffer, InLen, &In);
+        if (!NT_SUCCESS(status))
+            goto fail3;
+
+        Context->UseRequestId = FALSE;
+        Context->RequestId = 0;
+    }
+
+    // At this point we only access In.
     status = STATUS_INVALID_PARAMETER;
     if (In->NumberPages == 0 ||
         In->NumberPages > 1024 * 1024 ||
         In->NumberPages != NumberPages) {
-        goto fail3;
+        goto fail5;
     }
 
     if ((In->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) &&
         (In->NotifyOffset >= In->NumberPages * PAGE_SIZE)) {
-        goto fail4;
+        goto fail6;
     }
 
     status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen != (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References[In->NumberPages]))
-        goto fail5;
+    if (InLen != (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References[In->NumberPages]))
+        goto fail7;
 
-    status = STATUS_NO_MEMORY;
-    Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_MAP_CONTEXT), XENIFACE_POOL_TAG);
-    if (Context == NULL)
-        goto fail6;
-
-    RtlZeroMemory(Context, sizeof(XENIFACE_MAP_CONTEXT));
-    Context->Id.Type = XENIFACE_CONTEXT_MAP;
-    Context->Id.Process = PsGetCurrentProcess();
-    Context->Id.RequestId = In->RequestId;
     Context->RemoteDomain = In->RemoteDomain;
     Context->NumberPages = In->NumberPages;
     Context->Flags = In->Flags;
@@ -523,15 +663,17 @@ IoctlGnttabMapForeignPages(
     Context->NotifyPort = In->NotifyPort;
 
     Trace("> RemoteDomain %d, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
-                       Context->RemoteDomain, Context->NumberPages, Context->Flags, Context->NotifyOffset, Context->NotifyPort,
-                       Context->Id.Process, Context->Id.RequestId);
+          Context->RemoteDomain, Context->NumberPages, Context->Flags, Context->NotifyOffset, Context->NotifyPort,
+          Context->Process, Context->RequestId);
 
-    for (PageIndex = 0; PageIndex < In->NumberPages; PageIndex++)
+#if DBG
+    for (ULONG PageIndex = 0; PageIndex < In->NumberPages; PageIndex++)
         Info("> Ref %d\n", In->References[PageIndex]);
+#endif
 
     status = STATUS_INVALID_PARAMETER;
-    if (FindGnttabIrp(Fdo, &Context->Id) != NULL)
-        goto fail7;
+    if (FindGnttabIrp(Fdo, Context) != NULL)
+        goto fail8;
 
     status = XENBUS_GNTTAB(MapForeignPages,
                            &Fdo->GnttabInterface,
@@ -542,41 +684,36 @@ IoctlGnttabMapForeignPages(
                            &Context->Address);
 
     if (!NT_SUCCESS(status))
-        goto fail8;
+        goto fail9;
 
-    status = STATUS_NO_MEMORY;
+    status = STATUS_INSUFFICIENT_RESOURCES;
     Context->KernelVa = MmMapIoSpace(Context->Address, Context->NumberPages * PAGE_SIZE, MmCached);
     if (Context->KernelVa == NULL)
-        goto fail9;
+        goto fail10;
 
     status = STATUS_NO_MEMORY;
     Context->Mdl = IoAllocateMdl(Context->KernelVa, Context->NumberPages * PAGE_SIZE, FALSE, FALSE, NULL);
     if (Context->Mdl == NULL)
-        goto fail10;
+        goto fail11;
 
     MmBuildMdlForNonPagedPool(Context->Mdl);
 
     // map into user mode
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
-    __try {
+    try {
         Context->UserVa = MmMapLockedPagesSpecifyCache(Context->Mdl,
                                                        UserMode,
                                                        MmCached,
                                                        NULL,
                                                        FALSE,
                                                        NormalPagePriority);
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER) {
+    } except (EXCEPTION_EXECUTE_HANDLER) {
         status = GetExceptionCode();
-        goto fail11;
-    }
-
-    status = STATUS_UNSUCCESSFUL;
-    if (Context->UserVa == NULL)
         goto fail12;
+    }
 
     Trace("< Context %p, Irp %p, Address %p, KernelVa %p, UserVa %p\n",
-                       Context, Irp, Context->Address, Context->KernelVa, Context->UserVa);
+          Context, Irp, Context->Address, Context->KernelVa, Context->UserVa);
 
     // Pass the result to user mode.
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
@@ -591,8 +728,8 @@ IoctlGnttabMapForeignPages(
 
     // Insert the IRP/context into the pending queue.
     // This also checks (again) if the request ID is unique for the calling process.
-    Irp->Tail.Overlay.DriverContext[0] = &Context->Id;
-    status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, &Context->Id);
+    Irp->Tail.Overlay.DriverContext[0] = Context;
+    status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, Context);
     if (!NT_SUCCESS(status))
         goto fail14;
 
@@ -609,45 +746,46 @@ fail13:
 
 fail12:
     Error("Fail12\n");
+    IoFreeMdl(Context->Mdl);
 
 fail11:
     Error("Fail11\n");
-    IoFreeMdl(Context->Mdl);
+    MmUnmapIoSpace(Context->KernelVa, Context->NumberPages * PAGE_SIZE);
 
 fail10:
     Error("Fail10\n");
-    MmUnmapIoSpace(Context->KernelVa, Context->NumberPages * PAGE_SIZE);
-
-fail9:
-    Error("Fail9\n");
     ASSERT(NT_SUCCESS(XENBUS_GNTTAB(UnmapForeignPages,
                                     &Fdo->GnttabInterface,
                                     Context->Address
                                     )));
+
+fail9:
+    Error("Fail9\n");
 
 fail8:
     Error("Fail8\n");
 
 fail7:
     Error("Fail7\n");
-    RtlZeroMemory(Context, sizeof(XENIFACE_MAP_CONTEXT));
-    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail6:
     Error("Fail6\n");
 
 fail5:
     Error("Fail5\n");
+    __FreeCapturedBuffer(In);
 
 fail4:
     Error("Fail4\n");
+    __FreeCapturedBuffer(In1);
 
 fail3:
     Error("Fail3\n");
-    __FreeCapturedBuffer(In);
 
 fail2:
     Error("Fail2\n");
+    RtlZeroMemory(Context, sizeof(*Context));
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail1:
     Error("Fail1 (%08x)\n", status);
@@ -658,12 +796,13 @@ _IRQL_requires_max_(APC_LEVEL)
 DECLSPEC_NOINLINE
 VOID
 GnttabFreeMap(
-    __in     PXENIFACE_FDO            Fdo,
-    __inout  PXENIFACE_MAP_CONTEXT    Context
+    __in     PXENIFACE_FDO             Fdo,
+    __inout  PXENIFACE_GNTTAB_CONTEXT  Context
     )
 {
     NTSTATUS status;
 
+    ASSERT(Context->Type == XENIFACE_GNTTAB_CONTEXT_MAP);
     ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
 
     Trace("Context %p\n", Context);
@@ -694,45 +833,61 @@ GnttabFreeMap(
 
     ASSERT(NT_SUCCESS(status));
 
-    RtlZeroMemory(Context, sizeof(XENIFACE_MAP_CONTEXT));
+    RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabUnmapForeignPages(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    __in  PXENIFACE_FDO  Fdo,
+    __in  PVOID          Buffer,
+    __in  ULONG          InLen,
+    __in  ULONG          OutLen,
+    __in  ULONG          ControlCode
     )
 {
     NTSTATUS status;
-    PXENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN In = Buffer;
-    PXENIFACE_MAP_CONTEXT Context = NULL;
-    XENIFACE_CONTEXT_ID Id;
+    XENIFACE_GNTTAB_CONTEXT SeekContext;
+    PXENIFACE_GNTTAB_CONTEXT Context;
     PIRP PendingIrp;
-    PXENIFACE_CONTEXT_ID ContextId;
 
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen != sizeof(XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN) ||
-        OutLen != 0) {
-        goto fail1;
+    ASSERT(ControlCode == IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES
+        || ControlCode == IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2);
+
+    SeekContext.Type = XENIFACE_GNTTAB_CONTEXT_MAP;
+    SeekContext.Process = PsGetCurrentProcess();
+
+    if (ControlCode == IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES) {
+        status = STATUS_INVALID_BUFFER_SIZE;
+        if (InLen != sizeof(XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN) || OutLen != 0) {
+            goto fail1;
+        }
+
+        PXENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN In = Buffer;
+        SeekContext.UseRequestId = TRUE;
+        SeekContext.RequestId = In->RequestId;
+
+        Trace("> Process %p, Id %lu\n", SeekContext.Process, SeekContext.RequestId);
+    } else {
+        status = STATUS_INVALID_BUFFER_SIZE;
+        if (InLen != sizeof(XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2) || OutLen != 0) {
+            goto fail1;
+        }
+
+        PXENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2 In = Buffer;
+        SeekContext.UseRequestId = FALSE;
+        SeekContext.UserVa = In->Address;
+
+        Trace("> Process %p, UserVa %p\n", SeekContext.Process, SeekContext.UserVa);
     }
 
-    Id.Type = XENIFACE_CONTEXT_MAP;
-    Id.Process = PsGetCurrentProcess();
-    Id.RequestId = In->RequestId;
-
-    Trace("> Process %p, Id %lu\n", Id.Process, Id.RequestId);
-
     status = STATUS_NOT_FOUND;
-    PendingIrp = IoCsqRemoveNextIrp(&Fdo->IrpQueue, &Id);
+    PendingIrp = IoCsqRemoveNextIrp(&Fdo->IrpQueue, &SeekContext);
     if (PendingIrp == NULL)
         goto fail2;
 
-    ContextId = PendingIrp->Tail.Overlay.DriverContext[0];
-    Context = CONTAINING_RECORD(ContextId, XENIFACE_MAP_CONTEXT, Id);
+    Context = PendingIrp->Tail.Overlay.DriverContext[0];
     GnttabFreeMap(Fdo, Context);
 
     PendingIrp->IoStatus.Status = STATUS_SUCCESS;

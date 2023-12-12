@@ -40,14 +40,14 @@ NTSTATUS
 CsqInsertIrpEx(
     _In_  PIO_CSQ Csq,
     _In_  PIRP    Irp,
-    _In_  PVOID   InsertContext // PXENIFACE_CONTEXT_ID
+    _In_  PVOID   InsertContext // PXENIFACE_GNTTAB_CONTEXT
     )
 {
     PXENIFACE_FDO Fdo;
 
     Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
 
-    // Fail if a request with the same ID already exists.
+    // Fail if a request with the same ID/address already exists.
     if (CsqPeekNextIrp(Csq, NULL, InsertContext) != NULL)
         return STATUS_INVALID_PARAMETER;
 
@@ -70,16 +70,16 @@ PIRP
 CsqPeekNextIrp(
     _In_      PIO_CSQ Csq,
     _In_opt_  PIRP    Irp,
-    _In_opt_  PVOID   PeekContext // PXENIFACE_CONTEXT_ID
+    _In_opt_  PVOID   PeekContext // PXENIFACE_GNTTAB_CONTEXT
     )
 {
-    PXENIFACE_FDO        Fdo;
-    PIRP                 NextIrp = NULL;
-    PLIST_ENTRY          Head, NextEntry;
-    PXENIFACE_CONTEXT_ID Id, TargetId;
+    PXENIFACE_FDO            Fdo;
+    PIRP                     NextIrp = NULL;
+    PLIST_ENTRY              Head, NextEntry;
+    PXENIFACE_GNTTAB_CONTEXT Context, TargetContext;
 
     Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
-    TargetId = PeekContext;
+    TargetContext = PeekContext;
     Head = &Fdo->IrpList;
 
     // If the IRP is NULL, we will start peeking from the list head,
@@ -96,8 +96,15 @@ CsqPeekNextIrp(
         NextIrp = CONTAINING_RECORD(NextEntry, IRP, Tail.Overlay.ListEntry);
 
         if (PeekContext) {
-            Id = NextIrp->Tail.Overlay.DriverContext[0];
-            if (Id->RequestId == TargetId->RequestId && Id->Process == TargetId->Process)
+            Context = NextIrp->Tail.Overlay.DriverContext[0];
+
+            BOOL Match = TargetContext->Type == Context->Type;
+            if (TargetContext->UseRequestId)
+                Match = Match && (TargetContext->RequestId == Context->RequestId);
+            else
+                Match = Match && (TargetContext->UserVa == Context->UserVa);
+
+            if (Match)
                 break;
         } else {
             break;

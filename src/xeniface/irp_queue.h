@@ -51,7 +51,7 @@ PIRP
 CsqPeekNextIrp(
     _In_      PIO_CSQ Csq,
     _In_opt_  PIRP    Irp,
-    _In_opt_  PVOID   PeekContext // PXENIFACE_CONTEXT_ID
+    _In_opt_  PVOID   PeekContext // PXENIFACE_GNTTAB_CONTEXT
     );
 
 _IRQL_raises_(DISPATCH_LEVEL)

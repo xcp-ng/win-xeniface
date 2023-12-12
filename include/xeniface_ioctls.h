@@ -245,8 +245,10 @@ typedef enum _XENIFACE_GNTTAB_PAGE_FLAGS {
 } XENIFACE_GNTTAB_PAGE_FLAGS;
 
 /*! \brief Grant permission to access local memory pages to a foreign domain
+    \deprecated Use the _V2 IOCTLs that don't need RequestId input instead
     \note This IOCTL must be asynchronous. The driver doesn't complete the request
           until the grant is explicitly revoked or the calling thread terminates.
+          Granted memory is allocated by the driver.
 
     Input: XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN
 
@@ -271,7 +273,35 @@ typedef struct _XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT {
     ULONG References[ANYSIZE_ARRAY]; /*!< An array of Xen-assigned references for each granted page */
 } XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT, *PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT;
 
-/*! \brief Revoke a foreign domain access to previously granted memory region
+/*! \brief Grant permission to access local memory pages to a foreign domain
+    \note This IOCTL must be asynchronous. The driver doesn't complete the request
+          until the grant is explicitly revoked or the calling thread terminates.
+          Granted memory may be already mapped or allocated by the driver.
+
+    Input: XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2
+
+    Output: XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2
+*/
+#define IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2 \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x824, METHOD_NEITHER, FILE_ANY_ACCESS)
+
+/*! \brief Input for IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2 */
+typedef struct _XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2 {
+    USHORT                     RemoteDomain; /*!< Remote domain that is being granted access */
+    PVOID                      Address;      /*!< Address of the granted memory region, allocated by the driver if NULL */
+    ULONG                      NumberPages;  /*!< Number of 4k pages to grant access to */
+    XENIFACE_GNTTAB_PAGE_FLAGS Flags;        /*!< Additional flags */
+    ULONG                      NotifyOffset; /*!< Offset of a byte in the granted region that will be set to 0 when the grant is revoked */
+    ULONG                      NotifyPort;   /*!< Local port number of an open event channel that will be notified when the grant is revoked */
+} XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2, *PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2;
+
+/*! \brief Output for IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2 */
+typedef struct _XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT \
+    XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2, *PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2;
+
+/*! \brief Revoke a foreign domain access to a memory region
+           previously granted by IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS
+    \deprecated Use the _V2 IOCTLs that don't need RequestId input instead
 
     Input: XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN
 
@@ -285,7 +315,23 @@ typedef struct _XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN {
     ULONG RequestId; /*! Request ID used in the corresponding IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS call */
 } XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN, *PXENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN;
 
+/*! \brief Revoke a foreign domain access to a memory region
+           previously granted by IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2
+
+    Input: XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2
+
+    Output: None
+*/
+#define IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_V2 \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x825, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Input for IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_V2 */
+typedef struct _XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2 {
+    PVOID Address; /*!< User-mode address of the shared memory region */
+} XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2, * PXENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2;
+
 /*! \brief Map a foreign memory region into the current address space
+    \deprecated Use the _V2 IOCTLs that don't need RequestId input instead
     \note This IOCTL must be asynchronous. The driver doesn't complete the request
           until the memory is explicitly unmapped or the calling thread terminates.
 
@@ -309,10 +355,37 @@ typedef struct _XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN {
 
 /*! \brief Output for IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES */
 typedef struct _XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT {
-    PVOID Address; /*!< User-mode address of the mapped memory region */
+    PVOID Address; /*!< User-mode address of the shared memory region */
 } XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT, *PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT;
 
-/*! \brief Unmap a foreign memory region from the current address space
+/*! \brief Map a foreign memory region into the current address space
+    \note This IOCTL must be asynchronous. The driver doesn't complete the request
+          until the memory is explicitly unmapped or the calling thread terminates.
+
+    Input: XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2
+
+    Output: XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2
+*/
+#define IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2 \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x826, METHOD_NEITHER, FILE_ANY_ACCESS)
+
+/*! \brief Input for IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2 */
+typedef struct _XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2 {
+    USHORT                     RemoteDomain;              /*!< Remote domain that has granted access to the pages */
+    ULONG                      NumberPages;               /*!< Number of 4k pages to map */
+    XENIFACE_GNTTAB_PAGE_FLAGS Flags;                     /*!< Additional flags */
+    ULONG                      NotifyOffset;              /*!< Offset of a byte in the mapped region that will be set to 0 when the region is unmapped */
+    ULONG                      NotifyPort;                /*!< Local port number of an open event channel that will be notified when the region is unmapped */
+    ULONG                      References[ANYSIZE_ARRAY]; /*!< An array of Xen-assigned references for each granted page */
+} XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, *PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2;
+
+/*! \brief Output for IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2 */
+typedef struct _XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT \
+    XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2, *PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2;
+
+/*! \brief Unmap a foreign memory region mapped by IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES
+           from the current address space
+    \deprecated Use the _V2 IOCTLs that don't need RequestId input instead
 
     Input: XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN
 
@@ -325,6 +398,21 @@ typedef struct _XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT {
 typedef struct _XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN {
     ULONG RequestId; /*! Request ID used in the corresponding IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES call */
 } XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN, *PXENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN;
+
+/*! \brief Unmap a foreign memory region mapped by IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2
+           from the current address space
+
+    Input: XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2
+
+    Output: None
+*/
+#define IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2 \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x827, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Input for IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2 */
+typedef struct _XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2 {
+    PVOID Address; /*!< User-mode address of the shared memory region */
+} XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2, *PXENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2;
 
 /*! \brief Gets the current suspend count.
 
