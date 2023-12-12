@@ -291,16 +291,6 @@ IoctlGnttabPermitForeignAccess(
 
 DECLSPEC_NOINLINE
 NTSTATUS
-IoctlGnttabGetGrantResult(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
-    );
-
-DECLSPEC_NOINLINE
-NTSTATUS
 IoctlGnttabRevokeForeignAccess(
     __in  PXENIFACE_FDO     Fdo,
     __in  PVOID             Buffer,
@@ -316,16 +306,6 @@ IoctlGnttabMapForeignPages(
     __in     ULONG             InLen,
     __in     ULONG             OutLen,
     __inout  PIRP              Irp
-    );
-
-DECLSPEC_NOINLINE
-NTSTATUS
-IoctlGnttabGetMapResult(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
     );
 
 DECLSPEC_NOINLINE
