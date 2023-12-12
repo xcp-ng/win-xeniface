@@ -161,7 +161,7 @@ XcEvtchnUnmask(
     IN  ULONG LocalPort
     );
 
-/*! \brief Grant a \a RemoteDomain permission to access local memory pages
+/*! \brief Grant a \a RemoteDomain permission to access local newly allocated memory pages
     \param Xc Xencontrol handle returned by XcOpen()
     \param RemoteDomain ID of a remote domain that is being granted access
     \param NumberPages Number of 4k pages to grant access to
@@ -184,6 +184,32 @@ XcGnttabPermitForeignAccess(
     OUT PVOID *Address,
     OUT ULONG *References
     );
+
+/*! \brief Grant a \a RemoteDomain permission to access local memory pages
+    \param Xc Xencontrol handle returned by XcOpen()
+    \param RemoteDomain ID of a remote domain that is being granted access
+    \param Address Address of the granted memory region, allocated by the driver if NULL
+    \param NumberPages Number of 4k pages to grant access to
+    \param NotifyOffset Offset of a byte in the granted region that will be set to 0 when the grant is revoked
+    \param NotifyPort Local port number of an open event channel that will be notified when the grant is revoked
+    \param Flags Grant options
+    \param SharedAddress Local user mode address of the granted memory region
+    \param References An array of Xen grant numbers for every granted page
+    \return Error code
+*/
+XENCONTROL_API
+DWORD
+XcGnttabPermitForeignAccess2(
+    IN  PXENCONTROL_CONTEXT Xc,
+    IN  USHORT RemoteDomain,
+    IN  PVOID Address,
+    IN  ULONG NumberPages,
+    IN  ULONG NotifyOffset,
+    IN  ULONG NotifyPort,
+    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
+    OUT PVOID* SharedAddress,
+    OUT ULONG* References
+);
 
 /*! \brief Revoke a foreign domain access to previously granted memory region
     \param Xc Xencontrol handle returned by XcOpen()
