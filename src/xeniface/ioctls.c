@@ -56,8 +56,10 @@ __CaptureUserBuffer(
 
     Status = STATUS_NO_MEMORY;
     TempBuffer = __AllocatePoolWithTag(NonPagedPool, Length, XENIFACE_POOL_TAG);
-    if (TempBuffer == NULL)
+    if (TempBuffer == NULL) {
+        *CapturedBuffer = NULL;
         return STATUS_INSUFFICIENT_RESOURCES;
+    }
 
     Status = STATUS_SUCCESS;
 
