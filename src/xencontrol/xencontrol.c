@@ -168,6 +168,8 @@ fail:
          L"Error: 0x%x", GetLastError());
 
     free(DetailData);
+    free(Context);
+    *Xc = NULL;
     return GetLastError();
 }
 
@@ -208,7 +210,7 @@ XcEvtchnOpenUnbound(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_BIND_UNBOUND_PORT failed");
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_BIND_UNBOUND failed");
         goto fail;
     }
 
@@ -442,11 +444,11 @@ XcGnttabPermitForeignAccess(
     // this IOCTL is expected to be pending on success
     if (!Success) {
         if (Status != ERROR_IO_PENDING) {
-            Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_GRANT_PAGES failed");
+            Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS failed");
             goto fail;
         }
     } else {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_GRANT_PAGES not pending");
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS not pending");
         Status = ERROR_UNIDENTIFIED_ERROR;
         goto fail;
     }
@@ -506,7 +508,7 @@ XcGnttabRevokeForeignAccess(
 
     Status = GetLastError();
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_UNGRANT_PAGES failed");
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS failed");
         goto fail;
     }
 

@@ -244,7 +244,7 @@ XENCONTROL_API
 DWORD
 XcStoreRead(
     IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
+    IN  PSTR Path,
     IN  DWORD cbValue,
     OUT CHAR *Value
     );
