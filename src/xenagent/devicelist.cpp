@@ -35,6 +35,7 @@
 #pragma comment (lib , "setupapi.lib" )
 
 #include "devicelist.h"
+#include <strsafe.h>
 
 #define BUFFER_SIZE 127
 
@@ -54,15 +55,25 @@ static std::wstring Convert(const wchar_t* wstr)
 
 static void DebugPrint(const wchar_t* fmt, ...)
 {
-    wchar_t buffer[BUFFER_SIZE + 1];
+    wchar_t buffer[BUFFER_SIZE];
     va_list args;
 
     va_start(args, fmt);
-    _vsnwprintf(buffer, BUFFER_SIZE, fmt, args);
+
+	// Fix for warning C28719: Banned API Usage:  _vsnwprintf is a Banned API as listed in dontuse.h for security purposes.
+    // StringCchVPrintfW is used for safe string formatting. 
+    // It automatically handles buffer size and ensures null-termination 
+    // of the output string, preventing buffer overflow.
+    HRESULT hr = StringCchVPrintfW(buffer, BUFFER_SIZE, fmt, args);
+
     va_end(args);
 
-    buffer[BUFFER_SIZE] = 0;
-    OutputDebugStringW(buffer);
+    // Check if string formatting was successful before outputting.
+    // This step ensures that only valid formatted strings are sent to the output.
+    if (SUCCEEDED(hr))
+    {
+        OutputDebugStringW(buffer);
+    }
 }
 
 CCritSec::CCritSec(LPCRITICAL_SECTION crit) : m_crit(crit)
