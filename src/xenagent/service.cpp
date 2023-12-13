@@ -271,6 +271,11 @@ void CXenAgent::SetServiceStatus(DWORD state, DWORD exit /*= 0*/, DWORD hint /*=
     ::SetServiceStatus(m_handle, &m_status);
 }
 
+#pragma warning(push)
+#pragma warning(disable: 28735) 
+//	Temporary ignore warning C28735: Banned Crimson API Usage:  RegisterEventSourceA is a Banned Crimson API.
+//	TODO: Replace with a safer API alternative and ensure compliance with security best practices.
+
 void WINAPI CXenAgent::__ServiceMain(int argc, char** argv)
 {
     UNREFERENCED_PARAMETER(argc);
@@ -292,6 +297,8 @@ void WINAPI CXenAgent::__ServiceMain(int argc, char** argv)
     m_evtlog = NULL;
     SetServiceStatus(SERVICE_STOPPED);
 }
+
+#pragma warning(pop)
 
 DWORD WINAPI CXenAgent::__ServiceControlHandlerEx(DWORD req, DWORD evt, LPVOID data, LPVOID ctxt)
 {
