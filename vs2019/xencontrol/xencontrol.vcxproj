@@ -34,7 +34,10 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;ws2_32.lib;shlwapi.lib;wtsapi32.lib;userenv.lib;version.lib;ntdll.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/INTEGRITYCHECK %(AdditionalOptions)</AdditionalOptions>
       <CETCompat>true</CETCompat>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -56,6 +59,7 @@
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
     <FilesToPackage Include="$(OutDir)$(TargetName).pdb" />
+    <FilesToPackage Include="$(OutDir)$(TargetName).map" />
     <FilesToPackage Include="$(OutDir)$(TargetName).dll" />
     <FilesToPackage Include="$(OutDir)$(TargetName).lib" />
   </ItemGroup>

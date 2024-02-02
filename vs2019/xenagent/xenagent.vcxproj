@@ -35,7 +35,10 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>powrprof.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/INTEGRITYCHECK %(AdditionalOptions)</AdditionalOptions>
       <CETCompat>true</CETCompat>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -67,6 +70,7 @@
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
     <FilesToPackage Include="$(OutDir)$(TargetName).pdb" />
+    <FilesToPackage Include="$(OutDir)$(TargetName).map" />
     <FilesToPackage Include="$(OutDir)$(TargetName).dll" />
   </ItemGroup>
   <ItemGroup>
