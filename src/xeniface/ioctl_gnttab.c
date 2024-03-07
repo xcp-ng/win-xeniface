@@ -304,12 +304,6 @@ fail2:
 fail1:
     Error("Fail1\n");
     GnttabStopSharing(Fdo, Context, Page);
-
-    if (Context != NULL) {
-        RtlZeroMemory(Context, sizeof(*Context));
-        __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
-    }
-
     return Status;
 }
 
