@@ -94,49 +94,54 @@ XcOpen(
     SP_DEVICE_INTERFACE_DETAIL_DATA *DetailData = NULL;
     DWORD BufferSize;
     PXENCONTROL_CONTEXT Context;
+    DWORD Status = ERROR_OUTOFMEMORY;
 
     Context = malloc(sizeof(*Context));
     if (Context == NULL)
-        return ERROR_NOT_ENOUGH_MEMORY;
+        goto end;
 
     Context->Logger = Logger;
     Context->LogLevel = XLL_INFO;
 
     DevInfo = SetupDiGetClassDevs(&GUID_INTERFACE_XENIFACE, 0, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (DevInfo == INVALID_HANDLE_VALUE) {
+        Status = GetLastError();
         _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
-             L"XENIFACE device class doesn't exist");
-        goto fail;
+             L"XENIFACE device class doesn't exist: 0x%x", Status);
+        goto end;
     }
 
     InterfaceData.cbSize = sizeof(InterfaceData);
     if (!SetupDiEnumDeviceInterfaces(DevInfo, NULL, &GUID_INTERFACE_XENIFACE, 0, &InterfaceData)) {
+        Status = GetLastError();
         _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
-             L"Failed to enumerate XENIFACE devices");
-        goto fail;
+             L"Failed to enumerate XENIFACE devices: 0x%x", Status);
+        goto end;
     }
 
     SetupDiGetDeviceInterfaceDetail(DevInfo, &InterfaceData, NULL, 0, &BufferSize, NULL);
-    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+    Status = GetLastError();
+    if (Status != ERROR_INSUFFICIENT_BUFFER) {
         _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
-             L"Failed to get buffer size for device details");
-        goto fail;
+             L"Failed to get buffer size for device details: 0x%x", Status);
+        goto end;
     }
 
     // Using 'BufferSize' from failed function call
 #pragma warning(suppress: 6102)
     DetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA *)malloc(BufferSize);
     if (!DetailData) {
-        SetLastError(ERROR_OUTOFMEMORY);
-        goto fail;
+        Status = ERROR_OUTOFMEMORY;
+        goto end;
     }
 
     DetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 
     if (!SetupDiGetDeviceInterfaceDetail(DevInfo, &InterfaceData, DetailData, BufferSize, NULL, NULL)) {
+        Status = GetLastError();
         _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
-             L"Failed to get XENIFACE device path");
-        goto fail;
+             L"Failed to get XENIFACE device path: 0x%x", Status);
+        goto end;
     }
 
     Context->XenIface = CreateFile(DetailData->DevicePath,
@@ -148,26 +153,27 @@ XcOpen(
                                    NULL);
 
     if (Context->XenIface == INVALID_HANDLE_VALUE) {
+        Status = GetLastError();
         _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
-             L"Failed to open XENIFACE device, path: %s", DetailData->DevicePath);
-        goto fail;
+             L"Failed to open XENIFACE device (path: %s): 0x%x", DetailData->DevicePath, Status);
+        goto end;
     }
 
-    _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
+    _Log(Logger, XLL_INFO, Context->LogLevel, __FUNCTION__,
          L"XenIface handle: %p", Context->XenIface);
 
-    free(DetailData);
     *Xc = Context;
-    return ERROR_SUCCESS;
+     Status = ERROR_SUCCESS;
 
-fail:
-    _Log(Logger, XLL_ERROR, Context->LogLevel, __FUNCTION__,
-         L"Error: 0x%x", GetLastError());
-
+end:
     free(DetailData);
-    free(Context);
-    *Xc = NULL;
-    return GetLastError();
+
+    if (Status != ERROR_SUCCESS) {
+        free(Context);
+        *Xc = NULL;
+    }
+
+    return Status;
 }
 
 void
@@ -192,6 +198,7 @@ XcEvtchnOpenUnbound(
     XENIFACE_EVTCHN_BIND_UNBOUND_OUT Out;
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     In.RemoteDomain = RemoteDomain;
     In.Event = Event;
@@ -206,18 +213,16 @@ XcEvtchnOpenUnbound(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_BIND_UNBOUND failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_BIND_UNBOUND failed: 0x%x", Status);
+        goto end;
     }
 
     *LocalPort = Out.LocalPort;
     Log(XLL_DEBUG, L"LocalPort: %lu", *LocalPort);
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -234,6 +239,7 @@ XcEvtchnBindInterdomain(
     XENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT Out;
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     In.RemoteDomain = RemoteDomain;
     In.RemotePort = RemotePort;
@@ -250,18 +256,16 @@ XcEvtchnBindInterdomain(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_BIND_INTERDOMAIN failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_BIND_INTERDOMAIN failed: 0x%x", Status);
+        goto end;
     }
 
     *LocalPort = Out.LocalPort;
     Log(XLL_DEBUG, L"LocalPort: %lu", *LocalPort);
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -273,6 +277,7 @@ XcEvtchnClose(
     XENIFACE_EVTCHN_CLOSE_IN In;
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     In.LocalPort = LocalPort;
 
@@ -285,15 +290,11 @@ XcEvtchnClose(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_CLOSE failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_CLOSE failed: 0x%x", Status);
     }
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+    return Status;
 }
 
 DWORD
@@ -305,6 +306,7 @@ XcEvtchnNotify(
     XENIFACE_EVTCHN_NOTIFY_IN In;
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     In.LocalPort = LocalPort;
 
@@ -317,15 +319,11 @@ XcEvtchnNotify(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_NOTIFY failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_NOTIFY failed: 0x%x", Status);
     }
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+    return Status;
 }
 
 DWORD
@@ -337,6 +335,7 @@ XcEvtchnUnmask(
     XENIFACE_EVTCHN_UNMASK_IN In;
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     In.LocalPort = LocalPort;
 
@@ -349,15 +348,11 @@ XcEvtchnUnmask(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_UNMASK failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_EVTCHN_UNMASK failed: 0x%x", Status);
     }
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+    return Status;
 }
 
 DWORD
@@ -418,7 +413,7 @@ XcGnttabPermitForeignAccess2(
 
     Status = ERROR_OUTOFMEMORY;
     if (!Out)
-        goto fail;
+        goto end;
 
     Log(XLL_DEBUG, L"RemoteDomain: %d, Address %p, NumberPages: %lu, NotifyOffset: 0x%x, NotifyPort: %lu, Flags: 0x%x",
         RemoteDomain, Address, NumberPages, NotifyOffset, NotifyPort, Flags);
@@ -431,17 +426,18 @@ XcGnttabPermitForeignAccess2(
                               &Returned,
                               &Overlapped);
 
-    Status = GetLastError();
     // this IOCTL is expected to be pending on success
     if (!Success) {
+        Status = GetLastError();
         if (Status != ERROR_IO_PENDING) {
-            Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2 failed");
-            goto fail;
+            Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2 failed: 0x%x", Status);
+            goto end;
         }
+        Status = ERROR_SUCCESS;
     } else {
         Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_V2 not pending");
         Status = ERROR_UNIDENTIFIED_ERROR;
-        goto fail;
+        goto end;
     }
 
     *SharedAddress = Out->Address;
@@ -452,11 +448,7 @@ XcGnttabPermitForeignAccess2(
         Log(XLL_DEBUG, L"Grant ref[%lu]: %lu", i, Out->References[i]);
 #endif
 
-    free(Out);
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", Status);
+end:
     free(Out);
     return Status;
 }
@@ -470,7 +462,7 @@ XcGnttabRevokeForeignAccess(
     XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2 In;
     DWORD Returned;
     BOOL Success;
-    DWORD Status;
+    DWORD Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Address: %p", Address);
     In.Address = Address;
@@ -482,16 +474,11 @@ XcGnttabRevokeForeignAccess(
                               &Returned,
                               NULL);
 
-    Status = GetLastError();
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_V2 failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_V2 failed: 0x%x", Status);
     }
 
-    return Status;
-
-fail:
-    Log(XLL_ERROR, L"Error: %d 0x%x", Status, Status);
     return Status;
 }
 
@@ -512,13 +499,12 @@ XcGnttabMapForeignPages(
     DWORD Returned, Size;
     OVERLAPPED Overlapped;
     BOOL Success;
-    DWORD Status;
+    DWORD Status = ERROR_OUTOFMEMORY;
 
-    Status = ERROR_OUTOFMEMORY;
     Size = (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References[NumberPages]);
     In = malloc(Size);
     if (!In)
-        goto fail;
+        goto end;
 
     In->RemoteDomain = RemoteDomain;
     In->NumberPages = NumberPages;
@@ -543,28 +529,25 @@ XcGnttabMapForeignPages(
                               &Returned,
                               &Overlapped);
 
-    Status = GetLastError();
     // this IOCTL is expected to be pending on success
     if (!Success) {
+        Status = GetLastError();
         if (Status != ERROR_IO_PENDING) {
-            Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2 failed");
-            goto fail;
+            Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2 failed: 0x%x", Status);
+            goto end;
         }
+        Status = ERROR_SUCCESS;
     } else {
         Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_V2 not pending");
         Status = ERROR_UNIDENTIFIED_ERROR;
-        goto fail;
+        goto end;
     }
 
     *Address = Out.Address;
 
     Log(XLL_DEBUG, L"Address: %p", *Address);
 
-    free(In);
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", Status);
+end:
     free(In);
     return Status;
 }
@@ -578,7 +561,7 @@ XcGnttabUnmapForeignPages(
     XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2 In;
     DWORD Returned;
     BOOL Success;
-    DWORD Status;
+    DWORD Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Address: %p", Address);
 
@@ -591,16 +574,11 @@ XcGnttabUnmapForeignPages(
                               &Returned,
                               NULL);
 
-    Status = GetLastError();
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2 failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2 failed: 0x%x", Status);
     }
 
-    return Status;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", Status);
     return Status;
 }
 
@@ -614,6 +592,7 @@ XcStoreRead(
 {
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Path: '%S'", Path);
     Success = DeviceIoControl(Xc->XenIface,
@@ -624,17 +603,15 @@ XcStoreRead(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_READ failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_READ failed: 0x%x", Status);
+        goto end;
     }
 
     Log(XLL_DEBUG, L"Value: '%S'", Value);
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -648,12 +625,13 @@ XcStoreWrite(
     DWORD cbBuffer;
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     cbBuffer = (DWORD)(strlen(Path) + 1 + strlen(Value) + 1 + 1);
     Buffer = malloc(cbBuffer);
     if (!Buffer) {
-        SetLastError(ERROR_OUTOFMEMORY);
-        goto fail;
+        Status = ERROR_OUTOFMEMORY;
+        goto end;
     }
 
     ZeroMemory(Buffer, cbBuffer);
@@ -669,17 +647,14 @@ XcStoreWrite(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_WRITE failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_WRITE failed: 0x%x", Status);
     }
 
     free(Buffer);
-    return ERROR_SUCCESS;
 
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    free(Buffer);
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -692,6 +667,7 @@ XcStoreDirectory(
 {
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Path: '%S'", Path);
     Success = DeviceIoControl(Xc->XenIface,
@@ -702,17 +678,15 @@ XcStoreDirectory(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_DIRECTORY failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_DIRECTORY failed: 0x%x", Status);
+        goto end;
     }
 
     _LogMultiSz(Xc, __FUNCTION__, XLL_DEBUG, Output);
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -723,6 +697,7 @@ XcStoreRemove(
 {
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Path: '%S'", Path);
     Success = DeviceIoControl(Xc->XenIface,
@@ -733,15 +708,11 @@ XcStoreRemove(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_REMOVE failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_REMOVE failed: 0x%x", Status);
     }
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+    return Status;
 }
 
 DWORD
@@ -754,6 +725,7 @@ XcStoreSetPermissions(
 {
     DWORD Returned, Size;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
     XENIFACE_STORE_SET_PERMISSIONS_IN *In = NULL;
 
     Log(XLL_DEBUG, L"Path: '%S', Count: %lu", Path, Count);
@@ -763,8 +735,8 @@ XcStoreSetPermissions(
     Size = (ULONG)FIELD_OFFSET(XENIFACE_STORE_SET_PERMISSIONS_IN, Permissions[Count]);
     In = malloc(Size);
     if (!In) {
-        SetLastError(ERROR_OUTOFMEMORY);
-        goto fail;
+        Status = ERROR_OUTOFMEMORY;
+        goto end;
     }
 
     In->Path = Path;
@@ -780,17 +752,13 @@ XcStoreSetPermissions(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_SET_PERMISSIONS failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_SET_PERMISSIONS failed: 0x%x", Status);
     }
 
     free(In);
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    free(In);
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -803,6 +771,7 @@ XcStoreAddWatch(
 {
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
     XENIFACE_STORE_ADD_WATCH_IN In;
     XENIFACE_STORE_ADD_WATCH_OUT Out;
 
@@ -819,19 +788,17 @@ XcStoreAddWatch(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_ADD_WATCH failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_ADD_WATCH failed: 0x%x", Status);
+        goto end;
     }
 
     *Handle = Out.Context;
 
-    Log(XLL_DEBUG, L"Handle: %p", *Handle);
+    Log(XLL_DEBUG, L"Watch handle: %p", *Handle);
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+end:
+    return Status;
 }
 
 DWORD
@@ -842,6 +809,7 @@ XcStoreRemoveWatch(
 {
     DWORD Returned;
     BOOL Success;
+    DWORD Status = ERROR_SUCCESS;
     XENIFACE_STORE_REMOVE_WATCH_IN In;
 
     Log(XLL_DEBUG, L"Handle: %p", Handle);
@@ -855,13 +823,9 @@ XcStoreRemoveWatch(
                               NULL);
 
     if (!Success) {
-        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_REMOVE_WATCH failed");
-        goto fail;
+        Status = GetLastError();
+        Log(XLL_ERROR, L"IOCTL_XENIFACE_STORE_REMOVE_WATCH failed: 0x%x", Status);
     }
 
-    return ERROR_SUCCESS;
-
-fail:
-    Log(XLL_ERROR, L"Error: 0x%x", GetLastError());
-    return GetLastError();
+    return Status;
 }
