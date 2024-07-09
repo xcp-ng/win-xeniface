@@ -61,84 +61,62 @@
 
 #define MAXNAMELEN  128
 
-
-static void
+static NTSTATUS
 FdoInitialiseXSRegistryEntries(
     IN PXENIFACE_FDO        Fdo
     )
 {
-    OBJECT_ATTRIBUTES Attributes;
-    HANDLE RegHandle;
-    UNICODE_STRING UnicodeValueName;
-    UNICODE_STRING UnicodeValue;
-    ANSI_STRING AnsiValue;
-    char *value;
-    NTSTATUS status;
+    ANSI_STRING             Ansi[2];
+    HANDLE                  Key;
+    PCHAR                   Value;
+    NTSTATUS                status;
+
     NT_ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
     status = XENBUS_STORE(Read,
                           &Fdo->StoreInterface,
                           NULL,
                           NULL,
                           "/mh/boot-time/management-mac-address",
-                          &value);
-    if (!NT_SUCCESS(status)){
-        Error("no such xenstore key\n");
-        goto failXS;
-    }
+                          &Value);
+    if (!NT_SUCCESS(status))
+        goto fail1;
 
-    InitializeObjectAttributes(&Attributes, &DriverParameters.RegistryPath,
-                                OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
-                                NULL,
-                                NULL);
+    status = RegistryOpenParametersKey(KEY_WRITE, &Key);
+    if (!NT_SUCCESS(status))
+        goto fail2;
 
-    status = ZwOpenKey(&RegHandle, KEY_WRITE, &Attributes);
+    RtlInitAnsiString(&Ansi[0], Value);
+    RtlZeroMemory(&Ansi[1], sizeof(ANSI_STRING));
 
-    if (!NT_SUCCESS(status)) {
-        Error("no such registry key %s\n", DriverParameters.RegistryPath);
-        goto failReg;
-    }
+    status = RegistryUpdateSzValue(Key,
+                                   "MgmtMacAddr",
+                                   REG_SZ,
+                                   &Ansi[0]);
+    if (!NT_SUCCESS(status))
+        goto fail3;
 
-    RtlInitUnicodeString(&UnicodeValueName, L"MgmtMacAddr");
-    RtlInitUnicodeString(&UnicodeValue, NULL);
-    RtlInitAnsiString(&AnsiValue, value);
+    RegistryCloseKey(Key);
 
-    Info("About to convert unicode string\n");
-    status = RtlAnsiStringToUnicodeString(&UnicodeValue, &AnsiValue, TRUE);
-    if (!NT_SUCCESS(status)) {
-        Error("Can't convert string\n");
-        goto failReg;
-    }
+    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 
-    Info("About to write unicode string\n");
-    status = ZwSetValueKey(RegHandle, &UnicodeValueName, 0, REG_SZ, UnicodeValue.Buffer, UnicodeValue.Length+sizeof(WCHAR));
-    if (!NT_SUCCESS(status)) {
-        Error("Can't write key\n");
-        goto failWrite;
-    }
+    return STATUS_SUCCESS;
 
-    ZwClose(RegHandle);
+fail3:
+    Error("fail3\n");
 
-    RtlFreeUnicodeString(&UnicodeValue);
-    XENBUS_STORE(Free, &Fdo->StoreInterface, value);
+    RegistryCloseKey(Key);
 
-    return;
+fail2:
+    Error("fail2\n");
 
-failWrite:
+    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
 
-    Error("Fail : Write\n");
-    ZwClose(RegHandle);
-    RtlFreeUnicodeString(&UnicodeValue);
+fail1:
+    Error("fail1 %08x\n", status);
 
-failReg:
-
-    Error("Fail : Reg\n");
-    XENBUS_STORE(Free, &Fdo->StoreInterface, value);
-
-failXS:
-    Error("Failed to initialise registry (%08x)\n", status);
-    return;
+    return status;
 }
-
 
 #define REGISTRY_WRITE_EVENT 0
 #define REGISTRY_THREAD_END_EVENT 1
@@ -163,7 +141,7 @@ static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
         if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
             if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
                 Info("WriteRegistry\n");
-                FdoInitialiseXSRegistryEntries(Fdo);
+                (VOID) FdoInitialiseXSRegistryEntries(Fdo);
                 KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
             }
             if (status == STATUS_WAIT_0+REGISTRY_THREAD_END_EVENT) {
@@ -2475,7 +2453,7 @@ FdoCreate(
     NTSTATUS            status;
 
 #pragma prefast(suppress:28197) // Possibly leaking memory 'FunctionDeviceObject'
-    status = IoCreateDevice(DriverObject,
+    status = IoCreateDevice(DriverGetDriverObject(),
                             sizeof (XENIFACE_DX),
                             NULL,
                             FILE_DEVICE_UNKNOWN,
@@ -2585,7 +2563,7 @@ FdoCreate(
     InitializeListHead(&Dx->ListEntry);
     Fdo->References = 1;
 
-    FdoInitialiseXSRegistryEntries(Fdo);
+    (VOID) FdoInitialiseXSRegistryEntries(Fdo);
 
     KeInitializeEvent(&Fdo->registryWriteEvent, NotificationEvent, FALSE);
 

@@ -46,19 +46,20 @@
 
 #include <wmilib.h>
 #include <ntifs.h>
-extern PDRIVER_OBJECT   DriverObject;
-
 
 #define MAX_DEVICE_ID_LEN   200
 
-typedef struct _XENIFACE_PARAMETERS {
-    UNICODE_STRING RegistryPath;
-
-} XENIFACE_PARAMETERS, *PXENIFACE_PARAMETERS;
-
 #define XENIFACE_POOL_TAG (ULONG) 'XIfc'
 
-extern XENIFACE_PARAMETERS DriverParameters;
+extern PDRIVER_OBJECT
+DriverGetDriverObject(
+    VOID
+    );
+
+extern HANDLE
+DriverGetParametersKey(
+    VOID
+    );
 
 typedef struct _XENIFACE_DX {
     PDEVICE_OBJECT      DeviceObject;

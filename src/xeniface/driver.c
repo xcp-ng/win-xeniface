@@ -36,32 +36,99 @@
 
 #include "fdo.h"
 #include "driver.h"
+#include "registry.h"
 
 #include "assert.h"
 #include "wmi.h"
 #include "util.h"
 
-PDRIVER_OBJECT      DriverObject;
+typedef struct _XENIFACE_DRIVER {
+    PDRIVER_OBJECT      DriverObject;
+    HANDLE              ParametersKey;
+} XENIFACE_DRIVER, *PXENIFACE_DRIVER;
+
+static XENIFACE_DRIVER  Driver;
+
+static FORCEINLINE VOID
+__DriverSetDriverObject(
+    IN  PDRIVER_OBJECT  DriverObject
+    )
+{
+    Driver.DriverObject = DriverObject;
+}
+
+static FORCEINLINE PDRIVER_OBJECT
+__DriverGetDriverObject(
+    VOID
+    )
+{
+    return Driver.DriverObject;
+}
+
+PDRIVER_OBJECT
+DriverGetDriverObject(
+    VOID
+    )
+{
+    return __DriverGetDriverObject();
+}
+
+static FORCEINLINE VOID
+__DriverSetParametersKey(
+    IN  HANDLE  Key
+    )
+{
+    Driver.ParametersKey = Key;
+}
+
+static FORCEINLINE HANDLE
+__DriverGetParametersKey(
+    VOID
+    )
+{
+    return Driver.ParametersKey;
+}
+
+HANDLE
+DriverGetParametersKey(
+    VOID
+    )
+{
+    return __DriverGetParametersKey();
+}
 
 DRIVER_UNLOAD       DriverUnload;
 
-XENIFACE_PARAMETERS DriverParameters;
-
 VOID
 DriverUnload(
-    IN  PDRIVER_OBJECT  _DriverObject
+    IN  PDRIVER_OBJECT  DriverObject
     )
 {
-    ASSERT3P(_DriverObject, ==, DriverObject);
+    HANDLE              ParametersKey;
+
+    ASSERT3P(DriverObject, ==, __DriverGetDriverObject());
 
     Trace("====>\n");
 
-    if (DriverParameters.RegistryPath.Buffer != NULL) {
-        __FreePoolWithTag(DriverParameters.RegistryPath.Buffer,
-                          XENIFACE_POOL_TAG);
-    }
+    ParametersKey = __DriverGetParametersKey();
+    __DriverSetParametersKey(NULL);
 
-    DriverObject = NULL;
+    RegistryCloseKey(ParametersKey);
+
+    RegistryTeardown();
+
+    Info("XENIFACE %d.%d.%d (%d) (%02d.%02d.%04d)\n",
+         MAJOR_VERSION,
+         MINOR_VERSION,
+         MICRO_VERSION,
+         BUILD_NUMBER,
+         DAY,
+         MONTH,
+         YEAR);
+
+    __DriverSetDriverObject(NULL);
+
+    ASSERT(IsZeroMemory(&Driver, sizeof (XENIFACE_DRIVER)));
 
     Trace("<====\n");
 }
@@ -70,13 +137,13 @@ DRIVER_ADD_DEVICE   AddDevice;
 
 NTSTATUS
 AddDevice(
-    IN  PDRIVER_OBJECT  _DriverObject,
+    IN  PDRIVER_OBJECT  DriverObject,
     IN  PDEVICE_OBJECT  DeviceObject
     )
 {
     NTSTATUS            status;
 
-    ASSERT3P(_DriverObject, ==, DriverObject);
+    ASSERT3P(DriverObject, ==, __DriverGetDriverObject());
 
     status = FdoCreate(DeviceObject);
     if (!NT_SUCCESS(status))
@@ -147,40 +214,45 @@ done:
 
 DRIVER_INITIALIZE   DriverEntry;
 
-
 NTSTATUS
 DriverEntry(
-    IN  PDRIVER_OBJECT  _DriverObject,
+    IN  PDRIVER_OBJECT  DriverObject,
     IN  PUNICODE_STRING RegistryPath
     )
 {
+    HANDLE              ParametersKey;
     ULONG               Index;
-    NTSTATUS status = STATUS_UNSUCCESSFUL;
-    ASSERT3P(DriverObject, ==, NULL);
+    NTSTATUS            status;
+
+    ASSERT3P(__DriverGetDriverObject(), ==, NULL);
 
     ExInitializeDriverRuntime(DrvRtPoolNxOptIn);
     WdmlibProcgrpInitialize();
 
     Trace("====>\n");
 
-    Info("%s (%s)\n",
-         MAJOR_VERSION_STR "." MINOR_VERSION_STR "." MICRO_VERSION_STR "." BUILD_NUMBER_STR,
-         DAY_STR "/" MONTH_STR "/" YEAR_STR);
+    __DriverSetDriverObject(DriverObject);
 
-    DriverParameters.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
-    DriverParameters.RegistryPath.Length = RegistryPath->Length;
-    DriverParameters.RegistryPath.Buffer = __AllocatePoolWithTag(PagedPool,
-                                                DriverParameters.RegistryPath.MaximumLength,
-                                                XENIFACE_POOL_TAG);
-    if (NULL == DriverParameters.RegistryPath.Buffer) {
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto fail1;
-    }
-    RtlCopyUnicodeString(&DriverParameters.RegistryPath, RegistryPath);
-
-
-    DriverObject = _DriverObject;
     DriverObject->DriverUnload = DriverUnload;
+
+    Info("XENIFACE %d.%d.%d (%d) (%02d.%02d.%04d)\n",
+         MAJOR_VERSION,
+         MINOR_VERSION,
+         MICRO_VERSION,
+         BUILD_NUMBER,
+         DAY,
+         MONTH,
+         YEAR);
+
+    status = RegistryInitialize(DriverObject, RegistryPath);
+    if (!NT_SUCCESS(status))
+        goto fail1;
+
+    status = RegistryOpenParametersKey(KEY_READ, &ParametersKey);
+    if (!NT_SUCCESS(status))
+        goto fail2;
+
+    __DriverSetParametersKey(ParametersKey);
 
     DriverObject->DriverExtension->AddDevice = AddDevice;
 
@@ -193,7 +265,19 @@ DriverEntry(
     Trace("<====\n");
 
     return STATUS_SUCCESS;
+
+
+fail2:
+    Error("fail2\n");
+
+    RegistryTeardown();
+
 fail1:
     Error("fail1 (%08x)\n", status);
+
+    __DriverSetDriverObject(NULL);
+
+    ASSERT(IsZeroMemory(&Driver, sizeof (XENIFACE_DRIVER)));
+
     return status;
 }

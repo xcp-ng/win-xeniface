@@ -41,6 +41,7 @@
 #include <ntstrsafe.h>
 #include "wmi.h"
 #include "driver.h"
+#include "registry.h"
 #include "store_interface.h"
 #include "suspend_interface.h"
 #include "log.h"
@@ -2999,6 +3000,7 @@ WmiRegInfo(
     UCHAR*                  mofnameptr;
     UCHAR*                  regpath;
     ULONG                   RequiredSize;
+    PUNICODE_STRING         RegistryPath;
 
     const int entries = 4;
     const static UNICODE_STRING mofname = RTL_CONSTANT_STRING(L"XENIFACEMOF");
@@ -3010,13 +3012,14 @@ WmiRegInfo(
     else
         mofnamesz = 0;
 
+    RegistryPath = RegistryGetPath();
     if (!AccessWmiBuffer(Stack->Parameters.WMI.Buffer, FALSE,
                          &RequiredSize,
                          Stack->Parameters.WMI.BufferSize,
                          WMI_BUFFER, sizeof(WMIREGINFO), (UCHAR **)&reginfo,
                          WMI_BUFFER, entries * sizeof(WMIREGGUID), (UCHAR **)&guiddata,
                          WMI_STRING, mofnamesz, &mofnameptr,
-                         WMI_STRING, DriverParameters.RegistryPath.Length + sizeof(USHORT), &regpath,
+                         WMI_STRING, RegistryPath->Length + sizeof(USHORT), &regpath,
                          WMI_DONE)) {
         reginfo->BufferSize = RequiredSize;
         *BytesWritten = sizeof(ULONG);
@@ -3027,7 +3030,7 @@ WmiRegInfo(
         reginfo->MofResourceName = (ULONG)((ULONG_PTR)mofnameptr - (ULONG_PTR)reginfo);
         WriteCountedUnicodeString(&mofname, mofnameptr);
         reginfo->RegistryPath = (ULONG)((ULONG_PTR)regpath - (ULONG_PTR)reginfo);
-        WriteCountedUnicodeString(&DriverParameters.RegistryPath, regpath);
+        WriteCountedUnicodeString(RegistryPath, regpath);
     }
 
     reginfo->BufferSize = RequiredSize;
