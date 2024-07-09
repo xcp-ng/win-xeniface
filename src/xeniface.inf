@@ -30,83 +30,94 @@
 ; SUCH DAMAGE.
 
 [Version]
-Signature="$WINDOWS NT$"
+Signature="$Windows NT$"
 Class=System
-ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318} 
+ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318}
 Provider=%Vendor%
-DriverVer=@INF_DATE@,@MAJOR_VERSION@.@MINOR_VERSION@.@MICRO_VERSION@.@BUILD_NUMBER@
 CatalogFile=xeniface.cat
-DriverPackageDisplayName=%DiskId1%
+DriverVer=@INF_DATE@,@MAJOR_VERSION@.@MINOR_VERSION@.@MICRO_VERSION@.@BUILD_NUMBER@
+DriverPackageDisplayName=%DiskDesc%
 PnpLockdown=1
 
 [DestinationDirs]
 DefaultDestDir = 12
-ServiceDestDir.Copy = 11
+XenAgent_CopyFiles = 11
+
+[SourceDisksNames]
+0=%DiskDesc%
+
+[SourceDisksFiles]
+xeniface.sys=0,,
+xenagent.exe=0,,
+xenagent.dll=0,,
+
+[XenIface_CopyFiles]
+xeniface.sys
+
+[XenAgent_CopyFiles]
+xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.exe,xenagent.exe
+xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xenagent.dll
 
 [Manufacturer]
 %Vendor%=Inst,NT@INF_ARCH@
 
 [Inst.NT@INF_ARCH@]
-; DisplayName		    Section	      DeviceID
-; -----------		    -------	      --------
+; DisplayName       Section        DeviceID
+; -----------       -------        --------
+%XenIfaceName% =    XenIface_Inst, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_0900000B
+%XenIfaceName% =    XenIface_Inst, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_0900000B
+%XenIfaceName% =    XenIface_Inst, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_0900000B
 
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_0900000A
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_0900000A
-%XenIfaceDevice.DeviceDesc% =XenIface_Device, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_0900000A
+[XenIface_Inst]
+CopyFiles=XenIface_CopyFiles
+CopyFiles=XenAgent_CopyFiles
 
-[XenIface_Device]
-CopyFiles=XenIface_Device.Copy
-CopyFiles=ServiceDestDir.Copy
+[Xeniface_Inst.Services]
+AddService = xeniface, 0x0002, XenIface_Service
+AddService = xenagent, 0x0800, XenAgent_Service,XenAgent_EventLog
 
-[XenIFace_Device.Copy]
-xeniface.sys
+[XenIface_Service]
+DisplayName=%XenIfaceName%
+ServiceType=%SERVICE_KERNEL_DRIVER%
+StartType=%SERVICE_DEMAND_START%
+ErrorControl=%SERVICE_ERROR_NORMAL%
+ServiceBinary=%12%\xeniface.sys
+LoadOrderGroup=Extended Base
+AddReg=XenIface_Parameters
 
-[ServiceDestDir.Copy]
-xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.exe,xenagent.exe
-xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xenagent.dll
-
-[Xeniface_Device.Services]
-AddService = xeniface, %SPSVCINST_ASSOCSERVICE%, xeniface_Service_Inst
-AddService = xenagent, %XENAGENT_FLAGS%, xenagent_Service_Inst,xenagent_EventLog
-
-[xeniface_Service_Inst]
-DisplayName    = %XenIfaceDevice.DeviceDesc%
-ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
-StartType      = 3               ; SERVICE_DEMAND_START 
-ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
-ServiceBinary  = %12%\xeniface.sys
-LoadOrderGroup = Extended Base
-AddReg = Xeniface_Parameters
-
-[Xeniface_Parameters]
+[XenIface_Parameters]
 HKR,"Parameters",,0x00000010
 
-[xenagent_Service_Inst]
-DisplayName    = %xenagent.SVCDESC%
-ServiceType    = 16              ; SERVICE_WIN32_OWN_PROCESS
-StartType      = 2               ; SERVICE_AUTO_START 
-ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
-ServiceBinary  = %11%\xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.exe
+[XenAgent_Service]
+DisplayName=%XenAgentName%
+ServiceType=%SERVICE_WIN32_OWN_PROCESS%
+StartType=%SERVICE_AUTO_START%
+ErrorControl=%SERVICE_ERROR_NORMAL%
+ServiceBinary=%11%\xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.exe
 
-[xenagent_EventLog]
-AddReg=xenagent_EventLog_AddReg
+[XenAgent_EventLog]
+AddReg=XenAgent_AddReg
 
-[xenagent_EventLog_AddReg]
+[XenAgent_AddReg]
 HKR,,EventMessageFile,0x00020000,"%%SystemRoot%%\System32\xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll"
 HKR,,TypesSupported,0x00010001,7
 
-[SourceDisksNames]
-1 = %DiskId1%,,,""
-
-[SourceDisksFiles]
-xeniface.sys  = 1,,
-xenagent.exe = 1,,
-xenagent.dll = 1,,
-
 [Strings]
-SPSVCINST_ASSOCSERVICE= 0x00000002
-Vendor= "@VENDOR_NAME@" 
-DiskId1 = "@PRODUCT_NAME@ Interface Package"
-XenIfaceDevice.DeviceDesc = "@PRODUCT_NAME@ Interface"
-XENAGENT_FLAGS= 0x00000800
-xenagent.SVCDESC= "@PRODUCT_NAME@ Agent"
+Vendor="@VENDOR_NAME@"
+DiskDesc="@PRODUCT_NAME@ Interface Package"
+XenIfaceName="@PRODUCT_NAME@ Interface"
+XenAgentName="@PRODUCT_NAME@ Agent"
+
+SERVICE_BOOT_START=0x0
+SERVICE_SYSTEM_START=0x1
+SERVICE_AUTO_START=0x2
+SERVICE_DEMAND_START=0x3
+SERVICE_DISABLED=0x4
+
+SERVICE_KERNEL_DRIVER=0x1
+SERVICE_WIN32_OWN_PROCESS=0x10
+
+SERVICE_ERROR_IGNORE=0x0
+SERVICE_ERROR_NORMAL=0x1
+SERVICE_ERROR_SEVERE=0x2
+SERVICE_ERROR_CRITICAL=0x3
