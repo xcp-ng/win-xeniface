@@ -5,3 +5,15 @@
 
 # Output
 /xeniface
+/.build_number
+/vs20??/xeniface.inf
+/vs20??/version/.revision
+/vs20??/version/version.log
+/include/version.h
+
+.vs
+Win32/
+x64/
+
+/src/xeniface/wmi_generated.h
+/src/xeniface/wmi.mof
