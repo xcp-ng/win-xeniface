@@ -72,6 +72,12 @@ xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xena
 CopyFiles=XenIface_CopyFiles
 CopyFiles=XenAgent_CopyFiles
 
+[XenIface_Inst.HW]
+AddReg=XenIface_Inst.HW.AddReg
+
+[XenIface_Inst.HW.AddReg]
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GA;;;BA)"  ; SDDL_DEVOBJ_SYS_ALL_ADM_ALL
+
 [Xeniface_Inst.Services]
 AddService = xeniface, 0x0002, XenIface_Service
 AddService = xenagent, 0x0800, XenAgent_Service,XenAgent_EventLog
