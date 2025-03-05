@@ -33,6 +33,7 @@
 
 #include <ntifs.h>
 #include <procgrp.h>
+#include <wdmsec.h>
 #include "driver.h"
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
@@ -251,6 +252,10 @@ XenIfaceIoctl(
 
     status = STATUS_DEVICE_NOT_READY;
     if (Fdo->InterfacesAcquired == FALSE)
+        goto done;
+
+    status = WdmlibIoValidateDeviceIoControlAccess(Irp, FILE_READ_ACCESS | FILE_WRITE_ACCESS);
+    if (status != STATUS_SUCCESS)
         goto done;
 
     switch (ControlCode) {
