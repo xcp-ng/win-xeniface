@@ -210,9 +210,6 @@ IoctlEvtchnBindUnbound(
 
     ExInterlockedInsertTailList(&Fdo->EvtchnList, &Context->Entry, &Fdo->EvtchnLock);
 
-    Out->LocalPort = Context->LocalPort;
-    *Info = sizeof(XENIFACE_EVTCHN_BIND_UNBOUND_OUT);
-
     if (!In->Mask) {
         (VOID) XENBUS_EVTCHN(Unmask,
                              &Fdo->EvtchnInterface,
@@ -220,6 +217,9 @@ IoctlEvtchnBindUnbound(
                              FALSE,
                              TRUE);
     }
+
+    Out->LocalPort = Context->LocalPort;
+    *Info = sizeof(XENIFACE_EVTCHN_BIND_UNBOUND_OUT);
 
     Trace("< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
     return STATUS_SUCCESS;
@@ -304,9 +304,6 @@ IoctlEvtchnBindInterdomain(
 
     ExInterlockedInsertTailList(&Fdo->EvtchnList, &Context->Entry, &Fdo->EvtchnLock);
 
-    Out->LocalPort = Context->LocalPort;
-    *Info = sizeof(XENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT);
-
     if (!In->Mask) {
         (VOID) XENBUS_EVTCHN(Unmask,
                              &Fdo->EvtchnInterface,
@@ -314,6 +311,9 @@ IoctlEvtchnBindInterdomain(
                              FALSE,
                              TRUE);
     }
+
+    Out->LocalPort = Context->LocalPort;
+    *Info = sizeof(XENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT);
 
     Trace("< LocalPort %lu, Context %p\n", Context->LocalPort, Context);
 
