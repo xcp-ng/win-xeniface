@@ -435,6 +435,7 @@ IoctlStoreSetPermissions(
     if (!NT_SUCCESS(status))
         goto fail6;
 
+    __FreePermissions(Permissions);
     __FreeCapturedBuffer(Path);
     return status;
 
