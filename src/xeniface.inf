@@ -72,6 +72,16 @@ xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xena
 CopyFiles=XenIface_CopyFiles
 CopyFiles=XenAgent_CopyFiles
 
+[XenIface_Inst.WMI]
+WMIInterface={1D80EB99-A1D6-4492-B62F-8B4549FF0B5E},,XenIface_Inst.WMI.Security
+WMIInterface={12138A69-97B2-49DD-B9DE-54749AABC789},,XenIface_Inst.WMI.Security
+WMIInterface={AB8136BF-8EA7-420D-ADAD-89C83E587925},,XenIface_Inst.WMI.Security
+
+[XenIface_Inst.WMI.Security]
+; owned by BUILTIN\Administrators
+; grant GENERIC_ALL access to BUILTIN\Administrators and NT AUTHORITY\SYSTEM
+Security="O:BAG:BAD:(A;;GA;;;BA)(A;;GA;;;SY)"
+
 [XenIface_Inst.HW]
 AddReg=XenIface_Inst.HW.AddReg
 
