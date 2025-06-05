@@ -65,10 +65,10 @@ __CaptureUserBuffer(
     Status = STATUS_SUCCESS;
 
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
-    try {
+    __try {
         ProbeForRead(Buffer, Length, 1);
         RtlCopyMemory(TempBuffer, Buffer, Length);
-    } except(EXCEPTION_EXECUTE_HANDLER) {
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
         Error("Exception while probing/reading buffer at %p, size 0x%lx\n", Buffer, Length);
         __FreePoolWithTag(TempBuffer, XENIFACE_POOL_TAG);
         TempBuffer = NULL;

@@ -167,9 +167,9 @@ GnttabStopSharing(
             MmUnmapLockedPages(Context->UserVa, Context->Mdl);
         } else {
             // user-supplied memory
-            try {
+            __try {
                 MmUnlockPages(Context->Mdl);
-            } except(EXCEPTION_EXECUTE_HANDLER) {
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
                 Error("Failed to unlock user pages: 0x%x\n", GetExceptionCode());
                 // this shouldn't happen and will BSOD the system when the user process exits with locked pages
             }
@@ -236,11 +236,11 @@ GnttabPermitForeignAccess(
         if (Context->Mdl == NULL)
             goto fail4;
 
-        try {
+        __try {
             MmProbeAndLockPages(Context->Mdl,
                                 UserMode,
                                 (Context->Flags & XENIFACE_GNTTAB_READONLY) != 0 ? IoReadAccess : IoWriteAccess);
-        } except(EXCEPTION_EXECUTE_HANDLER) {
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
             Status = GetExceptionCode();
             Error("Failed to lock user pages: 0x%x\n", Status);
             Page = 0;
@@ -268,14 +268,14 @@ GnttabPermitForeignAccess(
     if (Context->KernelVa != NULL) {
         // map driver-allocated memory into user mode
 #pragma prefast(suppress:6320) // we want to catch all exceptions
-        try {
+        __try {
             Context->UserVa = MmMapLockedPagesSpecifyCache(Context->Mdl,
                                                            UserMode,
                                                            MmCached,
                                                            NULL,
                                                            FALSE,
                                                            NormalPagePriority);
-        } except (EXCEPTION_EXECUTE_HANDLER) {
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
             Status = GetExceptionCode();
             goto fail6;
         }
@@ -405,7 +405,7 @@ IoctlGnttabPermitForeignAccess(
 
     // Pass the result to user mode.
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
-    try {
+    __try {
         ProbeForWrite(Out, OutLen, 1);
         Out->Address = Context->UserVa;
 
@@ -414,7 +414,7 @@ IoctlGnttabPermitForeignAccess(
                                                   &Fdo->GnttabInterface,
                                                   Context->Grants[Page]);
         }
-    } except(EXCEPTION_EXECUTE_HANDLER) {
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
         Status = GetExceptionCode();
         Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", Status, Out, OutLen);
         goto fail9;
@@ -694,14 +694,14 @@ IoctlGnttabMapForeignPages(
 
     // map into user mode
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
-    try {
+    __try {
         Context->UserVa = MmMapLockedPagesSpecifyCache(Context->Mdl,
                                                        UserMode,
                                                        MmCached,
                                                        NULL,
                                                        FALSE,
                                                        NormalPagePriority);
-    } except (EXCEPTION_EXECUTE_HANDLER) {
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
         status = GetExceptionCode();
         goto fail12;
     }
@@ -711,10 +711,10 @@ IoctlGnttabMapForeignPages(
 
     // Pass the result to user mode.
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
-    try {
+    __try {
         ProbeForWrite(Out, OutLen, 1);
         Out->Address = Context->UserVa;
-    } except(EXCEPTION_EXECUTE_HANDLER) {
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
         status = GetExceptionCode();
         Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", status, Out, OutLen);
         goto fail13;
