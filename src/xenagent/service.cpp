@@ -216,7 +216,7 @@ bool CXenAgent::ServiceMainLoop()
 
     case WAIT_OBJECT_0+2:
         ResetEvent(m_xeniface.m_evt_suspend);
-        m_xeniface.CheckXenTime();
+        m_xeniface.CheckXenTime(true);
         m_xeniface.CheckSuspend();
         return true; // continue loop
 
@@ -230,7 +230,7 @@ bool CXenAgent::ServiceMainLoop()
         return true; // continue loop
     }
     case WAIT_TIMEOUT:
-        m_xeniface.CheckXenTime();
+        m_xeniface.CheckXenTime(false);
         __fallthrough;
     case WAIT_IO_COMPLETION:
         m_xeniface.CheckSuspend();

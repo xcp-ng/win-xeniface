@@ -84,7 +84,7 @@ public:
 
     void Log(const char* message);
     bool CheckShutdown();
-    void CheckXenTime();
+    void CheckXenTime(bool forced);
     void CheckSuspend();
     bool CheckSlateMode(std::string& mode);
     void LogIfRebootPending();
@@ -95,7 +95,7 @@ private:
     void StartSlateModeWatch(CXenIfaceDevice* device);
     void StopSlateModeWatch(CXenIfaceDevice* device);
     void AcquireShutdownPrivilege();
-    void SetXenTime(CXenIfaceDevice* device);
+    void SetXenTime(CXenIfaceDevice* device, bool forced);
 
 private:
     CXenAgent*  m_agent;

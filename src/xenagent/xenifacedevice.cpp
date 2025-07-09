@@ -40,6 +40,13 @@
 #include "xeniface_ioctls.h"
 #include "messages.h"
 
+#define SERVICES_KEY "SYSTEM\\CurrentControlSet\\Services"
+
+#define SERVICE_KEY(_Service) \
+        SERVICES_KEY ## "\\" ## _Service
+
+#define TIME_SYNC_MODE_DISABLED 0
+
 CXenIfaceDevice::CXenIfaceDevice(const wchar_t* path) : CDevice(path)
 {}
 
@@ -213,7 +220,7 @@ CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_IN
     if (m_agent->ConvDevicePresent())
         StartSlateModeWatch(device);
 
-    SetXenTime(device);
+    SetXenTime(device, false);
 }
 
 /*virtual*/ void CXenIfaceDeviceList::OnDeviceRemoved(CDevice* dev)
@@ -339,7 +346,7 @@ bool CXenIfaceDeviceList::CheckShutdown()
     return false;
 }
 
-void CXenIfaceDeviceList::CheckXenTime()
+void CXenIfaceDeviceList::CheckXenTime(bool forced)
 {
     CCritSec crit(&m_crit);
     CXenIfaceDevice* device = (CXenIfaceDevice*)GetFirstDevice();
@@ -347,7 +354,7 @@ void CXenIfaceDeviceList::CheckXenTime()
     if (device == NULL)
         return;
 
-    SetXenTime(device);
+    SetXenTime(device, forced);
 }
 
 void CXenIfaceDeviceList::CheckSuspend()
@@ -485,9 +492,25 @@ void CXenIfaceDeviceList::AcquireShutdownPrivilege()
     CloseHandle(token);
 }
 
-void CXenIfaceDeviceList::SetXenTime(CXenIfaceDevice* device)
+void CXenIfaceDeviceList::SetXenTime(CXenIfaceDevice* device, bool forced)
 {
     bool local;
+
+    if (!forced) {
+        DWORD   mode = 0;
+        DWORD   size = sizeof(mode);
+        LSTATUS lstatus;
+
+        lstatus = RegGetValue(HKEY_LOCAL_MACHINE,
+                              TEXT(SERVICE_KEY(__MODULE__)),
+                              TEXT("TimeSyncMode"),
+                              RRF_RT_DWORD,
+                              NULL,
+                              &mode,
+                              &size);
+        if (lstatus == ERROR_SUCCESS && mode == TIME_SYNC_MODE_DISABLED)
+            return;
+    }
 
     FILETIME now = { 0 };
     if (!device->SharedInfoGetTime(&now, &local))
