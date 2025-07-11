@@ -537,8 +537,11 @@ void CXenIfaceDeviceList::SetXenTime(CXenIfaceDevice* device, bool forced)
                    sys.wYear, sys.wMonth, sys.wDay,
                    sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
 
-    if (local)
+    if (local) {
+        // Must call SetLocalTime twice to correctly adjust DST per Microsoft.
         SetLocalTime(&sys);
-    else
+        SetLocalTime(&sys);
+    } else {
         SetSystemTime(&sys);
+    }
 }
