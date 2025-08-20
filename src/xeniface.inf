@@ -62,15 +62,16 @@ xenagent_@MAJOR_VERSION@_@MINOR_VERSION@_@MICRO_VERSION@_@BUILD_NUMBER@.dll,xena
 %Vendor%=Inst,NT@INF_ARCH@
 
 [Inst.NT@INF_ARCH@]
-; DisplayName       Section        DeviceID
-; -----------       -------        --------
-%XenIfaceName% =    XenIface_Inst, XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_0900000B
-%XenIfaceName% =    XenIface_Inst, XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_0900000B
-%XenIfaceName% =    XenIface_Inst, XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_0900000B
+%XenIfaceName%=XenIface_Inst,\
+XENBUS\VEN_@VENDOR_PREFIX@@VENDOR_DEVICE_ID@&DEV_IFACE&REV_0900000B,\
+XENBUS\VEN_@VENDOR_PREFIX@0001&DEV_IFACE&REV_0900000B,\
+XENBUS\VEN_@VENDOR_PREFIX@0002&DEV_IFACE&REV_0900000B
 
 [XenIface_Inst]
 CopyFiles=XenIface_CopyFiles
 CopyFiles=XenAgent_CopyFiles
+; TODO: Remove during next PDO version bump
+FeatureScore=0xFE
 
 [XenIface_Inst.WMI]
 WMIInterface={1D80EB99-A1D6-4492-B62F-8B4549FF0B5E},,XenIface_Inst.WMI.Security
