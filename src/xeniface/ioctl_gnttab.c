@@ -387,6 +387,7 @@ IoctlGnttabPermitForeignAccess(
     In = NULL;
 
     if (ControlCode == IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS) {
+        ASSERT3P(In1, !=, NULL);
         Context->UseRequestId = TRUE;
         Context->RequestId = In1->RequestId;
         __FreeCapturedBuffer(In1);
