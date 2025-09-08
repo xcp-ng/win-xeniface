@@ -8,7 +8,8 @@ param(
 	[string]$Arch,
 	[Parameter(Mandatory = $true)]
 	[string]$Type,
-	[string]$SignMode = "TestSign"
+	[string]$SignMode = "TestSign",
+	[switch]$CodeAnalysis
 )
 
 Function Run-MSBuild {
@@ -154,10 +155,10 @@ $projectlist = @( "xeniface" )
 Set-ExecutionPolicy -Scope CurrentUser -Force Bypass
 
 if ($Type -eq "free") {
-	Run-MSBuild $solutionpath "xeniface.sln" $configuration["free"] $platform[$Arch]
+	Run-MSBuild $solutionpath "xeniface.sln" $configuration["free"] $platform[$Arch] -CodeAnalysis:$CodeAnalysis
 }
 elseif ($Type -eq "checked") {
-	Run-MSBuild $solutionpath "xeniface.sln" $configuration["checked"] $platform[$Arch]
+	Run-MSBuild $solutionpath "xeniface.sln" $configuration["checked"] $platform[$Arch] -CodeAnalysis:$CodeAnalysis
 }
 elseif ($Type -eq "codeql") {
 	if (-Not (Test-Path -Path $archivepath)) {
