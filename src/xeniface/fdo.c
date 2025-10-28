@@ -61,106 +61,6 @@
 
 #define MAXNAMELEN  128
 
-static NTSTATUS
-FdoInitialiseXSRegistryEntries(
-    IN PXENIFACE_FDO        Fdo
-    )
-{
-    ANSI_STRING             Ansi[2];
-    HANDLE                  Key;
-    PCHAR                   Value;
-    NTSTATUS                status;
-
-    NT_ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
-
-    status = XENBUS_STORE(Read,
-                          &Fdo->StoreInterface,
-                          NULL,
-                          NULL,
-                          "/mh/boot-time/management-mac-address",
-                          &Value);
-    if (!NT_SUCCESS(status))
-        goto fail1;
-
-    status = RegistryOpenParametersKey(KEY_WRITE, &Key);
-    if (!NT_SUCCESS(status))
-        goto fail2;
-
-    RtlInitAnsiString(&Ansi[0], Value);
-    RtlZeroMemory(&Ansi[1], sizeof(ANSI_STRING));
-
-    status = RegistryUpdateSzValue(Key,
-                                   "MgmtMacAddr",
-                                   REG_SZ,
-                                   &Ansi[0]);
-    if (!NT_SUCCESS(status))
-        goto fail3;
-
-    RegistryCloseKey(Key);
-
-    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
-
-    return STATUS_SUCCESS;
-
-fail3:
-    Error("fail3\n");
-
-    RegistryCloseKey(Key);
-
-fail2:
-    Error("fail2\n");
-
-    XENBUS_STORE(Free, &Fdo->StoreInterface, Value);
-
-fail1:
-    Error("fail1 %08x\n", status);
-
-    return status;
-}
-
-#define REGISTRY_WRITE_EVENT 0
-#define REGISTRY_THREAD_END_EVENT 1
-#define REGISTRY_EVENTS 2
-
-static NTSTATUS FdoRegistryThreadHandler(IN  PXENIFACE_THREAD  Self,
-                                         IN  PVOID StartContext) {
-    KEVENT* threadevents[REGISTRY_EVENTS];
-    PXENIFACE_FDO Fdo = (PXENIFACE_FDO)StartContext;
-    NTSTATUS status;
-
-    PKEVENT             Event;
-
-    Event = ThreadGetEvent(Self);
-
-    threadevents[REGISTRY_WRITE_EVENT] = &Fdo->registryWriteEvent;
-    threadevents[REGISTRY_THREAD_END_EVENT] = Event;
-
-    for(;;) {
-
-        status = KeWaitForMultipleObjects(REGISTRY_EVENTS, (PVOID *)threadevents, WaitAny, Executive, KernelMode, TRUE, NULL, NULL);
-        if ((status>=STATUS_WAIT_0) && (status < STATUS_WAIT_0+REGISTRY_EVENTS)) {
-            if (status == STATUS_WAIT_0+REGISTRY_WRITE_EVENT) {
-                Info("WriteRegistry\n");
-                (VOID) FdoInitialiseXSRegistryEntries(Fdo);
-                KeClearEvent(threadevents[REGISTRY_WRITE_EVENT]);
-            }
-            if (status == STATUS_WAIT_0+REGISTRY_THREAD_END_EVENT) {
-                if (ThreadIsAlerted(Self))
-                    return STATUS_SUCCESS;
-                KeClearEvent(threadevents[REGISTRY_THREAD_END_EVENT]);
-            }
-
-        }
-        else if (!NT_SUCCESS(status)) {
-            Error("Registry handler thread failed %x\n", status);
-            return status;
-        }
-    }
-
-}
-
-
-
 static FORCEINLINE PVOID
 __FdoAllocate(
     IN  ULONG   Length
@@ -2563,17 +2463,9 @@ FdoCreate(
     InitializeListHead(&Dx->ListEntry);
     Fdo->References = 1;
 
-    (VOID) FdoInitialiseXSRegistryEntries(Fdo);
-
-    KeInitializeEvent(&Fdo->registryWriteEvent, NotificationEvent, FALSE);
-
-    status = ThreadCreate(FdoRegistryThreadHandler, Fdo, &Fdo->registryThread);
-    if (!NT_SUCCESS(status))
-        goto fail13;
-
     status = WmiInitialize(Fdo);
     if (!NT_SUCCESS(status))
-        goto fail14;
+        goto fail13;
 
     KeInitializeSpinLock(&Fdo->StoreWatchLock);
     InitializeListHead(&Fdo->StoreWatchList);
@@ -2597,7 +2489,7 @@ FdoCreate(
                                CsqReleaseLock,
                                CsqCompleteCanceledIrp);
     if (!NT_SUCCESS(status))
-        goto fail15;
+        goto fail14;
 
     Info("%p (%s)\n",
          FunctionDeviceObject,
@@ -2608,8 +2500,8 @@ FdoCreate(
 
     return STATUS_SUCCESS;
 
-fail15:
-    Error("fail15\n");
+fail14:
+    Error("fail14\n");
 
     RtlZeroMemory(&Fdo->GnttabCacheLock, sizeof (KSPIN_LOCK));
     ASSERT(IsListEmpty(&Fdo->IrpList));
@@ -2630,15 +2522,12 @@ fail15:
 
     WmiTeardown(Fdo);
 
-fail14:
-    Error("fail14\n");
-
-    ThreadAlert(Fdo->registryThread);
-    ThreadJoin(Fdo->registryThread);
-    Fdo->registryThread = NULL;
-
 fail13:
     Error("fail13\n");
+
+    RtlZeroMemory(&Fdo->Mutex, sizeof(XENIFACE_MUTEX));
+    RtlZeroMemory(&Dx->ListEntry, sizeof(LIST_ENTRY));
+    Fdo->References = 0;
 
     RtlZeroMemory(&Fdo->GnttabInterface,
                   sizeof (XENBUS_GNTTAB_INTERFACE));
@@ -2773,10 +2662,6 @@ FdoDestroy(
     RtlZeroMemory(&Fdo->SuspendInterface,
                   sizeof (XENBUS_SUSPEND_INTERFACE));
 
-    ThreadAlert(Fdo->registryThread);
-    ThreadJoin(Fdo->registryThread);
-    Fdo->registryThread = NULL;
-
     ThreadAlert(Fdo->DevicePowerThread);
     ThreadJoin(Fdo->DevicePowerThread);
     Fdo->DevicePowerThread = NULL;
@@ -2793,7 +2678,6 @@ FdoDestroy(
     Fdo->Dx = NULL;
 
     WmiTeardown(Fdo);
-    RtlZeroMemory(&Fdo->registryWriteEvent, sizeof(KEVENT));
 
     RtlFreeUnicodeString(&Fdo->InterfaceName);
     RtlZeroMemory(&Fdo->InterfaceName,sizeof(UNICODE_STRING));

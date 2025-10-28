@@ -110,9 +110,6 @@ typedef struct _XENIFACE_FDO {
     XENIFACE_MUTEX                  SessionLock;
     LIST_ENTRY                      SessionHead;
 
-    PXENIFACE_THREAD                registryThread;
-    KEVENT                          registryWriteEvent;
-
     UNICODE_STRING                  SuggestedInstanceName;
 
     UNICODE_STRING                  InterfaceName;

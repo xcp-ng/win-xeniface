@@ -3122,7 +3122,6 @@ WmiFireSuspendEvent(
     )
 {
     Info("Ready to unsuspend Event\n");
-    KeSetEvent(&Fdo->registryWriteEvent, IO_NO_INCREMENT, FALSE);
 
     if (!Fdo->WmiReady)
         return;
