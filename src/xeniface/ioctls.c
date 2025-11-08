@@ -33,7 +33,6 @@
 
 #include <ntifs.h>
 #include <procgrp.h>
-#include <wdmsec.h>
 #include "driver.h"
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
@@ -254,9 +253,25 @@ XenIfaceIoctl(
     if (Fdo->InterfacesAcquired == FALSE)
         goto done;
 
-    status = WdmlibIoValidateDeviceIoControlAccess(Irp, FILE_READ_ACCESS | FILE_WRITE_ACCESS);
-    if (status != STATUS_SUCCESS)
-        goto done;
+    switch (ControlCode) {
+    /*
+     * The following IOCTLs are usable when the Xeniface device is open for
+     * reading.
+     */
+    case IOCTL_XENIFACE_SUSPEND_GET_COUNT:
+    case IOCTL_XENIFACE_SUSPEND_REGISTER:
+    case IOCTL_XENIFACE_SUSPEND_DEREGISTER:
+    case IOCTL_XENIFACE_SHAREDINFO_GET_TIME:
+        status = IoValidateDeviceIoControlAccess(Irp, FILE_READ_ACCESS);
+        if (status != STATUS_SUCCESS)
+            goto done;
+        break;
+    default:
+        status = IoValidateDeviceIoControlAccess(Irp, FILE_READ_ACCESS | FILE_WRITE_ACCESS);
+        if (status != STATUS_SUCCESS)
+            goto done;
+        break;
+    }
 
     switch (ControlCode) {
         // store
