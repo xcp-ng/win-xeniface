@@ -494,23 +494,22 @@ void CXenIfaceDeviceList::AcquireShutdownPrivilege()
 
 void CXenIfaceDeviceList::SetXenTime(CXenIfaceDevice* device, bool forced)
 {
-    bool local;
+    bool    local;
+    DWORD   mode = 0;
+    DWORD   size = sizeof(mode);
+    LSTATUS lstatus;
 
-    if (!forced) {
-        DWORD   mode = 0;
-        DWORD   size = sizeof(mode);
-        LSTATUS lstatus;
+    UNREFERENCED_PARAMETER(forced);
 
-        lstatus = RegGetValue(HKEY_LOCAL_MACHINE,
-                              TEXT(SERVICE_KEY(__MODULE__)),
-                              TEXT("TimeSyncMode"),
-                              RRF_RT_DWORD,
-                              NULL,
-                              &mode,
-                              &size);
-        if (lstatus == ERROR_SUCCESS && mode == TIME_SYNC_MODE_DISABLED)
-            return;
-    }
+    lstatus = RegGetValue(HKEY_LOCAL_MACHINE,
+                            TEXT(SERVICE_KEY(__MODULE__)),
+                            TEXT("TimeSyncMode"),
+                            RRF_RT_DWORD,
+                            NULL,
+                            &mode,
+                            &size);
+    if (lstatus == ERROR_SUCCESS && mode == TIME_SYNC_MODE_DISABLED)
+        return;
 
     FILETIME now = { 0 };
     if (!device->SharedInfoGetTime(&now, &local))
