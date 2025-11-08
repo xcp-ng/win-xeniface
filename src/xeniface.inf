@@ -87,7 +87,9 @@ Security="O:BAG:BAD:(A;;GA;;;BA)(A;;GA;;;SY)"
 AddReg=XenIface_Inst.HW.AddReg
 
 [XenIface_Inst.HW.AddReg]
-HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GA;;;BA)"  ; SDDL_DEVOBJ_SYS_ALL_ADM_ALL
+; grant GENERIC_ALL access to BUILTIN\Administrators and NT AUTHORITY\SYSTEM
+; grant GENERIC_READ access to NT AUTHORITY\LOCAL SERVICE
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GR;;;LS)"
 
 [Xeniface_Inst.Services]
 AddService = xeniface, 0x0002, XenIface_Service
