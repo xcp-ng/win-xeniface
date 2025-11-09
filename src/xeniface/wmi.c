@@ -2804,7 +2804,11 @@ GenerateBaseBlock(
     if (Fdo->InterfacesAcquired) {
         LARGE_INTEGER info;
 
-        XENBUS_SHARED_INFO(GetTime, &Fdo->SharedInfoInterface, &info, NULL);
+        XENBUS_SHARED_INFO(GetTime,
+                           &Fdo->SharedInfoInterface,
+                           &info,
+                           NULL,
+                           NULL);
         *time = info.QuadPart;
     } else {
         *time = 0;
@@ -2855,7 +2859,11 @@ GenerateBaseInstance(
     if (Fdo->InterfacesAcquired) {
         LARGE_INTEGER info;
 
-        XENBUS_SHARED_INFO(GetTime, &Fdo->SharedInfoInterface, &info, NULL);
+        XENBUS_SHARED_INFO(GetTime,
+                           &Fdo->SharedInfoInterface,
+                           &info,
+                           NULL,
+                           NULL);
         *time = info.QuadPart;
     } else {
         *time = 0;

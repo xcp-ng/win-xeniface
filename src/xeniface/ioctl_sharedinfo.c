@@ -30,6 +30,8 @@
  * SUCH DAMAGE.
  */
 
+#include <limits.h>
+
 #include "driver.h"
 #include "ioctls.h"
 #include "xeniface_ioctls.h"
@@ -42,33 +44,69 @@ IoctlSharedInfoGetTime(
     __in  PCHAR                         Buffer,
     __in  ULONG                         InLen,
     __in  ULONG                         OutLen,
-    __out PULONG_PTR                    Info
+    __inout  PIRP                       Irp
     )
 {
-    PXENIFACE_SHAREDINFO_GET_TIME_OUT   Out;
     LARGE_INTEGER                       Time;
-    BOOLEAN                             Local;
+    LARGE_INTEGER                       Offset;
+    ULONG                               Flags;
+    ULONG                               ControlCode;
     NTSTATUS                            status;
+
+    ControlCode = IoGetCurrentIrpStackLocation(Irp)->
+        Parameters.DeviceIoControl.IoControlCode;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != 0)
         goto fail1;
 
-    if (OutLen != sizeof(XENIFACE_SHAREDINFO_GET_TIME_OUT))
+    if ((ControlCode == IOCTL_XENIFACE_SHAREDINFO_GET_TIME &&
+         OutLen != sizeof(XENIFACE_SHAREDINFO_GET_TIME_OUT)) ||
+        (ControlCode == IOCTL_XENIFACE_SHAREDINFO_GET_HOST_TIME &&
+         OutLen != sizeof(XENIFACE_SHAREDINFO_GET_HOST_TIME_OUT)))
         goto fail2;
 
-    Out = (PXENIFACE_SHAREDINFO_GET_TIME_OUT)Buffer;
-    XENBUS_SHARED_INFO(GetTime, &Fdo->SharedInfoInterface, &Time,
-                       &Local);
-    Out->Time.dwHighDateTime = Time.HighPart;
-    Out->Time.dwLowDateTime = Time.LowPart;
-    Out->Local = Local;
-    *Info = (ULONG_PTR)sizeof(XENIFACE_SHAREDINFO_GET_TIME_OUT);
+    XENBUS_SHARED_INFO(GetTime,
+                       &Fdo->SharedInfoInterface,
+                       &Time,
+                       &Offset,
+                       &Flags);
+
+    switch (ControlCode) {
+    case IOCTL_XENIFACE_SHAREDINFO_GET_TIME: {
+        PXENIFACE_SHAREDINFO_GET_TIME_OUT       Out;
+
+        Out = (PXENIFACE_SHAREDINFO_GET_TIME_OUT)Buffer;
+        Out->Time.dwHighDateTime = Time.HighPart;
+        Out->Time.dwLowDateTime = Time.LowPart;
+        Out->Local = (Flags & XENBUS_SHARED_INFO_TIME_IS_LOCAL) ? TRUE : FALSE;
+        Irp->IoStatus.Information =
+            (ULONG_PTR)sizeof(XENIFACE_SHAREDINFO_GET_TIME_OUT);
+        break;
+    }
+    case IOCTL_XENIFACE_SHAREDINFO_GET_HOST_TIME: {
+        PXENIFACE_SHAREDINFO_GET_TIME_OUT   Out2;
+
+        Out2 = (PXENIFACE_SHAREDINFO_GET_TIME_OUT)Buffer;
+
+        status = STATUS_NOT_SUPPORTED;
+        if (!(Flags & XENBUS_SHARED_INFO_TIME_OFFSET_IS_VALID))
+            goto fail3;
+
+        Time.QuadPart -= Offset.QuadPart;
+        Out2->Time.dwHighDateTime = Time.HighPart;
+        Out2->Time.dwLowDateTime = Time.LowPart;
+
+        Irp->IoStatus.Information =
+            (ULONG_PTR)sizeof(XENIFACE_SHAREDINFO_GET_HOST_TIME_OUT);
+        break;
+    }
+    }
 
     return STATUS_SUCCESS;
 
+fail3:
 fail2:
-    Error("Fail2\n");
 fail1:
     Error("Fail1 (%08x)\n", status);
     return status;

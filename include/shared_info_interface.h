@@ -1,32 +1,32 @@
 /* Copyright (c) Xen Project.
  * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, 
- * with or without modification, are permitted provided 
+ *
+ * Redistribution and use in source and binary forms,
+ * with or without modification, are permitted provided
  * that the following conditions are met:
- * 
- * *   Redistributions of source code must retain the above 
- *     copyright notice, this list of conditions and the 
+ *
+ * *   Redistributions of source code must retain the above
+ *     copyright notice, this list of conditions and the
  *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above 
- *     copyright notice, this list of conditions and the 
- *     following disclaimer in the documentation and/or other 
+ * *   Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the
+ *     following disclaimer in the documentation and/or other
  *     materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
 
@@ -45,20 +45,20 @@
     \brief Acquire a reference to the SHARED_INFO interface
 
     \param Interface The interface header
-*/  
+*/
 typedef NTSTATUS
 (*XENBUS_SHARED_INFO_ACQUIRE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SHARED_INFO_RELEASE
     \brief Release a reference to the SHARED_INFO interface
 
     \param Interface The interface header
-*/  
+*/
 typedef VOID
 (*XENBUS_SHARED_INFO_RELEASE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SHARED_INFO_UPCALL_SUPPORTED
@@ -66,8 +66,8 @@ typedef VOID
 */
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_UPCALL_SUPPORTED)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Index
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Index
     );
 
 /*! \typedef XENBUS_SHARED_INFO_UPCALL_PENDING
@@ -75,75 +75,93 @@ typedef BOOLEAN
 */
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_UPCALL_PENDING)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Index
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Index
     );
 
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_EVENT)(
-    IN  PVOID   Argument,
-    IN  ULONG   Port
+    _In_ PVOID  Argument,
+    _In_ ULONG  Port
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_POLL
     \brief Private method for EVTCHN inerface
-*/  
+*/
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_EVTCHN_POLL)(
-    IN  PINTERFACE                  Interface,
-    IN  ULONG                       Index,
-    IN  XENBUS_SHARED_INFO_EVENT    Event,
-    IN  PVOID                       Argument
+    _In_ PINTERFACE                 Interface,
+    _In_ ULONG                      Index,
+    _In_ XENBUS_SHARED_INFO_EVENT   Event,
+    _In_ PVOID                      Argument
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_ACK
     \brief Private method for EVTCHN inerface
-*/  
+*/
 typedef VOID
 (*XENBUS_SHARED_INFO_EVTCHN_ACK)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Port
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Port
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_MASK
     \brief Private method for EVTCHN inerface
-*/  
+*/
 typedef VOID
 (*XENBUS_SHARED_INFO_EVTCHN_MASK)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Port
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Port
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_UNMASK
     \brief Private method for EVTCHN inerface
-*/  
+*/
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_EVTCHN_UNMASK)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Port
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Port
     );
 
 typedef LARGE_INTEGER
 (*XENBUS_SHARED_INFO_GET_TIME_V2)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
+
+typedef VOID
+(*XENBUS_SHARED_INFO_GET_TIME_V4)(
+    _In_ PINTERFACE         Interface,
+    _Out_ PLARGE_INTEGER    Time,
+    _Out_ PBOOLEAN          Local
+    );
+
+/*! \def XENBUS_SHARED_INFO_TIME_IS_LOCAL
+    \brief Wallclock time is local time
+ */
+#define XENBUS_SHARED_INFO_TIME_IS_LOCAL    0x1
+/*! \def XENBUS_SHARED_INFO_TIME_OFFSET_IS_VALID
+    \brief Domain time offset is valid
+ */
+#define XENBUS_SHARED_INFO_TIME_OFFSET_IS_VALID  0x2
 
 /*! \typedef XENBUS_SHARED_INFO_GET_TIME
     \brief Retrieve the wallclock time from the shared info
 
     \param Interface The interface header
     \param Time The wallclock time
-    \param Local Set, on return, if the wallclock is in local time
-*/  
+    \param Offset The domain time offset in seconds
+    \param Flags Flag values (XENBUS_SHARED_INFO_TIME_*)
+*/
 typedef VOID
 (*XENBUS_SHARED_INFO_GET_TIME)(
-    IN  PINTERFACE      Interface,
-    OUT PLARGE_INTEGER  Time,
-    OUT PBOOLEAN        Local
+    _In_ PINTERFACE             Interface,
+    _Out_ PLARGE_INTEGER        Time,
+    _Out_opt_ PLARGE_INTEGER    Offset,
+    _Out_opt_ PULONG            Flags
     );
 
 // {7E73C34F-1640-4649-A8F3-263BC930A004}
-DEFINE_GUID(GUID_XENBUS_SHARED_INFO_INTERFACE, 
+DEFINE_GUID(GUID_XENBUS_SHARED_INFO_INTERFACE,
 0x7e73c34f, 0x1640, 0x4649, 0xa8, 0xf3, 0x26, 0x3b, 0xc9, 0x30, 0xa0, 0x4);
 
 /*! \struct _XENBUS_SHARED_INFO_INTERFACE_V2
@@ -175,7 +193,7 @@ struct _XENBUS_SHARED_INFO_INTERFACE_V3 {
     XENBUS_SHARED_INFO_EVTCHN_ACK       SharedInfoEvtchnAck;
     XENBUS_SHARED_INFO_EVTCHN_MASK      SharedInfoEvtchnMask;
     XENBUS_SHARED_INFO_EVTCHN_UNMASK    SharedInfoEvtchnUnmask;
-    XENBUS_SHARED_INFO_GET_TIME         SharedInfoGetTime;
+    XENBUS_SHARED_INFO_GET_TIME_V4      SharedInfoGetTimeVersion4;
 };
 
 /*! \struct _XENBUS_SHARED_INFO_INTERFACE_V4
@@ -192,10 +210,27 @@ struct _XENBUS_SHARED_INFO_INTERFACE_V4 {
     XENBUS_SHARED_INFO_EVTCHN_ACK       SharedInfoEvtchnAck;
     XENBUS_SHARED_INFO_EVTCHN_MASK      SharedInfoEvtchnMask;
     XENBUS_SHARED_INFO_EVTCHN_UNMASK    SharedInfoEvtchnUnmask;
+    XENBUS_SHARED_INFO_GET_TIME_V4      SharedInfoGetTimeVersion4;
+};
+
+/*! \struct _XENBUS_SHARED_INFO_INTERFACE_V5
+    \brief SHARED_INFO interface version 5
+    \ingroup interfaces
+*/
+struct _XENBUS_SHARED_INFO_INTERFACE_V5 {
+    INTERFACE                           Interface;
+    XENBUS_SHARED_INFO_ACQUIRE          SharedInfoAcquire;
+    XENBUS_SHARED_INFO_RELEASE          SharedInfoRelease;
+    XENBUS_SHARED_INFO_UPCALL_SUPPORTED SharedInfoUpcallSupported;
+    XENBUS_SHARED_INFO_UPCALL_PENDING   SharedInfoUpcallPending;
+    XENBUS_SHARED_INFO_EVTCHN_POLL      SharedInfoEvtchnPoll;
+    XENBUS_SHARED_INFO_EVTCHN_ACK       SharedInfoEvtchnAck;
+    XENBUS_SHARED_INFO_EVTCHN_MASK      SharedInfoEvtchnMask;
+    XENBUS_SHARED_INFO_EVTCHN_UNMASK    SharedInfoEvtchnUnmask;
     XENBUS_SHARED_INFO_GET_TIME         SharedInfoGetTime;
 };
 
-typedef struct _XENBUS_SHARED_INFO_INTERFACE_V4 XENBUS_SHARED_INFO_INTERFACE, *PXENBUS_SHARED_INFO_INTERFACE;
+typedef struct _XENBUS_SHARED_INFO_INTERFACE_V5 XENBUS_SHARED_INFO_INTERFACE, *PXENBUS_SHARED_INFO_INTERFACE;
 
 /*! \def XENBUS_SHARED_INFO
     \brief Macro at assist in method invocation
@@ -206,6 +241,6 @@ typedef struct _XENBUS_SHARED_INFO_INTERFACE_V4 XENBUS_SHARED_INFO_INTERFACE, *P
 #endif  // _WINDLL
 
 #define XENBUS_SHARED_INFO_INTERFACE_VERSION_MIN    2
-#define XENBUS_SHARED_INFO_INTERFACE_VERSION_MAX    4
+#define XENBUS_SHARED_INFO_INTERFACE_VERSION_MAX    5
 
 #endif  // _XENBUS_SHARED_INFO_H

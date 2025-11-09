@@ -389,7 +389,7 @@ IoctlSharedInfoGetTime(
     __in  PCHAR             Buffer,
     __in  ULONG             InLen,
     __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    __inout  PIRP           Irp
     );
 
 NTSTATUS

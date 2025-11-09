@@ -262,6 +262,7 @@ XenIfaceIoctl(
     case IOCTL_XENIFACE_SUSPEND_REGISTER:
     case IOCTL_XENIFACE_SUSPEND_DEREGISTER:
     case IOCTL_XENIFACE_SHAREDINFO_GET_TIME:
+    case IOCTL_XENIFACE_SHAREDINFO_GET_HOST_TIME:
         status = IoValidateDeviceIoControlAccess(Irp, FILE_READ_ACCESS);
         if (status != STATUS_SUCCESS)
             goto done;
@@ -372,7 +373,8 @@ XenIfaceIoctl(
 
         // sharedinfo
     case IOCTL_XENIFACE_SHAREDINFO_GET_TIME:
-        status = IoctlSharedInfoGetTime(Fdo, Buffer, InLen, OutLen, &Irp->IoStatus.Information);
+    case IOCTL_XENIFACE_SHAREDINFO_GET_HOST_TIME:
+        status = IoctlSharedInfoGetTime(Fdo, Buffer, InLen, OutLen, Irp);
         break;
 
         // misc

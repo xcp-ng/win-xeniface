@@ -466,6 +466,20 @@ typedef struct _XENIFACE_SHAREDINFO_GET_TIME_OUT {
     BOOLEAN Local; /*!< TRUE is wallclock is in local time, FALSE if it is in UTC */
 } XENIFACE_SHAREDINFO_GET_TIME_OUT, *PXENIFACE_SHAREDINFO_GET_TIME_OUT;
 
+/*! \brief Gets the current host time in UTC.
+
+    Input: None
+
+    Output: XENIFACE_SHAREDINFO_GET_HOST_TIME_OUT
+*/
+#define IOCTL_XENIFACE_SHAREDINFO_GET_HOST_TIME \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x841, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/*! \brief Output for IOCTL_XENIFACE_SHAREDINFO_GET_HOST_TIME */
+typedef struct _XENIFACE_SHAREDINFO_GET_HOST_TIME_OUT {
+    FILETIME    Time; /*!< Current host wallclock time in UTC */
+} XENIFACE_SHAREDINFO_GET_HOST_TIME_OUT, *PXENIFACE_SHAREDINFO_GET_HOST_TIME_OUT;
+
 /*! \brief Logs a message to Dom0
 
     Input: NUL-terminated CHAR array containing the message to log
