@@ -49,6 +49,7 @@ EvtchnNotificationDpc(
     )
 {
     PXENIFACE_EVTCHN_CONTEXT Context = _Context;
+    PXENBUS_EVTCHN_CHANNEL   Channel;
 
     UNREFERENCED_PARAMETER(Dpc);
     UNREFERENCED_PARAMETER(Argument1);
@@ -56,11 +57,16 @@ EvtchnNotificationDpc(
 
     ASSERT(Context != NULL);
 
+    Channel = InterlockedCompareExchangePointer((PVOID *)&Context->Channel,
+                                                NULL, NULL);
+    if (Channel == NULL)
+        return;
+
     KeSetEvent(Context->Event, 0, FALSE);
 
     (VOID) XENBUS_EVTCHN(Unmask,
                          &Context->Fdo->EvtchnInterface,
-                         Context->Channel,
+                         Channel,
                          FALSE,
                          TRUE);
 }
@@ -98,17 +104,24 @@ EvtchnFree(
     __inout  PXENIFACE_EVTCHN_CONTEXT Context
     )
 {
+    PXENBUS_EVTCHN_CHANNEL Channel;
+
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
     Trace("Context %p, LocalPort %d, FO %p\n",
                        Context, Context->LocalPort, Context->FileObject);
 
+    Channel = InterlockedExchangePointer((PVOID *)&Context->Channel, NULL);
+
+    // Flush DPCs that can have Channel captured before the swap.
+    KeFlushQueuedDpcs();
+
     XENBUS_EVTCHN(Close,
                   &Fdo->EvtchnInterface,
-                  Context->Channel);
+                  Channel);
 
-    // There may still be a pending event at this time.
-    // Wait for our DPCs to complete.
+    // A second flush is needed so DPCs queued after the first flush
+    // don't dereference invalid Context.
     KeFlushQueuedDpcs();
 
     ObDereferenceObject(Context->Event);
@@ -163,6 +176,7 @@ IoctlEvtchnBindUnbound(
     PXENIFACE_EVTCHN_BIND_UNBOUND_IN In = Buffer;
     PXENIFACE_EVTCHN_BIND_UNBOUND_OUT Out = Buffer;
     PXENIFACE_EVTCHN_CONTEXT Context;
+    PXENBUS_EVTCHN_CHANNEL Channel;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_BIND_UNBOUND_IN) ||
@@ -176,6 +190,7 @@ IoctlEvtchnBindUnbound(
         goto fail2;
 
     Context->FileObject = FileObject;
+    Context->Fdo = Fdo;
 
     Trace("> RemoteDomain %d, Mask %d, FO %p\n",
                        In->RemoteDomain, In->Mask, FileObject);
@@ -192,28 +207,28 @@ IoctlEvtchnBindUnbound(
     KeInitializeDpc(&Context->Dpc, EvtchnNotificationDpc, Context);
 
     status = STATUS_UNSUCCESSFUL;
-    Context->Channel = XENBUS_EVTCHN(Open,
-                                     &Fdo->EvtchnInterface,
-                                     XENBUS_EVTCHN_TYPE_UNBOUND,
-                                     EvtchnInterruptHandler,
-                                     Context,
-                                     In->RemoteDomain,
-                                     TRUE);
-    if (Context->Channel == NULL)
+    Channel = XENBUS_EVTCHN(Open,
+                            &Fdo->EvtchnInterface,
+                            XENBUS_EVTCHN_TYPE_UNBOUND,
+                            EvtchnInterruptHandler,
+                            Context,
+                            In->RemoteDomain,
+                            TRUE);
+    if (Channel == NULL)
         goto fail4;
 
     Context->LocalPort = XENBUS_EVTCHN(GetPort,
                                        &Fdo->EvtchnInterface,
-                                       Context->Channel);
+                                       Channel);
 
-    Context->Fdo = Fdo;
+    (VOID) InterlockedExchangePointer((PVOID *)&Context->Channel, Channel);
 
     ExInterlockedInsertTailList(&Fdo->EvtchnList, &Context->Entry, &Fdo->EvtchnLock);
 
     if (!In->Mask) {
         (VOID) XENBUS_EVTCHN(Unmask,
                              &Fdo->EvtchnInterface,
-                             Context->Channel,
+                             Channel,
                              FALSE,
                              TRUE);
     }
@@ -256,6 +271,7 @@ IoctlEvtchnBindInterdomain(
     PXENIFACE_EVTCHN_BIND_INTERDOMAIN_IN In = Buffer;
     PXENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT Out = Buffer;
     PXENIFACE_EVTCHN_CONTEXT Context;
+    PXENBUS_EVTCHN_CHANNEL Channel;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_BIND_INTERDOMAIN_IN) ||
@@ -269,6 +285,7 @@ IoctlEvtchnBindInterdomain(
         goto fail2;
 
     Context->FileObject = FileObject;
+    Context->Fdo = Fdo;
 
     Trace("> RemoteDomain %d, RemotePort %lu, Mask %d, FO %p\n",
                        In->RemoteDomain, In->RemotePort, In->Mask, FileObject);
@@ -285,29 +302,29 @@ IoctlEvtchnBindInterdomain(
     KeInitializeDpc(&Context->Dpc, EvtchnNotificationDpc, Context);
 
     status = STATUS_UNSUCCESSFUL;
-    Context->Channel = XENBUS_EVTCHN(Open,
-                                     &Fdo->EvtchnInterface,
-                                     XENBUS_EVTCHN_TYPE_INTER_DOMAIN,
-                                     EvtchnInterruptHandler,
-                                     Context,
-                                     In->RemoteDomain,
-                                     In->RemotePort,
-                                     TRUE);
-    if (Context->Channel == NULL)
+    Channel = XENBUS_EVTCHN(Open,
+                            &Fdo->EvtchnInterface,
+                            XENBUS_EVTCHN_TYPE_INTER_DOMAIN,
+                            EvtchnInterruptHandler,
+                            Context,
+                            In->RemoteDomain,
+                            In->RemotePort,
+                            TRUE);
+    if (Channel == NULL)
         goto fail4;
 
     Context->LocalPort = XENBUS_EVTCHN(GetPort,
                                        &Fdo->EvtchnInterface,
-                                       Context->Channel);
+                                       Channel);
 
-    Context->Fdo = Fdo;
+    (VOID) InterlockedExchangePointer((PVOID *)&Context->Channel, Channel);
 
     ExInterlockedInsertTailList(&Fdo->EvtchnList, &Context->Entry, &Fdo->EvtchnLock);
 
     if (!In->Mask) {
         (VOID) XENBUS_EVTCHN(Unmask,
                              &Fdo->EvtchnInterface,
-                             Context->Channel,
+                             Channel,
                              FALSE,
                              TRUE);
     }
