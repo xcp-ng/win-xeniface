@@ -802,15 +802,9 @@ GnttabFreeMap(
 
     Trace("Context %p\n", Context);
 
+    // Write the notify value while the grant is still mapped.
     if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) {
         ((PCHAR)Context->KernelVa)[Context->NotifyOffset] = 0;
-    }
-
-    if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_PORT) {
-        status = EvtchnNotify(Fdo, Context->NotifyPort, NULL);
-
-        if (!NT_SUCCESS(status)) // non-fatal, we must free memory
-            Error("failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
     }
 
     // unmap from user address space
@@ -827,6 +821,14 @@ GnttabFreeMap(
                            Context->Address);
 
     ASSERT(NT_SUCCESS(status));
+
+    // Notify the peer after the map is fully gone.
+    if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_PORT) {
+        status = EvtchnNotify(Fdo, Context->NotifyPort, NULL);
+
+        if (!NT_SUCCESS(status)) // non-fatal, we must free memory
+            Error("failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
+    }
 
     RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
