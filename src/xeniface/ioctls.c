@@ -39,6 +39,7 @@
 #include "xeniface_ioctls.h"
 #include "log.h"
 #include "util.h"
+#include <version.h>
 
 NTSTATUS
 __CaptureUserBuffer(
@@ -288,6 +289,7 @@ XenIfaceIoctl(
         status = IoctlStoreRemoveWatch(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
         break;
 
+#if !XENIFACE_DISABLE_EVTCHN
         // evtchn
     case IOCTL_XENIFACE_EVTCHN_BIND_UNBOUND:
         status = IoctlEvtchnBindUnbound(Fdo, Buffer, InLen, OutLen, Stack->FileObject, &Irp->IoStatus.Information);
@@ -308,7 +310,9 @@ XenIfaceIoctl(
     case IOCTL_XENIFACE_EVTCHN_UNMASK:
         status = IoctlEvtchnUnmask(Fdo, Buffer, InLen, OutLen, Stack->FileObject);
         break;
+#endif
 
+#if !XENIFACE_DISABLE_GNTTAB
         // gnttab
     case IOCTL_XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS: // this is a METHOD_NEITHER IOCTL
         status = IoctlGnttabPermitForeignAccess(Fdo, Stack->Parameters.DeviceIoControl.Type3InputBuffer, InLen, OutLen, Irp);
@@ -341,6 +345,7 @@ XenIfaceIoctl(
     case IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2:
         status = IoctlGnttabUnmapForeignPages(Fdo, Buffer, InLen, OutLen, ControlCode);
         break;
+#endif
 
         // suspend
     case IOCTL_XENIFACE_SUSPEND_GET_COUNT:
