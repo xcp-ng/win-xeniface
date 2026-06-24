@@ -69,7 +69,7 @@ __IsValidStr(
     for ( ; Len--; ++Str) {
         if (*Str == '\0')
             return TRUE;
-        if (!isprint((unsigned char)*Str))
+        if (*Str != '\n' && !isprint((unsigned char)*Str))
             break;
     }
     return FALSE;
