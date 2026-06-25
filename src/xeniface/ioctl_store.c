@@ -42,6 +42,25 @@
 
 static FORCEINLINE
 BOOLEAN
+__IsValidPath(
+    __in  PCHAR             Str,
+    __in  ULONG             Len
+    )
+{
+    for ( ; Len--; ++Str) {
+        if (*Str == '\0')
+            return TRUE;
+        if (*Str != '-' &&
+            *Str != '/' &&
+            *Str != '_' &&
+            !isalnum((unsigned char)*Str))
+            break;
+    }
+    return FALSE;
+}
+
+static FORCEINLINE
+BOOLEAN
 __IsValidStr(
     __in  PCHAR             Str,
     __in  ULONG             Len
@@ -110,7 +129,7 @@ IoctlStoreRead(
         goto fail1;
 
     status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
+    if (!__IsValidPath(Buffer, InLen))
         goto fail2;
 
     status = XENBUS_STORE(Read, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
@@ -178,7 +197,7 @@ IoctlStoreWrite(
         goto fail1;
 
     status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
+    if (!__IsValidPath(Buffer, InLen))
         goto fail2;
 
     Length = (ULONG)strlen(Buffer) + 1;
@@ -226,7 +245,7 @@ IoctlStoreDirectory(
         goto fail1;
 
     status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
+    if (!__IsValidPath(Buffer, InLen))
         goto fail2;
 
     status = XENBUS_STORE(Directory, &Fdo->StoreInterface, NULL, NULL, Buffer, &Value);
@@ -295,7 +314,7 @@ IoctlStoreRemove(
         goto fail1;
 
     status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Buffer, InLen))
+    if (!__IsValidPath(Buffer, InLen))
         goto fail2;
 
     status = XENBUS_STORE(Remove, &Fdo->StoreInterface, NULL, NULL, Buffer);
@@ -417,7 +436,7 @@ IoctlStoreSetPermissions(
 
     Path[In->PathLength - 1] = 0;
     status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Path, In->PathLength))
+    if (!__IsValidPath(Path, In->PathLength))
         goto fail6;
 
     Trace("> Path '%s', NumberPermissions %lu\n", Path, In->NumberPermissions);
@@ -534,7 +553,7 @@ IoctlStoreAddWatch(
 
     Path[In->PathLength - 1] = 0;
     status = STATUS_INVALID_PARAMETER;
-    if (!__IsValidStr(Path, In->PathLength))
+    if (!__IsValidPath(Path, In->PathLength))
         goto fail4;
 
     status = STATUS_NO_MEMORY;
