@@ -416,6 +416,10 @@ IoctlStoreSetPermissions(
         goto fail5;
 
     Path[In->PathLength - 1] = 0;
+    status = STATUS_INVALID_PARAMETER;
+    if (!__IsValidStr(Path, In->PathLength))
+        goto fail6;
+
     Trace("> Path '%s', NumberPermissions %lu\n", Path, In->NumberPermissions);
 
     for (Index = 0; Index < In->NumberPermissions; Index++) {
@@ -434,11 +438,14 @@ IoctlStoreSetPermissions(
                           In->NumberPermissions);
 
     if (!NT_SUCCESS(status))
-        goto fail6;
+        goto fail7;
 
     __FreePermissions(Permissions);
     __FreeCapturedBuffer(Path);
     return status;
+
+fail7:
+    Error("Fail7\n");
 
 fail6:
     Error("Fail6\n");
@@ -526,11 +533,14 @@ IoctlStoreAddWatch(
         goto fail3;
 
     Path[In->PathLength - 1] = 0;
+    status = STATUS_INVALID_PARAMETER;
+    if (!__IsValidStr(Path, In->PathLength))
+        goto fail4;
 
     status = STATUS_NO_MEMORY;
     Context = __AllocatePoolWithTag(NonPagedPool, sizeof(XENIFACE_STORE_CONTEXT), XENIFACE_POOL_TAG);
     if (Context == NULL)
-        goto fail4;
+        goto fail5;
 
     RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
 
@@ -543,7 +553,7 @@ IoctlStoreAddWatch(
                                        &Context->Event,
                                        NULL);
     if (!NT_SUCCESS(status))
-        goto fail5;
+        goto fail6;
 
     Trace("> Path '%s', Event %p, FO %p\n", Path, In->Event, FileObject);
 
@@ -551,7 +561,7 @@ IoctlStoreAddWatch(
 
     status = ThreadCreate(StoreWatch, Context, &Context->Thread);
     if (!NT_SUCCESS(status))
-        goto fail6;
+        goto fail7;
 
     status = XENBUS_STORE(WatchAdd,
                           &Fdo->StoreInterface,
@@ -561,7 +571,7 @@ IoctlStoreAddWatch(
                           &Context->Watch);
 
     if (!NT_SUCCESS(status))
-        goto fail7;
+        goto fail8;
 
     ExInterlockedInsertTailList(&Fdo->StoreWatchList, &Context->Entry, &Fdo->StoreWatchLock);
 
@@ -572,21 +582,24 @@ IoctlStoreAddWatch(
 
     return status;
 
-fail7:
+fail8:
     __FreeCapturedBuffer(Context->Path);
 
-    Error("Fail7\n");
+    Error("Fail8\n");
     ThreadAlert(Context->Thread);
     ThreadJoin(Context->Thread);
 
+fail7:
+    Error("Fail7\n");
+    ObDereferenceObject(Context->Event);
+
 fail6:
     Error("Fail6\n");
-    ObDereferenceObject(Context->Event);
+    RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
+    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail5:
     Error("Fail5\n");
-    RtlZeroMemory(Context, sizeof(XENIFACE_STORE_CONTEXT));
-    __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
 fail4:
     Error("Fail4\n");
