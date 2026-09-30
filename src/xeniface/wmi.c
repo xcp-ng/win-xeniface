@@ -446,7 +446,7 @@ GetCountedUnicodeStringSize(
 static VOID
 WriteCountedUnicodeString(
     _In_ PCUNICODE_STRING   ustr,
-    _In_ PUCHAR             location
+    _Out_ PUCHAR            location
     )
 {
     *((USHORT*)location) = ustr->Length;
@@ -458,7 +458,7 @@ WriteCountedUnicodeString(
 static NTSTATUS
 WriteCountedUTF8String(
     _In_ const CHAR     *string,
-    _In_ PUCHAR         location
+    _Out_ PUCHAR        location
     )
 {
     UNICODE_STRING      unicode;
@@ -583,7 +583,7 @@ static NTSTATUS
 WriteInstanceName(
     _In_ PXENIFACE_FDO  Fdo,
     _In_ const CHAR     *string,
-    _In_ PUCHAR         location
+    _Out_ PUCHAR        location
     )
 {
     UNICODE_STRING      destination;
