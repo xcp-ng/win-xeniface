@@ -44,7 +44,7 @@ typedef struct _XENIFACE_MUTEX {
 
 static FORCEINLINE VOID
 InitializeMutex(
-    IN  PXENIFACE_MUTEX   Mutex
+    _In_ PXENIFACE_MUTEX    Mutex
     )
 {
     RtlZeroMemory(Mutex, sizeof (XENIFACE_MUTEX));
@@ -53,9 +53,9 @@ InitializeMutex(
 }
 
 static FORCEINLINE VOID
-__drv_maxIRQL(PASSIVE_LEVEL)
+_IRQL_requires_max_(PASSIVE_LEVEL)
 AcquireMutex(
-    IN  PXENIFACE_MUTEX   Mutex
+    _In_ PXENIFACE_MUTEX    Mutex
     )
 {
     (VOID) KeWaitForSingleObject(&Mutex->Event,
@@ -69,9 +69,9 @@ AcquireMutex(
 }
 
 static FORCEINLINE VOID
-__drv_maxIRQL(PASSIVE_LEVEL)
+_IRQL_requires_max_(PASSIVE_LEVEL)
 ReleaseMutex(
-    IN  PXENIFACE_MUTEX   Mutex
+    _In_ PXENIFACE_MUTEX    Mutex
     )
 {
     ASSERT3P(Mutex->Owner, ==, KeGetCurrentThread());

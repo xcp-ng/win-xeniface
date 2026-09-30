@@ -62,7 +62,7 @@ typedef struct _XENBUS_SUSPEND_CALLBACK   XENBUS_SUSPEND_CALLBACK, *PXENBUS_SUSP
 */  
 typedef NTSTATUS
 (*XENBUS_SUSPEND_ACQUIRE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SUSPEND_RELEASE
@@ -72,7 +72,7 @@ typedef NTSTATUS
 */  
 typedef VOID
 (*XENBUS_SUSPEND_RELEASE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SUSPEND_FUNCTION
@@ -87,7 +87,7 @@ typedef VOID
 */  
 typedef VOID
 (*XENBUS_SUSPEND_FUNCTION)(
-    IN  PVOID   Argument
+    _In_ PVOID  Argument
     );
 
 /*! \typedef XENBUS_SUSPEND_REGISTER
@@ -101,11 +101,11 @@ typedef VOID
 */  
 typedef NTSTATUS
 (*XENBUS_SUSPEND_REGISTER)(
-    IN  PINTERFACE                      Interface,
-    IN  XENBUS_SUSPEND_CALLBACK_TYPE    Type,
-    IN  XENBUS_SUSPEND_FUNCTION         Function,
-    IN  PVOID                           Argument OPTIONAL,
-    OUT PXENBUS_SUSPEND_CALLBACK        *Callback
+    _In_ PINTERFACE                     Interface,
+    _In_ XENBUS_SUSPEND_CALLBACK_TYPE   Type,
+    _In_ XENBUS_SUSPEND_FUNCTION        Function,
+    _In_opt_ PVOID                      Argument,
+    _Outptr_ PXENBUS_SUSPEND_CALLBACK   *Callback
     );
 
 /*! \typedef XENBUS_SUSPEND_DEREGISTER
@@ -116,8 +116,8 @@ typedef NTSTATUS
 */
 typedef VOID
 (*XENBUS_SUSPEND_DEREGISTER)(
-    IN  PINTERFACE                  Interface,
-    IN  PXENBUS_SUSPEND_CALLBACK    Callback
+    _In_ PINTERFACE                 Interface,
+    _In_ PXENBUS_SUSPEND_CALLBACK   Callback
     );
 
 /*! \typedef XENBUS_SUSPEND_TRIGGER
@@ -129,7 +129,7 @@ typedef VOID
 */
 typedef NTSTATUS
 (*XENBUS_SUSPEND_TRIGGER)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SUSPEND_GET_COUNT
@@ -140,7 +140,7 @@ typedef NTSTATUS
 */
 typedef ULONG
 (*XENBUS_SUSPEND_GET_COUNT)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 // {0554F2AF-B510-4C71-AC03-1C503E394238}

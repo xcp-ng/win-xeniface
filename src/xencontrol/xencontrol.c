@@ -10,9 +10,9 @@
 
 BOOL APIENTRY
 DllMain(
-    IN  HMODULE Module,
-    IN  DWORD ReasonForCall,
-    IN  LPVOID Reserved
+    _In_ HMODULE    Module,
+    _In_ DWORD      ReasonForCall,
+    _In_ LPVOID     Reserved
 )
 {
     UNREFERENCED_PARAMETER(Module);
@@ -23,16 +23,16 @@ DllMain(
 
 static void
 _Log(
-    IN  XENCONTROL_LOGGER *Logger,
-    IN  XENCONTROL_LOG_LEVEL LogLevel,
-    IN  XENCONTROL_LOG_LEVEL CurrentLogLevel,
-    IN  PCHAR Function,
-    IN  PWCHAR Format,
+    _In_ XENCONTROL_LOGGER      *Logger,
+    _In_ XENCONTROL_LOG_LEVEL   LogLevel,
+    _In_ XENCONTROL_LOG_LEVEL   CurrentLogLevel,
+    _In_ PCHAR                  Function,
+    _In_ PWCHAR                 Format,
     ...
     )
 {
-    va_list Args;
-    DWORD LastError;
+    va_list                     Args;
+    DWORD                       LastError;
 
     if (Logger == NULL)
         return;
@@ -49,14 +49,14 @@ _Log(
 
 static void
 _LogMultiSz(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Caller,
-    IN  XENCONTROL_LOG_LEVEL Level,
-    IN  PCHAR MultiSz
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Caller,
+    _In_ XENCONTROL_LOG_LEVEL   Level,
+    _In_ PCHAR                  MultiSz
     )
 {
-    PCHAR Ptr;
-    ULONG Len;
+    PCHAR                       Ptr;
+    ULONG                       Len;
 
     for (Ptr = MultiSz; *Ptr;) {
         Len = (ULONG)strlen(Ptr);
@@ -67,8 +67,8 @@ _LogMultiSz(
 
 void
 XcRegisterLogger(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  XENCONTROL_LOGGER *Logger
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ XENCONTROL_LOGGER      *Logger
     )
 {
     Xc->Logger = Logger;
@@ -76,8 +76,8 @@ XcRegisterLogger(
 
 void
 XcSetLogLevel(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  XENCONTROL_LOG_LEVEL LogLevel
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ XENCONTROL_LOG_LEVEL   LogLevel
     )
 {
     Xc->LogLevel = LogLevel;
@@ -85,16 +85,16 @@ XcSetLogLevel(
 
 DWORD
 XcOpen(
-    IN  XENCONTROL_LOGGER *Logger,
-    OUT PXENCONTROL_CONTEXT *Xc
+    _In_ XENCONTROL_LOGGER          *Logger,
+    _Outptr_ PXENCONTROL_CONTEXT    *Xc
     )
 {
-    HDEVINFO DevInfo;
-    SP_DEVICE_INTERFACE_DATA InterfaceData;
+    HDEVINFO                        DevInfo;
+    SP_DEVICE_INTERFACE_DATA        InterfaceData;
     SP_DEVICE_INTERFACE_DETAIL_DATA *DetailData = NULL;
-    DWORD BufferSize;
-    PXENCONTROL_CONTEXT Context;
-    DWORD Status = ERROR_OUTOFMEMORY;
+    DWORD                           BufferSize;
+    PXENCONTROL_CONTEXT             Context;
+    DWORD                           Status = ERROR_OUTOFMEMORY;
 
     Context = malloc(sizeof(*Context));
     if (Context == NULL)
@@ -178,7 +178,7 @@ end:
 
 void
 XcClose(
-    IN  PXENCONTROL_CONTEXT Xc
+    _In_ PXENCONTROL_CONTEXT    Xc
     )
 {
     CloseHandle(Xc->XenIface);
@@ -187,18 +187,18 @@ XcClose(
 
 DWORD
 XcEvtchnOpenUnbound(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  HANDLE Event,
-    IN  BOOL Mask,
-    OUT ULONG *LocalPort
+    _In_ PXENCONTROL_CONTEXT            Xc,
+    _In_ USHORT                         RemoteDomain,
+    _In_ HANDLE                         Event,
+    _In_ BOOL                           Mask,
+    _Out_ ULONG                         *LocalPort
     )
 {
-    XENIFACE_EVTCHN_BIND_UNBOUND_IN In;
-    XENIFACE_EVTCHN_BIND_UNBOUND_OUT Out;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    XENIFACE_EVTCHN_BIND_UNBOUND_IN     In;
+    XENIFACE_EVTCHN_BIND_UNBOUND_OUT    Out;
+    DWORD                               Returned;
+    BOOL                                Success;
+    DWORD                               Status = ERROR_SUCCESS;
 
     In.RemoteDomain = RemoteDomain;
     In.Event = Event;
@@ -227,19 +227,19 @@ end:
 
 DWORD
 XcEvtchnBindInterdomain(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  ULONG RemotePort,
-    IN  HANDLE Event,
-    IN  BOOL Mask,
-    OUT ULONG *LocalPort
+    _In_ PXENCONTROL_CONTEXT                Xc,
+    _In_ USHORT                             RemoteDomain,
+    _In_ ULONG                              RemotePort,
+    _In_ HANDLE                             Event,
+    _In_ BOOL                               Mask,
+    _Out_ ULONG                             *LocalPort
     )
 {
-    XENIFACE_EVTCHN_BIND_INTERDOMAIN_IN In;
-    XENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT Out;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    XENIFACE_EVTCHN_BIND_INTERDOMAIN_IN     In;
+    XENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT    Out;
+    DWORD                                   Returned;
+    BOOL                                    Success;
+    DWORD                                   Status = ERROR_SUCCESS;
 
     In.RemoteDomain = RemoteDomain;
     In.RemotePort = RemotePort;
@@ -270,14 +270,14 @@ end:
 
 DWORD
 XcEvtchnClose(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  ULONG LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ ULONG                  LocalPort
     )
 {
-    XENIFACE_EVTCHN_CLOSE_IN In;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    XENIFACE_EVTCHN_CLOSE_IN    In;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     In.LocalPort = LocalPort;
 
@@ -299,14 +299,14 @@ XcEvtchnClose(
 
 DWORD
 XcEvtchnNotify(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  ULONG LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ ULONG                  LocalPort
     )
 {
-    XENIFACE_EVTCHN_NOTIFY_IN In;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    XENIFACE_EVTCHN_NOTIFY_IN   In;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     In.LocalPort = LocalPort;
 
@@ -328,14 +328,14 @@ XcEvtchnNotify(
 
 DWORD
 XcEvtchnUnmask(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  ULONG LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ ULONG                  LocalPort
     )
 {
-    XENIFACE_EVTCHN_UNMASK_IN In;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    XENIFACE_EVTCHN_UNMASK_IN   In;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     In.LocalPort = LocalPort;
 
@@ -357,14 +357,14 @@ XcEvtchnUnmask(
 
 DWORD
 XcGnttabPermitForeignAccess(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  ULONG NumberPages,
-    IN  ULONG NotifyOffset,
-    IN  ULONG NotifyPort,
-    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
-    OUT PVOID* SharedAddress,
-    OUT ULONG* References
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ USHORT                     RemoteDomain,
+    _In_ ULONG                      NumberPages,
+    _In_ ULONG                      NotifyOffset,
+    _In_ ULONG                      NotifyPort,
+    _In_ XENIFACE_GNTTAB_PAGE_FLAGS Flags,
+    _Outptr_ PVOID                  *SharedAddress,
+    _Out_ ULONG                     *References
 )
 {
     Log(XLL_DEBUG, L"RemoteDomain: %d, NumberPages: %lu, NotifyOffset: 0x%x, NotifyPort: %lu, Flags: 0x%x",
@@ -383,23 +383,23 @@ XcGnttabPermitForeignAccess(
 
 DWORD
 XcGnttabPermitForeignAccess2(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  PVOID Address,
-    IN  ULONG NumberPages,
-    IN  ULONG NotifyOffset,
-    IN  ULONG NotifyPort,
-    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
-    OUT PVOID *SharedAddress,
-    OUT ULONG *References
+    _In_ PXENCONTROL_CONTEXT                        Xc,
+    _In_ USHORT                                     RemoteDomain,
+    _In_ PVOID                                      Address,
+    _In_ ULONG                                      NumberPages,
+    _In_ ULONG                                      NotifyOffset,
+    _In_ ULONG                                      NotifyPort,
+    _In_ XENIFACE_GNTTAB_PAGE_FLAGS                 Flags,
+    _Outptr_ PVOID                                  *SharedAddress,
+    _Out_ ULONG                                     *References
     )
 {
-    XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2 In;
-    XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2 *Out;
-    DWORD Returned, Size;
-    OVERLAPPED Overlapped;
-    BOOL Success;
-    DWORD Status;
+    XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2     In;
+    XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2    *Out;
+    DWORD                                           Returned, Size;
+    OVERLAPPED                                      Overlapped;
+    BOOL                                            Success;
+    DWORD                                           Status;
 
     In.RemoteDomain = RemoteDomain;
     In.Address = Address;
@@ -455,14 +455,14 @@ end:
 
 DWORD
 XcGnttabRevokeForeignAccess(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PVOID Address
+    _In_ PXENCONTROL_CONTEXT                    Xc,
+    _In_ PVOID                                  Address
     )
 {
     XENIFACE_GNTTAB_REVOKE_FOREIGN_ACCESS_IN_V2 In;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    DWORD                                       Returned;
+    BOOL                                        Success;
+    DWORD                                       Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Address: %p", Address);
     In.Address = Address;
@@ -484,22 +484,22 @@ XcGnttabRevokeForeignAccess(
 
 DWORD
 XcGnttabMapForeignPages(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  ULONG NumberPages,
-    IN  PULONG References,
-    IN  ULONG NotifyOffset,
-    IN  ULONG NotifyPort,
-    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
-    OUT PVOID *Address
+    _In_ PXENCONTROL_CONTEXT                    Xc,
+    _In_ USHORT                                 RemoteDomain,
+    _In_ ULONG                                  NumberPages,
+    _In_ PULONG                                 References,
+    _In_ ULONG                                  NotifyOffset,
+    _In_ ULONG                                  NotifyPort,
+    _In_ XENIFACE_GNTTAB_PAGE_FLAGS             Flags,
+    _Outptr_ PVOID                              *Address
     )
 {
-    XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2 *In;
-    XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2 Out;
-    DWORD Returned, Size;
-    OVERLAPPED Overlapped;
-    BOOL Success;
-    DWORD Status = ERROR_OUTOFMEMORY;
+    XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2     *In;
+    XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2    Out;
+    DWORD                                       Returned, Size;
+    OVERLAPPED                                  Overlapped;
+    BOOL                                        Success;
+    DWORD                                       Status = ERROR_OUTOFMEMORY;
 
     Size = (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References[NumberPages]);
     In = malloc(Size);
@@ -554,14 +554,14 @@ end:
 
 DWORD
 XcGnttabUnmapForeignPages(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PVOID Address
+    _In_ PXENCONTROL_CONTEXT                    Xc,
+    _In_ PVOID                                  Address
     )
 {
-    XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2 In;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_IN_V2   In;
+    DWORD                                       Returned;
+    BOOL                                        Success;
+    DWORD                                       Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Address: %p", Address);
 
@@ -584,15 +584,15 @@ XcGnttabUnmapForeignPages(
 
 DWORD
 XcStoreRead(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PSTR Path,
-    IN  DWORD cbValue,
-    OUT CHAR *Value
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PSTR                   Path,
+    _In_ DWORD                  cbValue,
+    _Out_ CHAR                  *Value
     )
 {
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Path: '%S'", Path);
     Success = DeviceIoControl(Xc->XenIface,
@@ -616,16 +616,16 @@ end:
 
 DWORD
 XcStoreWrite(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  PCHAR Value
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path,
+    _In_ PCHAR                  Value
     )
 {
-    PCHAR Buffer;
-    DWORD cbBuffer;
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    PCHAR                       Buffer;
+    DWORD                       cbBuffer;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     cbBuffer = (DWORD)(strlen(Path) + 1 + strlen(Value) + 1 + 1);
     Buffer = malloc(cbBuffer);
@@ -659,15 +659,15 @@ end:
 
 DWORD
 XcStoreDirectory(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  DWORD cbOutput,
-    OUT CHAR *Output
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path,
+    _In_ DWORD                  cbOutput,
+    _Out_ CHAR                  *Output
     )
 {
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Path: '%S'", Path);
     Success = DeviceIoControl(Xc->XenIface,
@@ -691,13 +691,13 @@ end:
 
 DWORD
 XcStoreRemove(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path
     )
 {
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
+    DWORD                       Returned;
+    BOOL                        Success;
+    DWORD                       Status = ERROR_SUCCESS;
 
     Log(XLL_DEBUG, L"Path: '%S'", Path);
     Success = DeviceIoControl(Xc->XenIface,
@@ -717,16 +717,16 @@ XcStoreRemove(
 
 DWORD
 XcStoreSetPermissions(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  ULONG Count,
-    IN  PXENIFACE_STORE_PERMISSION Permissions
+    _In_ PXENCONTROL_CONTEXT            Xc,
+    _In_ PCHAR                          Path,
+    _In_ ULONG                          Count,
+    _In_ PXENIFACE_STORE_PERMISSION     Permissions
     )
 {
-    DWORD Returned, Size;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
-    XENIFACE_STORE_SET_PERMISSIONS_IN *In = NULL;
+    DWORD                               Returned, Size;
+    BOOL                                Success;
+    DWORD                               Status = ERROR_SUCCESS;
+    XENIFACE_STORE_SET_PERMISSIONS_IN   *In = NULL;
 
     Log(XLL_DEBUG, L"Path: '%S', Count: %lu", Path, Count);
     for (ULONG i = 0; i < Count; i++)
@@ -763,17 +763,17 @@ end:
 
 DWORD
 XcStoreAddWatch(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  HANDLE Event,
-    OUT PVOID *Handle
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ PCHAR                      Path,
+    _In_ HANDLE                     Event,
+    _Outptr_ PVOID                  *Handle
     )
 {
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
-    XENIFACE_STORE_ADD_WATCH_IN In;
-    XENIFACE_STORE_ADD_WATCH_OUT Out;
+    DWORD                           Returned;
+    BOOL                            Success;
+    DWORD                           Status = ERROR_SUCCESS;
+    XENIFACE_STORE_ADD_WATCH_IN     In;
+    XENIFACE_STORE_ADD_WATCH_OUT    Out;
 
     Log(XLL_DEBUG, L"Path: '%S', Event: %p", Path, Event);
 
@@ -803,14 +803,14 @@ end:
 
 DWORD
 XcStoreRemoveWatch(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PVOID Handle
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ PVOID                      Handle
     )
 {
-    DWORD Returned;
-    BOOL Success;
-    DWORD Status = ERROR_SUCCESS;
-    XENIFACE_STORE_REMOVE_WATCH_IN In;
+    DWORD                           Returned;
+    BOOL                            Success;
+    DWORD                           Status = ERROR_SUCCESS;
+    XENIFACE_STORE_REMOVE_WATCH_IN  In;
 
     Log(XLL_DEBUG, L"Handle: %p", Handle);
 

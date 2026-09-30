@@ -54,7 +54,7 @@ typedef struct _XENBUS_CACHE    XENBUS_CACHE, *PXENBUS_CACHE;
 */
 typedef NTSTATUS
 (*XENBUS_CACHE_ACQUIRE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_CACHE_RELEASE
@@ -64,7 +64,7 @@ typedef NTSTATUS
 */
 typedef VOID
 (*XENBUS_CACHE_RELEASE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_CACHE_CTOR
@@ -79,8 +79,8 @@ typedef VOID
 */
 typedef NTSTATUS
 (*XENBUS_CACHE_CTOR)(
-    IN  PVOID   Argument,
-    IN  PVOID   Object
+    _In_ PVOID  Argument,
+    _In_ PVOID  Object
     );
 
 /*! \typedef XENBUS_CACHE_DTOR
@@ -94,8 +94,8 @@ typedef NTSTATUS
 */
 typedef VOID
 (*XENBUS_CACHE_DTOR)(
-    IN  PVOID   Argument,
-    IN  PVOID   Object
+    _In_ PVOID  Argument,
+    _In_ PVOID  Object
     );
 
 /*! \typedef XENBUS_CACHE_ACQUIRE_LOCK
@@ -108,7 +108,7 @@ typedef VOID
 */
 typedef VOID
 (*XENBUS_CACHE_ACQUIRE_LOCK)(
-    IN  PVOID   Argument
+    _In_ PVOID  Argument
     );
 
 /*! \typedef XENBUS_CACHE_RELEASE_LOCK
@@ -121,21 +121,21 @@ typedef VOID
 */
 typedef VOID
 (*XENBUS_CACHE_RELEASE_LOCK)(
-    IN  PVOID   Argument
+    _In_ PVOID  Argument
     );
 
 typedef NTSTATUS
 (*XENBUS_CACHE_CREATE_V1)(
-    IN  PINTERFACE                  Interface,
-    IN  const CHAR                  *Name,
-    IN  ULONG                       Size,
-    IN  ULONG                       Reservation,
-    IN  XENBUS_CACHE_CTOR           Ctor,
-    IN  XENBUS_CACHE_DTOR           Dtor,
-    IN  XENBUS_CACHE_ACQUIRE_LOCK   AcquireLock,
-    IN  XENBUS_CACHE_RELEASE_LOCK   ReleaseLock,
-    IN  PVOID                       Argument OPTIONAL,
-    OUT PXENBUS_CACHE               *Cache
+    _In_ PINTERFACE                 Interface,
+    _In_ const CHAR                 *Name,
+    _In_ ULONG                      Size,
+    _In_ ULONG                      Reservation,
+    _In_ XENBUS_CACHE_CTOR          Ctor,
+    _In_ XENBUS_CACHE_DTOR          Dtor,
+    _In_ XENBUS_CACHE_ACQUIRE_LOCK  AcquireLock,
+    _In_ XENBUS_CACHE_RELEASE_LOCK  ReleaseLock,
+    _In_opt_ PVOID                  Argument,
+    _Outptr_ PXENBUS_CACHE          *Cache
     );
 
 /*! \typedef XENBUS_CACHE_CREATE
@@ -158,17 +158,17 @@ typedef NTSTATUS
 */
 typedef NTSTATUS
 (*XENBUS_CACHE_CREATE)(
-    IN  PINTERFACE                  Interface,
-    IN  const CHAR                  *Name,
-    IN  ULONG                       Size,
-    IN  ULONG                       Reservation,
-    IN  ULONG                       Cap,
-    IN  XENBUS_CACHE_CTOR           Ctor,
-    IN  XENBUS_CACHE_DTOR           Dtor,
-    IN  XENBUS_CACHE_ACQUIRE_LOCK   AcquireLock,
-    IN  XENBUS_CACHE_RELEASE_LOCK   ReleaseLock,
-    IN  PVOID                       Argument OPTIONAL,
-    OUT PXENBUS_CACHE               *Cache
+    _In_ PINTERFACE                 Interface,
+    _In_ const CHAR                 *Name,
+    _In_ ULONG                      Size,
+    _In_ ULONG                      Reservation,
+    _In_ ULONG                      Cap,
+    _In_ XENBUS_CACHE_CTOR          Ctor,
+    _In_ XENBUS_CACHE_DTOR          Dtor,
+    _In_ XENBUS_CACHE_ACQUIRE_LOCK  AcquireLock,
+    _In_ XENBUS_CACHE_RELEASE_LOCK  ReleaseLock,
+    _In_opt_ PVOID                  Argument,
+    _Outptr_ PXENBUS_CACHE          *Cache
     );
 
 /*! \typedef XENBUS_CACHE_GET
@@ -181,9 +181,9 @@ typedef NTSTATUS
 */
 typedef PVOID
 (*XENBUS_CACHE_GET)(
-    IN  PINTERFACE      Interface,
-    IN  PXENBUS_CACHE   Cache,
-    IN  BOOLEAN         Locked
+    _In_ PINTERFACE     Interface,
+    _In_ PXENBUS_CACHE  Cache,
+    _In_ BOOLEAN        Locked
     );
 
 /*! \typedef XENBUS_CACHE_PUT
@@ -196,10 +196,10 @@ typedef PVOID
 */
 typedef VOID
 (*XENBUS_CACHE_PUT)(
-    IN  PINTERFACE      Interface,
-    IN  PXENBUS_CACHE   Cache,
-    IN  PVOID           Object,
-    IN  BOOLEAN         Locked
+    _In_ PINTERFACE     Interface,
+    _In_ PXENBUS_CACHE  Cache,
+    _In_ PVOID          Object,
+    _In_ BOOLEAN        Locked
     );
 
 /*! \typedef XENBUS_CACHE_DESTROY
@@ -212,8 +212,8 @@ typedef VOID
 */
 typedef VOID
 (*XENBUS_CACHE_DESTROY)(
-    IN  PINTERFACE      Interface,
-    IN  PXENBUS_CACHE   Cache
+    _In_ PINTERFACE     Interface,
+    _In_ PXENBUS_CACHE  Cache
     );
 
 // {A98DFD78-416A-4949-92A5-E084F2F4B44E}

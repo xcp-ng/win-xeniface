@@ -42,13 +42,13 @@
 
 NTSTATUS
 __CaptureUserBuffer(
-    __in  PVOID Buffer,
-    __in  ULONG Length,
-    __out PVOID *CapturedBuffer
+    _In_ PVOID      Buffer,
+    _In_ ULONG      Length,
+    _Outptr_ PVOID  *CapturedBuffer
     )
 {
-    NTSTATUS Status;
-    PVOID TempBuffer = NULL;
+    NTSTATUS        Status;
+    PVOID           TempBuffer = NULL;
 
     if (Length == 0) {
         *CapturedBuffer = NULL;
@@ -82,7 +82,7 @@ __CaptureUserBuffer(
 
 VOID
 __FreeCapturedBuffer(
-    __in_opt  PVOID CapturedBuffer
+    _In_opt_ PVOID  CapturedBuffer
     )
 {
     if (CapturedBuffer != NULL) {
@@ -93,8 +93,8 @@ __FreeCapturedBuffer(
 static FORCEINLINE
 BOOLEAN
 __IsValidStr(
-    __in  PCHAR             Str,
-    __in  ULONG             Len
+    _In_ PCHAR  Str,
+    _In_ ULONG  Len
     )
 {
     for ( ; Len--; ++Str) {
@@ -111,14 +111,14 @@ __IsValidStr(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlLog(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     )
 {
-    NTSTATUS    status;
-	PCHAR		ptr;
+    NTSTATUS            status;
+	PCHAR                  ptr;
 
     UNREFERENCED_PARAMETER(Fdo);
 
@@ -152,16 +152,16 @@ fail1:
 _IRQL_requires_(PASSIVE_LEVEL) // EvtchnFree calls KeFlushQueuedDpcs
 VOID
 XenIfaceCleanup(
-    __in      PXENIFACE_FDO Fdo,
-    __in_opt  PFILE_OBJECT  FileObject
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_opt_ PFILE_OBJECT       FileObject
     )
 {
-    PLIST_ENTRY Node;
-    PXENIFACE_STORE_CONTEXT StoreContext;
-    PXENIFACE_EVTCHN_CONTEXT EvtchnContext;
-    PXENIFACE_SUSPEND_CONTEXT SuspendContext;
-    KIRQL Irql;
-    LIST_ENTRY ToFree;
+    PLIST_ENTRY                 Node;
+    PXENIFACE_STORE_CONTEXT     StoreContext;
+    PXENIFACE_EVTCHN_CONTEXT    EvtchnContext;
+    PXENIFACE_SUSPEND_CONTEXT   SuspendContext;
+    KIRQL                       Irql;
+    LIST_ENTRY                  ToFree;
 
     // store watches
     InitializeListHead(&ToFree);
@@ -239,8 +239,8 @@ XenIfaceCleanup(
 
 NTSTATUS
 XenIfaceIoctl(
-    __in     PXENIFACE_FDO     Fdo,
-    __inout  PIRP              Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _Inout_ PIRP        Irp
     )
 {
     NTSTATUS            status;

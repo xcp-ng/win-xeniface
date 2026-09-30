@@ -38,11 +38,11 @@
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlSharedInfoGetTime(
-    __in  PXENIFACE_FDO                 Fdo,
-    __in  PCHAR                         Buffer,
-    __in  ULONG                         InLen,
-    __in  ULONG                         OutLen,
-    __out PULONG_PTR                    Info
+    _In_ PXENIFACE_FDO                  Fdo,
+    _In_ PCHAR                          Buffer,
+    _In_ ULONG                          InLen,
+    _In_ ULONG                          OutLen,
+    _Out_ PULONG_PTR                    Info
     )
 {
     PXENIFACE_SHAREDINFO_GET_TIME_OUT   Out;

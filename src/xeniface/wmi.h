@@ -40,43 +40,43 @@
 
 extern NTSTATUS
 WmiInitialize(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 WmiTeardown(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern NTSTATUS
 WmiRegister(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 WmiDeregister(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 WmiSessionsResumeAll(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 WmiSessionsSuspendAll(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern NTSTATUS
 WmiProcessMinorFunction(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     );
 
 extern VOID
 WmiFireSuspendEvent(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 #endif

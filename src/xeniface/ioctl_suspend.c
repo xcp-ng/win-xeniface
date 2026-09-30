@@ -39,15 +39,15 @@
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlSuspendGetCount(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     )
 {
-    NTSTATUS    status;
-    PULONG      Value;
+    NTSTATUS            status;
+    PULONG              Value;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != 0)
@@ -73,18 +73,18 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlSuspendRegister(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PVOID                      Buffer,
+    _In_ ULONG                      InLen,
+    _In_ ULONG                      OutLen,
+    _In_ PFILE_OBJECT               FileObject,
+    _Out_ PULONG_PTR                Info
     )
 {
-    NTSTATUS status;
-    PXENIFACE_SUSPEND_REGISTER_IN In = Buffer;
-    PXENIFACE_SUSPEND_REGISTER_OUT Out = Buffer;
-    PXENIFACE_SUSPEND_CONTEXT Context;
+    NTSTATUS                        status;
+    PXENIFACE_SUSPEND_REGISTER_IN   In = Buffer;
+    PXENIFACE_SUSPEND_REGISTER_OUT  Out = Buffer;
+    PXENIFACE_SUSPEND_CONTEXT       Context;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_SUSPEND_REGISTER_IN) ||
@@ -134,8 +134,8 @@ fail1:
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 SuspendFreeEvent(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_SUSPEND_CONTEXT Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_SUSPEND_CONTEXT   Context
     )
 {
     Trace("Context %p, FO %p\n",
@@ -151,18 +151,18 @@ SuspendFreeEvent(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlSuspendDeregister(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PVOID                      Buffer,
+    _In_ ULONG                      InLen,
+    _In_ ULONG                      OutLen,
+    _In_ PFILE_OBJECT               FileObject
     )
 {
-    NTSTATUS status;
-    PXENIFACE_SUSPEND_REGISTER_OUT In = Buffer;
-    PXENIFACE_SUSPEND_CONTEXT Context = NULL;
-    KIRQL Irql;
-    PLIST_ENTRY Node;
+    NTSTATUS                        status;
+    PXENIFACE_SUSPEND_REGISTER_OUT  In = Buffer;
+    PXENIFACE_SUSPEND_CONTEXT       Context = NULL;
+    KIRQL                           Irql;
+    PLIST_ENTRY                     Node;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_SUSPEND_REGISTER_OUT) ||
@@ -206,12 +206,12 @@ fail1:
 
 VOID
 SuspendEventFire(
-    __in    PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO          Fdo
     )
 {
-    KIRQL       Irql;
-    PLIST_ENTRY Node;
-    PXENIFACE_SUSPEND_CONTEXT Context;
+    KIRQL                       Irql;
+    PLIST_ENTRY                 Node;
+    PXENIFACE_SUSPEND_CONTEXT   Context;
 
     KeAcquireSpinLock(&Fdo->SuspendLock, &Irql);
     Node = Fdo->SuspendList.Flink;

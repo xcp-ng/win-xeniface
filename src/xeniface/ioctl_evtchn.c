@@ -42,14 +42,14 @@ _IRQL_requires_(DISPATCH_LEVEL)
 _IRQL_requires_same_
 VOID
 EvtchnNotificationDpc(
-    __in      PKDPC Dpc,
-    __in_opt  PVOID _Context,
-    __in_opt  PVOID Argument1,
-    __in_opt  PVOID Argument2
+    _In_ PKDPC                  Dpc,
+    _In_opt_ PVOID              _Context,
+    _In_opt_ PVOID              Argument1,
+    _In_opt_ PVOID              Argument2
     )
 {
-    PXENIFACE_EVTCHN_CONTEXT Context = _Context;
-    PXENBUS_EVTCHN_CHANNEL   Channel;
+    PXENIFACE_EVTCHN_CONTEXT    Context = _Context;
+    PXENBUS_EVTCHN_CHANNEL      Channel;
 
     UNREFERENCED_PARAMETER(Dpc);
     UNREFERENCED_PARAMETER(Argument1);
@@ -77,13 +77,13 @@ _IRQL_requires_same_
 static DECLSPEC_NOINLINE
 BOOLEAN
 EvtchnInterruptHandler(
-    __in      PKINTERRUPT Interrupt,
-    __in_opt  PVOID Argument
+    _In_ PKINTERRUPT            Interrupt,
+    _In_opt_ PVOID              Argument
     )
 {
-    PXENIFACE_EVTCHN_CONTEXT Context = Argument;
-    PROCESSOR_NUMBER ProcNumber;
-    ULONG ProcIndex;
+    PXENIFACE_EVTCHN_CONTEXT    Context = Argument;
+    PROCESSOR_NUMBER            ProcNumber;
+    ULONG                       ProcIndex;
 
     UNREFERENCED_PARAMETER(Interrupt);
 
@@ -100,11 +100,11 @@ EvtchnInterruptHandler(
 _IRQL_requires_(PASSIVE_LEVEL) // needed for KeFlushQueuedDpcs
 VOID
 EvtchnFree(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_EVTCHN_CONTEXT Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_EVTCHN_CONTEXT    Context
     )
 {
-    PXENBUS_EVTCHN_CHANNEL Channel;
+    PXENBUS_EVTCHN_CHANNEL              Channel;
 
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
@@ -133,13 +133,13 @@ _Requires_exclusive_lock_held_(Fdo->EvtchnLock)
 static
 PXENIFACE_EVTCHN_CONTEXT
 EvtchnFindChannel(
-    __in      PXENIFACE_FDO Fdo,
-    __in      ULONG         LocalPort,
-    __in_opt  PFILE_OBJECT  FileObject
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ ULONG                  LocalPort,
+    _In_opt_ PFILE_OBJECT       FileObject
     )
 {
-    PXENIFACE_EVTCHN_CONTEXT Context, Found = NULL;
-    PLIST_ENTRY Node;
+    PXENIFACE_EVTCHN_CONTEXT    Context, Found = NULL;
+    PLIST_ENTRY                 Node;
 
     Node = Fdo->EvtchnList.Flink;
     while (Node->Flink != Fdo->EvtchnList.Flink) {
@@ -164,19 +164,19 @@ EvtchnFindChannel(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnBindUnbound(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO                  Fdo,
+    _In_ PVOID                          Buffer,
+    _In_ ULONG                          InLen,
+    _In_ ULONG                          OutLen,
+    _In_ PFILE_OBJECT                   FileObject,
+    _Out_ PULONG_PTR                    Info
     )
 {
-    NTSTATUS status;
-    PXENIFACE_EVTCHN_BIND_UNBOUND_IN In = Buffer;
-    PXENIFACE_EVTCHN_BIND_UNBOUND_OUT Out = Buffer;
-    PXENIFACE_EVTCHN_CONTEXT Context;
-    PXENBUS_EVTCHN_CHANNEL Channel;
+    NTSTATUS                            status;
+    PXENIFACE_EVTCHN_BIND_UNBOUND_IN    In = Buffer;
+    PXENIFACE_EVTCHN_BIND_UNBOUND_OUT   Out = Buffer;
+    PXENIFACE_EVTCHN_CONTEXT            Context;
+    PXENBUS_EVTCHN_CHANNEL              Channel;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_BIND_UNBOUND_IN) ||
@@ -259,19 +259,19 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnBindInterdomain(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO                      Fdo,
+    _In_ PVOID                              Buffer,
+    _In_ ULONG                              InLen,
+    _In_ ULONG                              OutLen,
+    _In_ PFILE_OBJECT                       FileObject,
+    _Out_ PULONG_PTR                        Info
     )
 {
-    NTSTATUS status;
-    PXENIFACE_EVTCHN_BIND_INTERDOMAIN_IN In = Buffer;
-    PXENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT Out = Buffer;
-    PXENIFACE_EVTCHN_CONTEXT Context;
-    PXENBUS_EVTCHN_CHANNEL Channel;
+    NTSTATUS                                status;
+    PXENIFACE_EVTCHN_BIND_INTERDOMAIN_IN    In = Buffer;
+    PXENIFACE_EVTCHN_BIND_INTERDOMAIN_OUT   Out = Buffer;
+    PXENIFACE_EVTCHN_CONTEXT                Context;
+    PXENBUS_EVTCHN_CHANNEL                  Channel;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_BIND_INTERDOMAIN_IN) ||
@@ -356,17 +356,17 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnClose(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ PVOID                  Buffer,
+    _In_ ULONG                  InLen,
+    _In_ ULONG                  OutLen,
+    _In_ PFILE_OBJECT           FileObject
     )
 {
-    NTSTATUS status;
-    PXENIFACE_EVTCHN_CLOSE_IN In = Buffer;
-    PXENIFACE_EVTCHN_CONTEXT Context;
-    KIRQL Irql;
+    NTSTATUS                    status;
+    PXENIFACE_EVTCHN_CLOSE_IN   In = Buffer;
+    PXENIFACE_EVTCHN_CONTEXT    Context;
+    KIRQL                       Irql;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_CLOSE_IN) ||
@@ -401,14 +401,14 @@ _Requires_lock_not_held_(Fdo->EvtchnLock)
 DECLSPEC_NOINLINE
 NTSTATUS
 EvtchnNotify(
-    __in      PXENIFACE_FDO Fdo,
-    __in      ULONG         LocalPort,
-    __in_opt  PFILE_OBJECT  FileObject
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ ULONG                  LocalPort,
+    _In_opt_ PFILE_OBJECT       FileObject
     )
 {
-    NTSTATUS status;
-    PXENIFACE_EVTCHN_CONTEXT Context;
-    KIRQL Irql;
+    NTSTATUS                    status;
+    PXENIFACE_EVTCHN_CONTEXT    Context;
+    KIRQL                       Irql;
 
     KeAcquireSpinLock(&Fdo->EvtchnLock, &Irql);
 
@@ -435,15 +435,15 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnNotify(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ PVOID                  Buffer,
+    _In_ ULONG                  InLen,
+    _In_ ULONG                  OutLen,
+    _In_ PFILE_OBJECT           FileObject
     )
 {
-    NTSTATUS status;
-    PXENIFACE_EVTCHN_NOTIFY_IN In = Buffer;
+    NTSTATUS                    status;
+    PXENIFACE_EVTCHN_NOTIFY_IN  In = Buffer;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_NOTIFY_IN) ||
@@ -465,17 +465,17 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnUnmask(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ PVOID                  Buffer,
+    _In_ ULONG                  InLen,
+    _In_ ULONG                  OutLen,
+    _In_ PFILE_OBJECT           FileObject
     )
 {
-    NTSTATUS status;
-    PXENIFACE_EVTCHN_UNMASK_IN In = Buffer;
-    PXENIFACE_EVTCHN_CONTEXT Context;
-    KIRQL Irql;
+    NTSTATUS                    status;
+    PXENIFACE_EVTCHN_UNMASK_IN  In = Buffer;
+    PXENIFACE_EVTCHN_CONTEXT    Context;
+    KIRQL                       Irql;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_EVTCHN_UNMASK_IN) ||
