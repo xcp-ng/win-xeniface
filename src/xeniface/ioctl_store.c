@@ -113,7 +113,7 @@ DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRead(
     _In_ PXENIFACE_FDO  Fdo,
-    _In_ PCHAR          Buffer,
+    _Inout_ PCHAR       Buffer,
     _In_ ULONG          InLen,
     _In_ ULONG          OutLen,
     _Out_ PULONG_PTR    Info
@@ -228,7 +228,7 @@ DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreDirectory(
     _In_ PXENIFACE_FDO  Fdo,
-    _In_ PCHAR          Buffer,
+    _Inout_ PCHAR       Buffer,
     _In_ ULONG          InLen,
     _In_ ULONG          OutLen,
     _Out_ PULONG_PTR    Info

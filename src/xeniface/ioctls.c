@@ -112,7 +112,7 @@ DECLSPEC_NOINLINE
 NTSTATUS
 IoctlLog(
     _In_ PXENIFACE_FDO  Fdo,
-    _In_ PCHAR          Buffer,
+    _Inout_ PCHAR       Buffer,
     _In_ ULONG          InLen,
     _In_ ULONG          OutLen
     )
