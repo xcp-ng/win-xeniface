@@ -74,8 +74,8 @@ XcSetLogLevel(
 XENCONTROL_API
 DWORD
 XcOpen(
-    _In_ XENCONTROL_LOGGER          *Logger,
-    _Outptr_ PXENCONTROL_CONTEXT    *Xc
+    _In_ XENCONTROL_LOGGER                          *Logger,
+    _Outptr_result_maybenull_ PXENCONTROL_CONTEXT   *Xc
     );
 
 /*! \brief Close the Xen Interface device
@@ -96,6 +96,7 @@ XcClose(
     \return Error code
 */
 XENCONTROL_API
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcEvtchnOpenUnbound(
     _In_ PXENCONTROL_CONTEXT    Xc,
@@ -115,6 +116,7 @@ XcEvtchnOpenUnbound(
     \return Error code
 */
 XENCONTROL_API
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcEvtchnBindInterdomain(
     _In_ PXENCONTROL_CONTEXT    Xc,
@@ -198,11 +200,12 @@ XcGnttabPermitForeignAccess(
     \return Error code
 */
 XENCONTROL_API
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcGnttabPermitForeignAccess2(
     _In_ PXENCONTROL_CONTEXT        Xc,
     _In_ USHORT                     RemoteDomain,
-    _In_ PVOID                      Address,
+    _In_opt_ PVOID                  Address,
     _In_ ULONG                      NumberPages,
     _In_ ULONG                      NotifyOffset,
     _In_ ULONG                      NotifyPort,
@@ -235,6 +238,7 @@ XcGnttabRevokeForeignAccess(
     \return Error code
 */
 XENCONTROL_API
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcGnttabMapForeignPages(
     _In_ PXENCONTROL_CONTEXT        Xc,
@@ -341,6 +345,7 @@ XcStoreSetPermissions(
     \return Error code
 */
 XENCONTROL_API
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcStoreAddWatch(
     _In_ PXENCONTROL_CONTEXT    Xc,
