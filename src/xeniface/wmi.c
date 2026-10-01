@@ -797,10 +797,12 @@ AccessWmiBuffer(
         } break;
 
         default:
-            return FALSE;
+            overflow = TRUE;
+            goto done;
         }
     }
 
+done:
     *RequiredSize = (ULONG)(position - Buffer);
     va_end(vl);
     if (overflow)
