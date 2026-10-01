@@ -39,8 +39,8 @@ _XENCONTROL_LOG_LEVEL {
 typedef void
 XENCONTROL_LOGGER(
     _In_ XENCONTROL_LOG_LEVEL   LogLevel,
-    _In_ const CHAR             *Function,
-    _In_ const WCHAR            *Message,
+    _In_ PCSTR                  Function,
+    _In_ PCWSTR                 Message,
     _In_ va_list                Args
     );
 
@@ -272,7 +272,7 @@ XcStoreRead(
     _In_ PXENCONTROL_CONTEXT    Xc,
     _In_ PSTR                   Path,
     _In_ DWORD                  cbValue,
-    _Out_ CHAR                  *Value
+    _Out_ PSTR                  Value
     );
 
 /*! \brief Write a value to a XenStore key
@@ -285,8 +285,8 @@ XENCONTROL_API
 DWORD
 XcStoreWrite(
     _In_ PXENCONTROL_CONTEXT    Xc,
-    _In_ PCHAR                  Path,
-    _In_ PCHAR                  Value
+    _In_ PSTR                   Path,
+    _In_ PSTR                   Value
     );
 
 /*! \brief Enumerate all immediate child keys of a XenStore key
@@ -300,9 +300,9 @@ XENCONTROL_API
 DWORD
 XcStoreDirectory(
     _In_ PXENCONTROL_CONTEXT    Xc,
-    _In_ PCHAR                  Path,
+    _In_ PSTR                   Path,
     _In_ DWORD                  cbOutput,
-    _Out_ CHAR                  *Output
+    _Out_ PSTR                  Output
     );
 
 /*! \brief Remove a XenStore key
@@ -314,7 +314,7 @@ XENCONTROL_API
 DWORD
 XcStoreRemove(
     _In_ PXENCONTROL_CONTEXT    Xc,
-    _In_ PCHAR                  Path
+    _In_ PSTR                   Path
     );
 
 /*! \brief Set permissions of a XenStore key
@@ -328,7 +328,7 @@ XENCONTROL_API
 DWORD
 XcStoreSetPermissions(
     _In_ PXENCONTROL_CONTEXT        Xc,
-    _In_ PCHAR                      Path,
+    _In_ PSTR                       Path,
     _In_ ULONG                      Count,
     _In_ PXENIFACE_STORE_PERMISSION Permissions
     );
@@ -344,7 +344,7 @@ XENCONTROL_API
 DWORD
 XcStoreAddWatch(
     _In_ PXENCONTROL_CONTEXT    Xc,
-    _In_ PCHAR                  Path,
+    _In_ PSTR                   Path,
     _In_ HANDLE                 Event,
     _Outptr_ PVOID              *Handle
     );
