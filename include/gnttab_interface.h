@@ -174,7 +174,7 @@ typedef NTSTATUS
 (*XENBUS_GNTTAB_QUERY_REFERENCE)(
     _In_ PINTERFACE             Interface,
     _In_ ULONG                  Reference,
-    _Outptr_opt_ PPFN_NUMBER    Pfn,
+    _Out_opt_ PPFN_NUMBER       Pfn,
     _Out_opt_ PBOOLEAN          ReadOnly
     );
 
