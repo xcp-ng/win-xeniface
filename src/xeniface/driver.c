@@ -51,7 +51,7 @@ static XENIFACE_DRIVER  Driver;
 
 static FORCEINLINE VOID
 __DriverSetDriverObject(
-    _In_ PDRIVER_OBJECT DriverObject
+    _In_opt_ PDRIVER_OBJECT DriverObject
     )
 {
     Driver.DriverObject = DriverObject;
@@ -75,7 +75,7 @@ DriverGetDriverObject(
 
 static FORCEINLINE VOID
 __DriverSetParametersKey(
-    _In_ HANDLE Key
+    _In_opt_ HANDLE Key
     )
 {
     Driver.ParametersKey = Key;
@@ -165,12 +165,12 @@ DRIVER_DISPATCH Dispatch;
 
 NTSTATUS 
 Dispatch(
-    _In_ PDEVICE_OBJECT DeviceObject,
-    _In_ PIRP           Irp
+    _In_ PDEVICE_OBJECT     DeviceObject,
+    _Inout_ PIRP            Irp
     )
 {
-    PXENIFACE_DX        Dx;
-    NTSTATUS            status;
+    PXENIFACE_DX            Dx;
+    NTSTATUS                status;
 
     Dx = (PXENIFACE_DX)DeviceObject->DeviceExtension;
     ASSERT3P(Dx->DeviceObject, ==, DeviceObject);
