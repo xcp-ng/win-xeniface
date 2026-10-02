@@ -317,7 +317,7 @@ __strtok_r(
 
 static FORCEINLINE PWSTR
 __wcstok_r(
-    _In_opt_ PWSTR      Buffer,
+    _Inout_opt_ PWSTR   Buffer,
     _In_ PWSTR          Delimiter,
     _When_(Buffer != NULL, _Outptr_)
     _When_(Buffer == NULL, _Inout_)
