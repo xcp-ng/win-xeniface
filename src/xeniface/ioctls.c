@@ -44,7 +44,9 @@ NTSTATUS
 __CaptureUserBuffer(
     _In_ PVOID      Buffer,
     _In_ ULONG      Length,
-    _Outptr_ PVOID  *CapturedBuffer
+    _When_(Length != 0, _Outptr_result_bytebuffer_(Length))
+    _When_(Length == 0, _Outptr_result_maybenull_)
+    PVOID           *CapturedBuffer
     )
 {
     NTSTATUS        Status;
