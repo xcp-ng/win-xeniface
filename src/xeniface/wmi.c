@@ -658,19 +658,19 @@ CompareUnicodeStrings(
 
 static int
 AccessWmiBuffer(
-    _In_ PUCHAR Buffer,
-    _In_ int    readbuffer,
-    _Out_ ULONG *RequiredSize,
-    _In_ size_t BufferSize,
+    _In_reads_opt_(BufferSize) PUCHAR   Buffer,
+    _In_ int                            readbuffer,
+    _Out_ ULONG                         *RequiredSize,
+    _In_ size_t                         BufferSize,
     ...
     )
 {
-    va_list     vl;
-    ULONG_PTR   offset;
-    ULONG_PTR   offby;
-    PUCHAR      position = Buffer;
-    PUCHAR      endbuffer = Buffer + BufferSize;
-    int         overflow = 0;
+    va_list                             vl;
+    ULONG_PTR                           offset;
+    ULONG_PTR                           offby;
+    PUCHAR                              position = Buffer;
+    PUCHAR                              endbuffer = Buffer + BufferSize;
+    int                                 overflow = 0;
 
     va_start(vl, BufferSize);
     for (;;) {
