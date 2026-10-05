@@ -190,13 +190,13 @@ Utf32FromUtf8(
 
 static USHORT
 Utf16FromUtf32(
-    _Out_ PWCHAR    utf16,
-    _In_ ULONG      utf32
+    _Out_writes_(2) PWCHAR  utf16,
+    _In_ ULONG              utf32
     )
 {
-    WCHAR           u;
-    WCHAR           w;
-    WCHAR           x;
+    WCHAR                   u;
+    WCHAR                   w;
+    WCHAR                   x;
 
     if ((utf32 > 0xFFFF)) {
         u = (utf32 & 0x1F0000) >> 16;
@@ -237,14 +237,14 @@ CountUtf16FromUtf32(
 
 static USHORT
 Utf8FromUtf32(
-    _Out_ PCHAR dest,
-    _In_ ULONG  utf32
+    _Out_writes_(4) PCHAR   dest,
+    _In_ ULONG              utf32
     )
 {
-    CHAR        u;
-    CHAR        y;
-    CHAR        x;
-    CHAR        z;
+    CHAR                    u;
+    CHAR                    y;
+    CHAR                    x;
+    CHAR                    z;
 
     if (utf32 & UTF8MASK4) {
         x = utf32 & 0x3f;
