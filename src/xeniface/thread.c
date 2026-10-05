@@ -50,7 +50,7 @@ struct _XENIFACE_THREAD {
 
 static FORCEINLINE PVOID
 __ThreadAllocate(
-    IN  ULONG   Length
+    _In_ ULONG  Length
     )
 {
     return __AllocatePoolWithTag(NonPagedPool, Length, THREAD_POOL);
@@ -58,7 +58,7 @@ __ThreadAllocate(
 
 static FORCEINLINE VOID
 __ThreadFree(
-    IN  PVOID   Buffer
+    _In_ PVOID  Buffer
     )
 {
     __FreePoolWithTag(Buffer, THREAD_POOL);
@@ -66,7 +66,7 @@ __ThreadFree(
 
 static FORCEINLINE VOID
 __ThreadWake(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
     KeSetEvent(&Thread->Event, IO_NO_INCREMENT, FALSE);
@@ -74,7 +74,7 @@ __ThreadWake(
 
 VOID
 ThreadWake(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
     __ThreadWake(Thread);
@@ -82,7 +82,7 @@ ThreadWake(
 
 static FORCEINLINE VOID
 __ThreadAlert(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
     Thread->Alerted = TRUE;
@@ -91,7 +91,7 @@ __ThreadAlert(
 
 VOID
 ThreadAlert(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
     __ThreadAlert(Thread);
@@ -101,11 +101,11 @@ KSTART_ROUTINE  ThreadFunction;
 
 VOID
 ThreadFunction(
-    IN  PVOID       Argument
+    _In_ PVOID          Argument
     )
 {
-    PXENIFACE_THREAD  Self = Argument;
-    NTSTATUS        status;
+    PXENIFACE_THREAD    Self = Argument;
+    NTSTATUS            status;
 
     status = Self->Function(Self, Self->Context);
 
@@ -116,16 +116,16 @@ ThreadFunction(
     // NOT REACHED
 }
 
-__drv_requiresIRQL(PASSIVE_LEVEL)
+_IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
 ThreadCreate(
-    IN  XENIFACE_THREAD_FUNCTION  Function,
-    IN  PVOID                   Context,
-    OUT PXENIFACE_THREAD          *Thread
+    _In_ XENIFACE_THREAD_FUNCTION   Function,
+    _In_ PVOID                      Context,
+    _Outptr_ PXENIFACE_THREAD       *Thread
     )
 {
-    HANDLE                      Handle;
-    NTSTATUS                    status;
+    HANDLE                          Handle;
+    NTSTATUS                        status;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
 
@@ -191,7 +191,7 @@ fail1:
 
 PKEVENT
 ThreadGetEvent(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
     return &Thread->Event;
@@ -199,7 +199,7 @@ ThreadGetEvent(
 
 BOOLEAN
 ThreadIsAlerted(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
     return Thread->Alerted;
@@ -207,10 +207,10 @@ ThreadIsAlerted(
 
 VOID
 ThreadJoin(
-    IN  PXENIFACE_THREAD  Thread
+    _In_ PXENIFACE_THREAD   Thread
     )
 {
-    LONG                References;
+    LONG                    References;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
     ASSERT3P(KeGetCurrentThread(), !=, Thread->Thread);

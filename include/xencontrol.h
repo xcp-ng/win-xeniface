@@ -38,10 +38,10 @@ _XENCONTROL_LOG_LEVEL {
 */
 typedef void
 XENCONTROL_LOGGER(
-    IN  XENCONTROL_LOG_LEVEL LogLevel,
-    IN  const CHAR *Function,
-    IN  const WCHAR *Message,
-    IN  va_list Args
+    _In_ XENCONTROL_LOG_LEVEL   LogLevel,
+    _In_ const CHAR             *Function,
+    _In_ const WCHAR            *Message,
+    _In_ va_list                Args
     );
 
 /*! \brief Register a callback for receiving library's diagnostic messages
@@ -51,8 +51,8 @@ XENCONTROL_LOGGER(
 XENCONTROL_API
 void
 XcRegisterLogger(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  XENCONTROL_LOGGER *Logger
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ XENCONTROL_LOGGER      *Logger
     );
 
 /*! \brief Set log level threshold for library's diagnostic messages
@@ -62,8 +62,8 @@ XcRegisterLogger(
 XENCONTROL_API
 void
 XcSetLogLevel(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  XENCONTROL_LOG_LEVEL LogLevel
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ XENCONTROL_LOG_LEVEL   LogLevel
     );
 
 /*! \brief Open the Xen Interface device
@@ -74,8 +74,8 @@ XcSetLogLevel(
 XENCONTROL_API
 DWORD
 XcOpen(
-    IN  XENCONTROL_LOGGER *Logger,
-    OUT PXENCONTROL_CONTEXT *Xc
+    _In_ XENCONTROL_LOGGER          *Logger,
+    _Outptr_ PXENCONTROL_CONTEXT    *Xc
     );
 
 /*! \brief Close the Xen Interface device
@@ -84,7 +84,7 @@ XcOpen(
 XENCONTROL_API
 void
 XcClose(
-    IN  PXENCONTROL_CONTEXT Xc
+    _In_ PXENCONTROL_CONTEXT    Xc
     );
 
 /*! \brief Open an unbound event channel
@@ -98,11 +98,11 @@ XcClose(
 XENCONTROL_API
 DWORD
 XcEvtchnOpenUnbound(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  HANDLE Event,
-    IN  BOOL Mask,
-    OUT ULONG *LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ USHORT                 RemoteDomain,
+    _In_ HANDLE                 Event,
+    _In_ BOOL                   Mask,
+    _Out_ ULONG                 *LocalPort
     );
 
 /*! \brief Open an event channel that was already bound by a remote domain
@@ -117,12 +117,12 @@ XcEvtchnOpenUnbound(
 XENCONTROL_API
 DWORD
 XcEvtchnBindInterdomain(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  ULONG RemotePort,
-    IN  HANDLE Event,
-    IN  BOOL Mask,
-    OUT ULONG *LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ USHORT                 RemoteDomain,
+    _In_ ULONG                  RemotePort,
+    _In_ HANDLE                 Event,
+    _In_ BOOL                   Mask,
+    _Out_ ULONG                 *LocalPort
     );
 
 /*! \brief Close an event channel
@@ -133,8 +133,8 @@ XcEvtchnBindInterdomain(
 XENCONTROL_API
 DWORD
 XcEvtchnClose(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  ULONG LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ ULONG                  LocalPort
     );
 
 /*! \brief Notify the remote end of an event channel
@@ -145,8 +145,8 @@ XcEvtchnClose(
 XENCONTROL_API
 DWORD
 XcEvtchnNotify(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  ULONG LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ ULONG                  LocalPort
     );
 
 /*! \brief Unmask an event channel
@@ -157,8 +157,8 @@ XcEvtchnNotify(
 XENCONTROL_API
 DWORD
 XcEvtchnUnmask(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  ULONG LocalPort
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ ULONG                  LocalPort
     );
 
 /*! \brief Grant a \a RemoteDomain permission to access local newly allocated memory pages
@@ -175,14 +175,14 @@ XcEvtchnUnmask(
 XENCONTROL_API
 DWORD
 XcGnttabPermitForeignAccess(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  ULONG NumberPages,
-    IN  ULONG NotifyOffset,
-    IN  ULONG NotifyPort,
-    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
-    OUT PVOID *Address,
-    OUT ULONG *References
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ USHORT                     RemoteDomain,
+    _In_ ULONG                      NumberPages,
+    _In_ ULONG                      NotifyOffset,
+    _In_ ULONG                      NotifyPort,
+    _In_ XENIFACE_GNTTAB_PAGE_FLAGS Flags,
+    _Outptr_ PVOID                  *Address,
+    _Out_ ULONG                     *References
     );
 
 /*! \brief Grant a \a RemoteDomain permission to access local memory pages
@@ -200,15 +200,15 @@ XcGnttabPermitForeignAccess(
 XENCONTROL_API
 DWORD
 XcGnttabPermitForeignAccess2(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  PVOID Address,
-    IN  ULONG NumberPages,
-    IN  ULONG NotifyOffset,
-    IN  ULONG NotifyPort,
-    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
-    OUT PVOID* SharedAddress,
-    OUT ULONG* References
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ USHORT                     RemoteDomain,
+    _In_ PVOID                      Address,
+    _In_ ULONG                      NumberPages,
+    _In_ ULONG                      NotifyOffset,
+    _In_ ULONG                      NotifyPort,
+    _In_ XENIFACE_GNTTAB_PAGE_FLAGS Flags,
+    _Outptr_ PVOID                  *SharedAddress,
+    _Out_ ULONG                     *References
 );
 
 /*! \brief Revoke a foreign domain access to previously granted memory region
@@ -219,8 +219,8 @@ XcGnttabPermitForeignAccess2(
 XENCONTROL_API
 DWORD
 XcGnttabRevokeForeignAccess(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PVOID Address
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PVOID                  Address
     );
 
 /*! \brief Map a foreign memory region into the current address space
@@ -237,14 +237,14 @@ XcGnttabRevokeForeignAccess(
 XENCONTROL_API
 DWORD
 XcGnttabMapForeignPages(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  USHORT RemoteDomain,
-    IN  ULONG NumberPages,
-    IN  PULONG References,
-    IN  ULONG NotifyOffset,
-    IN  ULONG NotifyPort,
-    IN  XENIFACE_GNTTAB_PAGE_FLAGS Flags,
-    OUT PVOID *Address
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ USHORT                     RemoteDomain,
+    _In_ ULONG                      NumberPages,
+    _In_ PULONG                     References,
+    _In_ ULONG                      NotifyOffset,
+    _In_ ULONG                      NotifyPort,
+    _In_ XENIFACE_GNTTAB_PAGE_FLAGS Flags,
+    _Outptr_ PVOID                  *Address
     );
 
 /*! \brief Unmap a foreign memory region from the current address space
@@ -255,8 +255,8 @@ XcGnttabMapForeignPages(
 XENCONTROL_API
 DWORD
 XcGnttabUnmapForeignPages(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PVOID Address
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PVOID                  Address
     );
 
 /*! \brief Read a XenStore key
@@ -269,10 +269,10 @@ XcGnttabUnmapForeignPages(
 XENCONTROL_API
 DWORD
 XcStoreRead(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PSTR Path,
-    IN  DWORD cbValue,
-    OUT CHAR *Value
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PSTR                   Path,
+    _In_ DWORD                  cbValue,
+    _Out_ CHAR                  *Value
     );
 
 /*! \brief Write a value to a XenStore key
@@ -284,9 +284,9 @@ XcStoreRead(
 XENCONTROL_API
 DWORD
 XcStoreWrite(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  PCHAR Value
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path,
+    _In_ PCHAR                  Value
     );
 
 /*! \brief Enumerate all immediate child keys of a XenStore key
@@ -299,10 +299,10 @@ XcStoreWrite(
 XENCONTROL_API
 DWORD
 XcStoreDirectory(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  DWORD cbOutput,
-    OUT CHAR *Output
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path,
+    _In_ DWORD                  cbOutput,
+    _Out_ CHAR                  *Output
     );
 
 /*! \brief Remove a XenStore key
@@ -313,8 +313,8 @@ XcStoreDirectory(
 XENCONTROL_API
 DWORD
 XcStoreRemove(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path
     );
 
 /*! \brief Set permissions of a XenStore key
@@ -327,10 +327,10 @@ XcStoreRemove(
 XENCONTROL_API
 DWORD
 XcStoreSetPermissions(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  ULONG Count,
-    IN  PXENIFACE_STORE_PERMISSION Permissions
+    _In_ PXENCONTROL_CONTEXT        Xc,
+    _In_ PCHAR                      Path,
+    _In_ ULONG                      Count,
+    _In_ PXENIFACE_STORE_PERMISSION Permissions
     );
 
 /*! \brief Add a XenStore key watch
@@ -343,10 +343,10 @@ XcStoreSetPermissions(
 XENCONTROL_API
 DWORD
 XcStoreAddWatch(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PCHAR Path,
-    IN  HANDLE Event,
-    OUT PVOID *Handle
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PCHAR                  Path,
+    _In_ HANDLE                 Event,
+    _Outptr_ PVOID              *Handle
     );
 
 /*! \brief Remove a XenStore watch
@@ -357,8 +357,8 @@ XcStoreAddWatch(
 XENCONTROL_API
 DWORD
 XcStoreRemoveWatch(
-    IN  PXENCONTROL_CONTEXT Xc,
-    IN  PVOID Handle
+    _In_ PXENCONTROL_CONTEXT    Xc,
+    _In_ PVOID                  Handle
     );
 
 #ifdef __cplusplus

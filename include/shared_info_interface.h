@@ -48,7 +48,7 @@
 */  
 typedef NTSTATUS
 (*XENBUS_SHARED_INFO_ACQUIRE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SHARED_INFO_RELEASE
@@ -58,7 +58,7 @@ typedef NTSTATUS
 */  
 typedef VOID
 (*XENBUS_SHARED_INFO_RELEASE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SHARED_INFO_UPCALL_SUPPORTED
@@ -66,8 +66,8 @@ typedef VOID
 */
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_UPCALL_SUPPORTED)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Index
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Index
     );
 
 /*! \typedef XENBUS_SHARED_INFO_UPCALL_PENDING
@@ -75,14 +75,14 @@ typedef BOOLEAN
 */
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_UPCALL_PENDING)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Index
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Index
     );
 
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_EVENT)(
-    IN  PVOID   Argument,
-    IN  ULONG   Port
+    _In_ PVOID  Argument,
+    _In_ ULONG  Port
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_POLL
@@ -90,10 +90,10 @@ typedef BOOLEAN
 */  
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_EVTCHN_POLL)(
-    IN  PINTERFACE                  Interface,
-    IN  ULONG                       Index,
-    IN  XENBUS_SHARED_INFO_EVENT    Event,
-    IN  PVOID                       Argument
+    _In_ PINTERFACE                 Interface,
+    _In_ ULONG                      Index,
+    _In_ XENBUS_SHARED_INFO_EVENT   Event,
+    _In_ PVOID                      Argument
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_ACK
@@ -101,8 +101,8 @@ typedef BOOLEAN
 */  
 typedef VOID
 (*XENBUS_SHARED_INFO_EVTCHN_ACK)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Port
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Port
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_MASK
@@ -110,8 +110,8 @@ typedef VOID
 */  
 typedef VOID
 (*XENBUS_SHARED_INFO_EVTCHN_MASK)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Port
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Port
     );
 
 /*! \typedef XENBUS_SHARED_INFO_EVTCHN_UNMASK
@@ -119,13 +119,13 @@ typedef VOID
 */  
 typedef BOOLEAN
 (*XENBUS_SHARED_INFO_EVTCHN_UNMASK)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Port
+    _In_ PINTERFACE Interface,
+    _In_ ULONG      Port
     );
 
 typedef LARGE_INTEGER
 (*XENBUS_SHARED_INFO_GET_TIME_V2)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_SHARED_INFO_GET_TIME
@@ -137,9 +137,9 @@ typedef LARGE_INTEGER
 */  
 typedef VOID
 (*XENBUS_SHARED_INFO_GET_TIME)(
-    IN  PINTERFACE      Interface,
-    OUT PLARGE_INTEGER  Time,
-    OUT PBOOLEAN        Local
+    _In_ PINTERFACE         Interface,
+    _Out_ PLARGE_INTEGER    Time,
+    _Out_ PBOOLEAN          Local
     );
 
 // {7E73C34F-1640-4649-A8F3-263BC930A004}

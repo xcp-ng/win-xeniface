@@ -60,7 +60,7 @@ typedef struct _XENBUS_GNTTAB_CACHE XENBUS_GNTTAB_CACHE, *PXENBUS_GNTTAB_CACHE;
 */
 typedef NTSTATUS
 (*XENBUS_GNTTAB_ACQUIRE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_GNTTAB_RELEASE
@@ -70,18 +70,18 @@ typedef NTSTATUS
 */
 typedef VOID
 (*XENBUS_GNTTAB_RELEASE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 typedef NTSTATUS
 (*XENBUS_GNTTAB_CREATE_CACHE_V1)(
-    IN  PINTERFACE                  Interface,
-    IN  const CHAR                  *Name,
-    IN  ULONG                       Reservation,
-    IN  XENBUS_CACHE_ACQUIRE_LOCK   AcquireLock,
-    IN  XENBUS_CACHE_RELEASE_LOCK   ReleaseLock,
-    IN  PVOID                       Argument OPTIONAL,
-    OUT PXENBUS_GNTTAB_CACHE        *Cache
+    _In_ PINTERFACE                 Interface,
+    _In_ const CHAR                 *Name,
+    _In_ ULONG                      Reservation,
+    _In_ XENBUS_CACHE_ACQUIRE_LOCK  AcquireLock,
+    _In_ XENBUS_CACHE_RELEASE_LOCK  ReleaseLock,
+    _In_opt_ PVOID                  Argument,
+    _Outptr_ PXENBUS_GNTTAB_CACHE   *Cache
     );
 
 /*! \typedef XENBUS_GNTTAB_CREATE_CACHE
@@ -98,14 +98,14 @@ typedef NTSTATUS
 */
 typedef NTSTATUS
 (*XENBUS_GNTTAB_CREATE_CACHE)(
-    IN  PINTERFACE                  Interface,
-    IN  const CHAR                  *Name,
-    IN  ULONG                       Reservation,
-    IN  ULONG                       Cap,
-    IN  XENBUS_CACHE_ACQUIRE_LOCK   AcquireLock,
-    IN  XENBUS_CACHE_RELEASE_LOCK   ReleaseLock,
-    IN  PVOID                       Argument OPTIONAL,
-    OUT PXENBUS_GNTTAB_CACHE        *Cache
+    _In_ PINTERFACE                 Interface,
+    _In_ const CHAR                 *Name,
+    _In_ ULONG                      Reservation,
+    _In_ ULONG                      Cap,
+    _In_ XENBUS_CACHE_ACQUIRE_LOCK  AcquireLock,
+    _In_ XENBUS_CACHE_RELEASE_LOCK  ReleaseLock,
+    _In_opt_ PVOID                  Argument,
+    _Outptr_ PXENBUS_GNTTAB_CACHE   *Cache
     );
 
 /*! \typedef XENBUS_GNTTAB_PERMIT_FOREIGN_ACCESS
@@ -123,13 +123,13 @@ typedef NTSTATUS
 */
 typedef NTSTATUS
 (*XENBUS_GNTTAB_PERMIT_FOREIGN_ACCESS)(
-    IN  PINTERFACE                  Interface,
-    IN  PXENBUS_GNTTAB_CACHE        Cache,
-    IN  BOOLEAN                     Locked,
-    IN  USHORT                      Domain,
-    IN  PFN_NUMBER                  Pfn,
-    IN  BOOLEAN                     ReadOnly,
-    OUT PXENBUS_GNTTAB_ENTRY        *Entry
+    _In_ PINTERFACE                 Interface,
+    _In_ PXENBUS_GNTTAB_CACHE       Cache,
+    _In_ BOOLEAN                    Locked,
+    _In_ USHORT                     Domain,
+    _In_ PFN_NUMBER                 Pfn,
+    _In_ BOOLEAN                    ReadOnly,
+    _Outptr_ PXENBUS_GNTTAB_ENTRY   *Entry
     );
 
 /*! \typedef XENBUS_GNTTAB_REVOKE_FOREIGN_ACCESS
@@ -143,10 +143,10 @@ typedef NTSTATUS
 */
 typedef NTSTATUS
 (*XENBUS_GNTTAB_REVOKE_FOREIGN_ACCESS)(
-    IN  PINTERFACE                  Interface,
-    IN  PXENBUS_GNTTAB_CACHE        Cache,
-    IN  BOOLEAN                     Locked,
-    IN  PXENBUS_GNTTAB_ENTRY        Entry
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_GNTTAB_CACHE   Cache,
+    _In_ BOOLEAN                Locked,
+    _In_ PXENBUS_GNTTAB_ENTRY   Entry
     );
 
 /*! \typedef XENBUS_GNTTAB_GET_REFERENCE
@@ -158,8 +158,8 @@ typedef NTSTATUS
 */
 typedef ULONG
 (*XENBUS_GNTTAB_GET_REFERENCE)(
-    IN  PINTERFACE                  Interface,
-    IN  PXENBUS_GNTTAB_ENTRY        Entry
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_GNTTAB_ENTRY   Entry
     );
 
 /*! \typedef XENBUS_GNTTAB_QUERY_REFERENCE
@@ -172,10 +172,10 @@ typedef ULONG
 */
 typedef NTSTATUS
 (*XENBUS_GNTTAB_QUERY_REFERENCE)(
-    IN  PINTERFACE  Interface,
-    IN  ULONG       Reference,
-    OUT PPFN_NUMBER Pfn OPTIONAL,
-    OUT PBOOLEAN    ReadOnly OPTIONAL
+    _In_ PINTERFACE             Interface,
+    _In_ ULONG                  Reference,
+    _Outptr_opt_ PPFN_NUMBER    Pfn,
+    _Out_opt_ PBOOLEAN          ReadOnly
     );
 
 #define XENBUS_GNTTAB_CONSOLE_REFERENCE 0
@@ -193,8 +193,8 @@ typedef NTSTATUS
 */
 typedef VOID
 (*XENBUS_GNTTAB_DESTROY_CACHE)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_GNTTAB_CACHE    Cache
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_GNTTAB_CACHE   Cache
     );
 
 /*! \typedef XENBUS_GNTTAB_MAP_FOREIGN_PAGES
@@ -210,12 +210,12 @@ typedef VOID
 
 typedef NTSTATUS
 (*XENBUS_GNTTAB_MAP_FOREIGN_PAGES)(
-    IN  PINTERFACE              Interface,
-    IN  USHORT                  Domain,
-    IN  ULONG                   NumberPages,
-    IN  PULONG                  References,
-    IN  BOOLEAN                 ReadOnly,
-    OUT PHYSICAL_ADDRESS        *Address
+    _In_ PINTERFACE         Interface,
+    _In_ USHORT             Domain,
+    _In_ ULONG              NumberPages,
+    _In_ PULONG             References,
+    _In_ BOOLEAN            ReadOnly,
+    _Out_ PHYSICAL_ADDRESS  *Address
     );
 
 /*! \typedef XENBUS_GNTTAB_UNMAP_FOREIGN_PAGES
@@ -226,8 +226,8 @@ typedef NTSTATUS
 */
 typedef NTSTATUS
 (*XENBUS_GNTTAB_UNMAP_FOREIGN_PAGES)(
-    IN  PINTERFACE              Interface,
-    IN  PHYSICAL_ADDRESS        Address
+    _In_ PINTERFACE         Interface,
+    _In_ PHYSICAL_ADDRESS   Address
     );
 
 // {763679C5-E5C2-4A6D-8B88-6BB02EC42D8E}

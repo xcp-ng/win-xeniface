@@ -91,163 +91,163 @@ typedef struct _XENIFACE_GNTTAB_CONTEXT {
 
 NTSTATUS
 __CaptureUserBuffer(
-    __in  PVOID Buffer,
-    __in  ULONG Length,
-    __out PVOID *CapturedBuffer
+    _In_ PVOID      Buffer,
+    _In_ ULONG      Length,
+    _Outptr_ PVOID  *CapturedBuffer
     );
 
 VOID
 __FreeCapturedBuffer(
-    __in_opt  PVOID CapturedBuffer
+    _In_opt_ PVOID  CapturedBuffer
     );
 
 NTSTATUS
 XenIfaceIoctl(
-    __in     PXENIFACE_FDO     Fdo,
-    __inout  PIRP              Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _Inout_ PIRP        Irp
     );
 
 _IRQL_requires_(PASSIVE_LEVEL)
 VOID
 XenIfaceCleanup(
-    __in  PXENIFACE_FDO Fdo,
-    __in_opt  PFILE_OBJECT  FileObject
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_opt_ PFILE_OBJECT   FileObject
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRead(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreWrite(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreDirectory(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRemove(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreSetPermissions(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreAddWatch(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject,
+    _Out_ PULONG_PTR    Info
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRemoveWatch(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject
     );
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 StoreFreeWatch(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_STORE_CONTEXT Context
+    _In_ PXENIFACE_FDO              Fdo,
+    _Inout_ PXENIFACE_STORE_CONTEXT Context
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnBindUnbound(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject,
+    _Out_ PULONG_PTR    Info
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnBindInterdomain(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject,
+    _Out_ PULONG_PTR    Info
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnClose(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnNotify(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlEvtchnUnmask(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject
     );
 
 _Requires_lock_not_held_(Fdo->EvtchnLock)
 DECLSPEC_NOINLINE
 NTSTATUS
 EvtchnNotify(
-    __in      PXENIFACE_FDO Fdo,
-    __in      ULONG         LocalPort,
-    __in_opt  PFILE_OBJECT  FileObject
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ ULONG              LocalPort,
+    _In_opt_ PFILE_OBJECT   FileObject
     );
 
 _Function_class_(KDEFERRED_ROUTINE)
@@ -255,149 +255,149 @@ _IRQL_requires_(DISPATCH_LEVEL)
 _IRQL_requires_same_
 VOID
 EvtchnNotificationDpc(
-    __in      PKDPC Dpc,
-    __in_opt  PVOID Context,
-    __in_opt  PVOID Argument1,
-    __in_opt  PVOID Argument2
+    _In_ PKDPC      Dpc,
+    _In_opt_ PVOID  Context,
+    _In_opt_ PVOID  Argument1,
+    _In_opt_ PVOID  Argument2
     );
 
 _IRQL_requires_(PASSIVE_LEVEL)
 VOID
 EvtchnFree(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_EVTCHN_CONTEXT Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_EVTCHN_CONTEXT    Context
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabPermitForeignAccess(
-    __in     PXENIFACE_FDO  Fdo,
-    __in     PVOID          Buffer,
-    __in     ULONG          InLen,
-    __in     ULONG          OutLen,
-    __inout  PIRP           Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Inout_ PIRP        Irp
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabRevokeForeignAccess(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  ULONG             ControlCode
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ ULONG          ControlCode
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabMapForeignPages(
-    __in     PXENIFACE_FDO     Fdo,
-    __in     PVOID             Buffer,
-    __in     ULONG             InLen,
-    __in     ULONG             OutLen,
-    __inout  PIRP              Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Inout_ PIRP        Irp
     );
 
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabUnmapForeignPages(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  ULONG             ControlCode
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ ULONG          ControlCode
     );
 
 _Acquires_exclusive_lock_(((PXENIFACE_FDO)Argument)->GnttabCacheLock)
 _IRQL_requires_(DISPATCH_LEVEL)
 VOID
 GnttabAcquireLock(
-    __in  PVOID Argument
+    _In_ PVOID  Argument
     );
 
 _Releases_exclusive_lock_(((PXENIFACE_FDO)Argument)->GnttabCacheLock)
 _IRQL_requires_(DISPATCH_LEVEL)
 VOID
 GnttabReleaseLock(
-    __in  PVOID Argument
+    _In_ PVOID  Argument
     );
 
 _Function_class_(IO_WORKITEM_ROUTINE)
 VOID
 CompleteGnttabIrp(
-    __in      PDEVICE_OBJECT DeviceObject,
-    __in_opt  PVOID          Context
+    _In_ PDEVICE_OBJECT DeviceObject,
+    _In_opt_ PVOID      Context
     );
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
 GnttabFreeGrant(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_GNTTAB_CONTEXT Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_GNTTAB_CONTEXT    Context
     );
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
 GnttabFreeMap(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_GNTTAB_CONTEXT Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_GNTTAB_CONTEXT    Context
     );
 
 NTSTATUS
 IoctlSuspendGetCount(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     );
 
 NTSTATUS
 IoctlSuspendRegister(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject,
+    _Out_ PULONG_PTR    Info
     );
 
 NTSTATUS
 IoctlSuspendDeregister(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PVOID          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _In_ PFILE_OBJECT   FileObject
     );
 
 VOID
 SuspendEventFire(
-    __in    PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 SuspendFreeEvent(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_SUSPEND_CONTEXT Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_SUSPEND_CONTEXT   Context
     );
 
 NTSTATUS
 IoctlSharedInfoGetTime(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     );
 
 NTSTATUS
 IoctlLog(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     );
 
 #endif // _IOCTLS_H_

@@ -38,12 +38,12 @@
 
 NTSTATUS
 CsqInsertIrpEx(
-    _In_  PIO_CSQ Csq,
-    _In_  PIRP    Irp,
-    _In_  PVOID   InsertContext // PXENIFACE_GNTTAB_CONTEXT
+    _In_ PIO_CSQ    Csq,
+    _In_ PIRP       Irp,
+    _In_ PVOID      InsertContext// PXENIFACE_GNTTAB_CONTEXT
     )
 {
-    PXENIFACE_FDO Fdo;
+    PXENIFACE_FDO   Fdo;
 
     Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
 
@@ -57,8 +57,8 @@ CsqInsertIrpEx(
 
 VOID
 CsqRemoveIrp(
-    _In_  PIO_CSQ Csq,
-    _In_  PIRP    Irp
+    _In_ PIO_CSQ    Csq,
+    _In_ PIRP       Irp
     )
 {
     UNREFERENCED_PARAMETER(Csq);
@@ -68,15 +68,15 @@ CsqRemoveIrp(
 
 PIRP
 CsqPeekNextIrp(
-    _In_      PIO_CSQ Csq,
-    _In_opt_  PIRP    Irp,
-    _In_opt_  PVOID   PeekContext // PXENIFACE_GNTTAB_CONTEXT
+    _In_ PIO_CSQ                Csq,
+    _In_opt_ PIRP               Irp,
+    _In_opt_ PVOID              PeekContext// PXENIFACE_GNTTAB_CONTEXT
     )
 {
-    PXENIFACE_FDO            Fdo;
-    PIRP                     NextIrp = NULL;
-    PLIST_ENTRY              Head, NextEntry;
-    PXENIFACE_GNTTAB_CONTEXT Context, TargetContext;
+    PXENIFACE_FDO               Fdo;
+    PIRP                        NextIrp = NULL;
+    PLIST_ENTRY                 Head, NextEntry;
+    PXENIFACE_GNTTAB_CONTEXT    Context, TargetContext;
 
     Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
     TargetContext = PeekContext;
@@ -121,11 +121,11 @@ _IRQL_requires_max_(DISPATCH_LEVEL)
 _Acquires_lock_(CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue)->IrpQueueLock)
 VOID
 CsqAcquireLock(
-    _In_                                       PIO_CSQ Csq,
-    _Out_ _At_(*Irql, _Post_ _IRQL_saves_)     PKIRQL  Irql
+    _In_ PIO_CSQ                                    Csq,
+    _Out_ _At_(*Irql, _Post_ _IRQL_saves_) PKIRQL   Irql
     )
 {
-    PXENIFACE_FDO Fdo;
+    PXENIFACE_FDO                                   Fdo;
 
     Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
 
@@ -136,11 +136,11 @@ _IRQL_requires_(DISPATCH_LEVEL)
 _Releases_lock_(CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue)->IrpQueueLock)
 VOID
 CsqReleaseLock(
-    _In_                    PIO_CSQ Csq,
-    _In_ _IRQL_restores_    KIRQL   Irql
+    _In_ PIO_CSQ                Csq,
+    _In_ _IRQL_restores_ KIRQL  Irql
     )
 {
-    PXENIFACE_FDO Fdo;
+    PXENIFACE_FDO               Fdo;
 
     Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
 
@@ -150,12 +150,12 @@ CsqReleaseLock(
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 CsqCompleteCanceledIrp(
-    _In_  PIO_CSQ Csq,
-    _In_  PIRP    Irp
+    _In_ PIO_CSQ    Csq,
+    _In_ PIRP       Irp
     )
 {
-    PXENIFACE_FDO Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
-    PIO_WORKITEM WorkItem;
+    PXENIFACE_FDO   Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
+    PIO_WORKITEM    WorkItem;
 
     Trace("Irp %p, IRQL %d\n", Irp, KeGetCurrentIrql());
 

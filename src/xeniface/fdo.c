@@ -63,7 +63,7 @@
 
 static FORCEINLINE PVOID
 __FdoAllocate(
-    IN  ULONG   Length
+    _In_ ULONG  Length
     )
 {
     return __AllocatePoolWithTag(NonPagedPool, Length, FDO_POOL);
@@ -71,7 +71,7 @@ __FdoAllocate(
 
 static FORCEINLINE VOID
 __FdoFree(
-    IN  PVOID   Buffer
+    _In_ PVOID  Buffer
     )
 {
     __FreePoolWithTag(Buffer, FDO_POOL);
@@ -79,11 +79,11 @@ __FdoFree(
 
 static FORCEINLINE VOID
 __FdoSetDevicePnpState(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  DEVICE_PNP_STATE    State
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ DEVICE_PNP_STATE   State
     )
 {
-    PXENIFACE_DX              Dx = Fdo->Dx;
+    PXENIFACE_DX            Dx = Fdo->Dx;
 
     // We can never transition out of the deleted state
     ASSERT(Dx->DevicePnpState != Deleted || State == Deleted);
@@ -94,11 +94,11 @@ __FdoSetDevicePnpState(
 
 static FORCEINLINE VOID
 __FdoRestoreDevicePnpState(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  DEVICE_PNP_STATE    State
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ DEVICE_PNP_STATE   State
     )
 {
-    PXENIFACE_DX               Dx = Fdo->Dx;
+    PXENIFACE_DX            Dx = Fdo->Dx;
 
     if (Dx->DevicePnpState == State)
         Dx->DevicePnpState = Dx->PreviousDevicePnpState;
@@ -106,59 +106,59 @@ __FdoRestoreDevicePnpState(
 
 static FORCEINLINE DEVICE_PNP_STATE
 __FdoGetDevicePnpState(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
-    PXENIFACE_DX          Dx = Fdo->Dx;
+    PXENIFACE_DX        Dx = Fdo->Dx;
 
     return Dx->DevicePnpState;
 }
 
 static FORCEINLINE VOID
 __FdoSetDevicePowerState(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  DEVICE_POWER_STATE  State
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ DEVICE_POWER_STATE State
     )
 {
-    PXENIFACE_DX              Dx = Fdo->Dx;
+    PXENIFACE_DX            Dx = Fdo->Dx;
 
     Dx->DevicePowerState = State;
 }
 
 static FORCEINLINE DEVICE_POWER_STATE
 __FdoGetDevicePowerState(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
-    PXENIFACE_DX          Dx = Fdo->Dx;
+    PXENIFACE_DX        Dx = Fdo->Dx;
 
     return Dx->DevicePowerState;
 }
 
 static FORCEINLINE VOID
 __FdoSetSystemPowerState(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  SYSTEM_POWER_STATE  State
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ SYSTEM_POWER_STATE State
     )
 {
-    PXENIFACE_DX              Dx = Fdo->Dx;
+    PXENIFACE_DX            Dx = Fdo->Dx;
 
     Dx->SystemPowerState = State;
 }
 
 static FORCEINLINE SYSTEM_POWER_STATE
 __FdoGetSystemPowerState(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
-    PXENIFACE_DX          Dx = Fdo->Dx;
+    PXENIFACE_DX        Dx = Fdo->Dx;
 
     return Dx->SystemPowerState;
 }
 
 static FORCEINLINE PDEVICE_OBJECT
 __FdoGetPhysicalDeviceObject(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     return Fdo->PhysicalDeviceObject;
@@ -166,7 +166,7 @@ __FdoGetPhysicalDeviceObject(
 
 PDEVICE_OBJECT
 FdoGetPhysicalDeviceObject(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     return __FdoGetPhysicalDeviceObject(Fdo);
@@ -174,15 +174,15 @@ FdoGetPhysicalDeviceObject(
 
 static FORCEINLINE NTSTATUS
 __FdoSetName(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PWCHAR      Name
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PWCHAR         Name
     )
 {
-    PXENIFACE_DX      Dx = Fdo->Dx;
-    UNICODE_STRING  Unicode;
-    ANSI_STRING     Ansi;
-    ULONG           Index;
-    NTSTATUS        status;
+    PXENIFACE_DX        Dx = Fdo->Dx;
+    UNICODE_STRING      Unicode;
+    ANSI_STRING         Ansi;
+    ULONG               Index;
+    NTSTATUS            status;
 
     RtlInitUnicodeString(&Unicode, Name);
 
@@ -209,29 +209,29 @@ fail1:
 
 static FORCEINLINE PCHAR
 __FdoGetName(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
-    PXENIFACE_DX      Dx = Fdo->Dx;
+    PXENIFACE_DX        Dx = Fdo->Dx;
 
     return Dx->Name;
 }
 
 PCHAR
 FdoGetName(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     return __FdoGetName(Fdo);
 }
 
-__drv_functionClass(IO_COMPLETION_ROUTINE)
-__drv_sameIRQL
+_Function_class_(IO_COMPLETION_ROUTINE)
+_IRQL_requires_same_
 static NTSTATUS
 __FdoDelegateIrp(
-    IN  PDEVICE_OBJECT  DeviceObject,
-    IN  PIRP            Irp,
-    IN  PVOID           Context
+    _In_ PDEVICE_OBJECT DeviceObject,
+    _In_ PIRP           Irp,
+    _In_ PVOID          Context
     )
 {
     PKEVENT             Event = (PKEVENT)Context;
@@ -246,8 +246,8 @@ __FdoDelegateIrp(
 
 NTSTATUS
 FdoDelegateIrp(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PDEVICE_OBJECT      DeviceObject;
@@ -310,13 +310,13 @@ done:
     return status;
 }
 
-__drv_functionClass(IO_COMPLETION_ROUTINE)
-__drv_sameIRQL
+_Function_class_(IO_COMPLETION_ROUTINE)
+_IRQL_requires_same_
 static NTSTATUS
 __FdoForwardIrpSynchronously(
-    IN  PDEVICE_OBJECT  DeviceObject,
-    IN  PIRP            Irp,
-    IN  PVOID           Context
+    _In_ PDEVICE_OBJECT DeviceObject,
+    _In_ PIRP           Irp,
+    _In_ PVOID          Context
     )
 {
     PKEVENT             Event = (PKEVENT)Context;
@@ -331,8 +331,8 @@ __FdoForwardIrpSynchronously(
 
 static NTSTATUS
 FdoForwardIrpSynchronously(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     KEVENT              Event;
@@ -369,7 +369,7 @@ FdoForwardIrpSynchronously(
 
 static FORCEINLINE VOID
 __FdoAcquireMutex(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     AcquireMutex(&Fdo->Mutex);
@@ -377,7 +377,7 @@ __FdoAcquireMutex(
 
 VOID
 FdoAcquireMutex(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     __FdoAcquireMutex(Fdo);
@@ -385,7 +385,7 @@ FdoAcquireMutex(
 
 static FORCEINLINE VOID
 __FdoReleaseMutex(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     ReleaseMutex(&Fdo->Mutex);
@@ -393,7 +393,7 @@ __FdoReleaseMutex(
 
 VOID
 FdoReleaseMutex(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     __FdoReleaseMutex(Fdo);
@@ -404,9 +404,9 @@ FdoReleaseMutex(
 
 static DECLSPEC_NOINLINE VOID
 FdoParseResources(
-    IN  PXENIFACE_FDO             Fdo,
-    IN  PCM_RESOURCE_LIST       RawResourceList,
-    IN  PCM_RESOURCE_LIST       TranslatedResourceList
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ PCM_RESOURCE_LIST      RawResourceList,
+    _In_ PCM_RESOURCE_LIST      TranslatedResourceList
     )
 {
     PCM_PARTIAL_RESOURCE_LIST   RawPartialList;
@@ -451,7 +451,7 @@ FdoParseResources(
 
 static FORCEINLINE PANSI_STRING
 __FdoMultiSzToUpcaseAnsi(
-    IN  PCHAR       Buffer
+    _In_ PCHAR      Buffer
     )
 {
     PANSI_STRING    Ansi;
@@ -516,7 +516,7 @@ fail1:
 
 static FORCEINLINE VOID
 __FdoFreeAnsi(
-    IN  PANSI_STRING    Ansi
+    _In_ PANSI_STRING   Ansi
     )
 {
     ULONG               Index;
@@ -529,8 +529,8 @@ __FdoFreeAnsi(
 
 static FORCEINLINE BOOLEAN
 __FdoMatchDistribution(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PCHAR           Buffer
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer
     )
 {
     PCHAR               Vendor;
@@ -589,7 +589,7 @@ fail1:
 
 static VOID
 FdoClearDistribution(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     PCHAR               Buffer;
@@ -652,7 +652,7 @@ done:
 
 static NTSTATUS
 FdoSetDistribution(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     ULONG               Index;
@@ -746,7 +746,7 @@ fail1:
 
 static FORCEINLINE NTSTATUS
 __FdoD3ToD0(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     Trace("====>\n");
@@ -762,7 +762,7 @@ __FdoD3ToD0(
 
 static FORCEINLINE VOID
 __FdoD0ToD3(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     Trace("====>\n");
@@ -776,7 +776,7 @@ __FdoD0ToD3(
 
 static DECLSPEC_NOINLINE VOID
 FdoSuspendCallbackLate(
-    IN  PVOID       Argument
+    _In_ PVOID      Argument
     )
 {
     PXENIFACE_FDO   Fdo = Argument;
@@ -793,7 +793,7 @@ FdoSuspendCallbackLate(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoD3ToD0(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     KIRQL               Irql;
@@ -917,10 +917,10 @@ fail1:
     return status;
 }
 
-__drv_requiresIRQL(PASSIVE_LEVEL)
+_IRQL_requires_(PASSIVE_LEVEL)
 static DECLSPEC_NOINLINE VOID
 FdoD0ToD3(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     KIRQL               Irql;
@@ -974,7 +974,7 @@ FdoD0ToD3(
 
 static DECLSPEC_NOINLINE VOID
 FdoS4ToS3(
-    IN  PXENIFACE_FDO         Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
@@ -985,7 +985,7 @@ FdoS4ToS3(
 
 static DECLSPEC_NOINLINE VOID
 FdoS3ToS4(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
@@ -996,8 +996,8 @@ FdoS3ToS4(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoStartDevice(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1065,11 +1065,11 @@ fail1:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoQueryStopDevice(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     __FdoSetDevicePnpState(Fdo, StopPending);
     Irp->IoStatus.Status = STATUS_SUCCESS;
@@ -1082,11 +1082,11 @@ FdoQueryStopDevice(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoCancelStopDevice(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
 
@@ -1100,11 +1100,11 @@ FdoCancelStopDevice(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoStopDevice(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     FdoD0ToD3(Fdo);
     WmiDeregister(Fdo);
@@ -1127,11 +1127,11 @@ FdoStopDevice(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoQueryRemoveDevice(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     __FdoSetDevicePnpState(Fdo, RemovePending);
     Irp->IoStatus.Status = STATUS_SUCCESS;
@@ -1144,11 +1144,11 @@ FdoQueryRemoveDevice(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoCancelRemoveDevice(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     __FdoRestoreDevicePnpState(Fdo, RemovePending);
 
@@ -1162,11 +1162,11 @@ FdoCancelRemoveDevice(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoSurpriseRemoval(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     __FdoSetDevicePnpState(Fdo, SurpriseRemovePending);
 
@@ -1181,14 +1181,14 @@ FdoSurpriseRemoval(
     return status;
 }
 
-__drv_requiresIRQL(PASSIVE_LEVEL)
+_IRQL_requires_(PASSIVE_LEVEL)
 static DECLSPEC_NOINLINE NTSTATUS
 FdoRemoveDevice(
-    IN  PXENIFACE_FDO Fdo,
-    IN  PIRP        Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
-    NTSTATUS        status;
+    NTSTATUS            status;
 
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
 
@@ -1228,8 +1228,8 @@ done:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoQueryCapabilities(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  PIRP                Irp
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PIRP               Irp
     )
 {
     PIO_STACK_LOCATION      StackLocation;
@@ -1271,8 +1271,8 @@ fail1:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDeviceUsageNotification(
-    IN  PXENIFACE_FDO                 Fdo,
-    IN  PIRP                        Irp
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PIRP                       Irp
     )
 {
     PIO_STACK_LOCATION              StackLocation;
@@ -1331,8 +1331,8 @@ fail1:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoQueryPnpDeviceState(
-    IN  PXENIFACE_FDO                 Fdo,
-    IN  PIRP                        Irp
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PIRP                       Irp
     )
 {
     ULONG_PTR                       State;
@@ -1362,8 +1362,8 @@ done:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchPnp(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1438,8 +1438,8 @@ FdoDispatchPnp(
 
 static FORCEINLINE NTSTATUS
 __FdoSetDevicePowerUp(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1475,8 +1475,8 @@ done:
 
 static FORCEINLINE NTSTATUS
 __FdoSetDevicePowerDown(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1505,8 +1505,8 @@ __FdoSetDevicePowerDown(
 
 static FORCEINLINE NTSTATUS
 __FdoSetDevicePower(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1543,15 +1543,15 @@ done:
     return status;
 }
 
-__drv_functionClass(REQUEST_POWER_COMPLETE)
-__drv_sameIRQL
+_Function_class_(REQUEST_POWER_COMPLETE)
+_IRQL_requires_same_
 VOID
 __FdoRequestSetDevicePower(
-    IN  PDEVICE_OBJECT      DeviceObject,
-    IN  UCHAR               MinorFunction,
-    IN  POWER_STATE         PowerState,
-    IN  PVOID               Context,
-    IN  PIO_STATUS_BLOCK    IoStatus
+    _In_ PDEVICE_OBJECT     DeviceObject,
+    _In_ UCHAR              MinorFunction,
+    _In_ POWER_STATE        PowerState,
+    _In_ PVOID              Context,
+    _In_ PIO_STATUS_BLOCK   IoStatus
     )
 {
     PKEVENT                 Event = (PKEVENT)Context;
@@ -1567,8 +1567,8 @@ __FdoRequestSetDevicePower(
 
 static VOID
 FdoRequestSetDevicePower(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  DEVICE_POWER_STATE  DeviceState
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ DEVICE_POWER_STATE DeviceState
     )
 {
     POWER_STATE             PowerState;
@@ -1599,8 +1599,8 @@ FdoRequestSetDevicePower(
 
 static FORCEINLINE NTSTATUS
 __FdoSetSystemPowerUp(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
 
@@ -1642,8 +1642,8 @@ done:
 
 static FORCEINLINE NTSTATUS
 __FdoSetSystemPowerDown(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1680,8 +1680,8 @@ __FdoSetSystemPowerDown(
 
 static FORCEINLINE NTSTATUS
 __FdoSetSystemPower(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1720,8 +1720,8 @@ done:
 
 static FORCEINLINE NTSTATUS
 __FdoQueryDevicePowerUp(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1743,8 +1743,8 @@ __FdoQueryDevicePowerUp(
 
 static FORCEINLINE NTSTATUS
 __FdoQueryDevicePowerDown(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1764,8 +1764,8 @@ __FdoQueryDevicePowerDown(
 
 static FORCEINLINE NTSTATUS
 __FdoQueryDevicePower(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1802,15 +1802,15 @@ done:
     return status;
 }
 
-__drv_functionClass(REQUEST_POWER_COMPLETE)
-__drv_sameIRQL
+_Function_class_(REQUEST_POWER_COMPLETE)
+_IRQL_requires_same_
 VOID
 __FdoRequestQueryDevicePower(
-    IN  PDEVICE_OBJECT      DeviceObject,
-    IN  UCHAR               MinorFunction,
-    IN  POWER_STATE         PowerState,
-    IN  PVOID               Context,
-    IN  PIO_STATUS_BLOCK    IoStatus
+    _In_ PDEVICE_OBJECT     DeviceObject,
+    _In_ UCHAR              MinorFunction,
+    _In_ POWER_STATE        PowerState,
+    _In_ PVOID              Context,
+    _In_ PIO_STATUS_BLOCK   IoStatus
     )
 {
     PKEVENT                 Event = (PKEVENT)Context;
@@ -1826,8 +1826,8 @@ __FdoRequestQueryDevicePower(
 
 static VOID
 FdoRequestQueryDevicePower(
-    IN  PXENIFACE_FDO         Fdo,
-    IN  DEVICE_POWER_STATE  DeviceState
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ DEVICE_POWER_STATE DeviceState
     )
 {
     POWER_STATE             PowerState;
@@ -1858,8 +1858,8 @@ FdoRequestQueryDevicePower(
 
 static FORCEINLINE NTSTATUS
 __FdoQuerySystemPowerUp(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
 
@@ -1890,8 +1890,8 @@ done:
 
 static FORCEINLINE NTSTATUS
 __FdoQuerySystemPowerDown(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1916,8 +1916,8 @@ __FdoQuerySystemPowerDown(
 
 static FORCEINLINE NTSTATUS
 __FdoQuerySystemPower(
-    IN  PXENIFACE_FDO     Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -1957,12 +1957,12 @@ done:
 
 static NTSTATUS
 FdoDevicePower(
-    IN  PXENIFACE_THREAD  Self,
-    IN  PVOID           Context
+    _In_ PXENIFACE_THREAD   Self,
+    _In_ PVOID              Context
     )
 {
-    PXENIFACE_FDO         Fdo = (PXENIFACE_FDO)Context;
-    PKEVENT             Event;
+    PXENIFACE_FDO           Fdo = (PXENIFACE_FDO)Context;
+    PKEVENT                 Event;
 
     Event = ThreadGetEvent(Self);
 
@@ -2014,12 +2014,12 @@ FdoDevicePower(
 
 static NTSTATUS
 FdoSystemPower(
-    IN  PXENIFACE_THREAD  Self,
-    IN  PVOID           Context
+    _In_ PXENIFACE_THREAD   Self,
+    _In_ PVOID              Context
     )
 {
-    PXENIFACE_FDO         Fdo = (PXENIFACE_FDO)Context;
-    PKEVENT             Event;
+    PXENIFACE_FDO           Fdo = (PXENIFACE_FDO)Context;
+    PKEVENT                 Event;
 
     Event = ThreadGetEvent(Self);
 
@@ -2071,8 +2071,8 @@ FdoSystemPower(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchPower(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -2139,8 +2139,8 @@ done:
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchDefault(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     NTSTATUS            status;
@@ -2153,8 +2153,8 @@ FdoDispatchDefault(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchComplete(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     UNREFERENCED_PARAMETER(Fdo);
@@ -2168,8 +2168,8 @@ FdoDispatchComplete(
 
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchSystemControl(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     NTSTATUS            status;
@@ -2186,11 +2186,11 @@ FdoDispatchSystemControl(
     return status;
 }
 
-__drv_requiresIRQL(PASSIVE_LEVEL)
+_IRQL_requires_(PASSIVE_LEVEL)
 static DECLSPEC_NOINLINE NTSTATUS
 FdoDispatchCleanup(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -2208,8 +2208,8 @@ FdoDispatchCleanup(
 
 NTSTATUS
 FdoDispatch(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  StackLocation;
@@ -2253,15 +2253,15 @@ FdoDispatch(
     return status;
 }
 
-__drv_requiresIRQL(PASSIVE_LEVEL)
+_IRQL_requires_(PASSIVE_LEVEL)
 static NTSTATUS
 FdoQueryInterface(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  const GUID      *Guid,
-    IN  ULONG           Version,
-    OUT PINTERFACE      Interface,
-    IN  ULONG           Size,
-    IN  BOOLEAN         Optional
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ const GUID     *Guid,
+    _In_ ULONG          Version,
+    _Out_ PINTERFACE    Interface,
+    _In_ ULONG          Size,
+    _In_ BOOLEAN        Optional
     )
 {
     KEVENT              Event;
@@ -2342,7 +2342,7 @@ fail1:
 
 NTSTATUS
 FdoCreate(
-    IN  PDEVICE_OBJECT  PhysicalDeviceObject
+    _In_ PDEVICE_OBJECT PhysicalDeviceObject
     )
 {
     PDEVICE_OBJECT      FunctionDeviceObject;
@@ -2607,11 +2607,11 @@ fail1:
 
 VOID
 FdoDestroy(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
-    PXENIFACE_DX          Dx = Fdo->Dx;
-    PDEVICE_OBJECT        FunctionDeviceObject = Dx->DeviceObject;
+    PXENIFACE_DX        Dx = Fdo->Dx;
+    PDEVICE_OBJECT      FunctionDeviceObject = Dx->DeviceObject;
 
     ASSERT(IsListEmpty(&Dx->ListEntry));
     ASSERT3U(Fdo->References, ==, 0);

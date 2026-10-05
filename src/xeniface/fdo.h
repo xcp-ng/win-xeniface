@@ -119,62 +119,62 @@ typedef struct _XENIFACE_FDO {
 
 extern PCHAR
 FdoGetName(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern NTSTATUS
 FdoCreate(
-    IN  PDEVICE_OBJECT  PhysicalDeviceObject
+    _In_ PDEVICE_OBJECT PhysicalDeviceObject
     );
 
 extern VOID
 FdoDestroy(
-    IN  PXENIFACE_FDO    Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 FdoAcquireMutex(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 FdoReleaseMutex(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern PDEVICE_OBJECT
 FdoGetPhysicalDeviceObject(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern VOID
 FdoReap(
-    IN  PXENIFACE_FDO Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 extern NTSTATUS
 FdoDelegateIrp(
-    IN  PXENIFACE_FDO    Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     );
 
 
 extern PXENBUS_STORE_INTERFACE
 FdoGetStoreInterface(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 
 extern PXENBUS_SUSPEND_INTERFACE
 FdoGetSuspendInterface(
-    IN  PXENIFACE_FDO     Fdo
+    _In_ PXENIFACE_FDO  Fdo
     );
 
 
 extern NTSTATUS
 FdoDispatch(
-    IN  PXENIFACE_FDO    Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     );
 
 #endif  // _XENIFACE_FDO_H

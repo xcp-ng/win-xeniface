@@ -105,7 +105,7 @@ typedef struct _XENSTORE_WATCH {
 
 static FORCEINLINE PVOID
 WmiAllocate(
-    IN  ULONG   Length
+    _In_ ULONG  Length
     )
 {
     // Zeroes the allocation
@@ -114,7 +114,7 @@ WmiAllocate(
 
 static FORCEINLINE VOID
 WmiFree(
-    IN  PVOID   Buffer
+    _In_ PVOID  Buffer
     )
 {
     __FreePoolWithTag(Buffer, WMI_POOL_TAG);
@@ -125,8 +125,8 @@ WmiFree(
 // prior to Windows 7.
 static USHORT
 Utf32FromUtf16(
-    OUT PULONG          utf32,
-    IN  const WCHAR*    utf16
+    _Out_ PULONG        utf32,
+    _In_ const WCHAR    *utf16
     )
 {
     ULONG               w;
@@ -151,8 +151,8 @@ Utf32FromUtf16(
 
 static USHORT
 Utf32FromUtf8(
-    OUT PULONG      utf32,
-    IN  const CHAR* utf8
+    _Out_ PULONG    utf32,
+    _In_ const CHAR *utf8
     )
 {
     ULONG           y;
@@ -190,13 +190,13 @@ Utf32FromUtf8(
 
 static USHORT
 Utf16FromUtf32(
-    OUT PWCHAR  utf16,
-    IN  ULONG   utf32
+    _Out_ PWCHAR    utf16,
+    _In_ ULONG      utf32
     )
 {
-    WCHAR       u;
-    WCHAR       w;
-    WCHAR       x;
+    WCHAR           u;
+    WCHAR           w;
+    WCHAR           x;
 
     if ((utf32 > 0xFFFF)) {
         u = (utf32 & 0x1F0000) >> 16;
@@ -213,7 +213,7 @@ Utf16FromUtf32(
 
 static USHORT
 CountUtf8FromUtf32(
-    IN  ULONG   utf32
+    _In_ ULONG  utf32
     )
 {
     if (utf32 & UTF8MASK4)
@@ -227,7 +227,7 @@ CountUtf8FromUtf32(
 
 static USHORT
 CountUtf16FromUtf32(
-    IN  ULONG   utf32
+    _In_ ULONG  utf32
     )
 {
     if (utf32 & 0xFF0000)
@@ -237,8 +237,8 @@ CountUtf16FromUtf32(
 
 static USHORT
 Utf8FromUtf32(
-    OUT PCHAR   dest,
-    IN  ULONG   utf32
+    _Out_ PCHAR dest,
+    _In_ ULONG  utf32
     )
 {
     CHAR        u;
@@ -279,7 +279,7 @@ Utf8FromUtf32(
 
 static USHORT
 CountBytesUtf16FromUtf8String(
-    IN  PCOEM_STRING        utf8
+    _In_ PCOEM_STRING       utf8
     )
 {
     ULONG                   utf32;
@@ -296,7 +296,7 @@ CountBytesUtf16FromUtf8String(
 
 static USHORT
 CountBytesUtf16FromUtf8(
-    IN  const CHAR*     utf8
+    _In_ const CHAR     *utf8
     )
 {
     ULONG               utf32;
@@ -313,13 +313,13 @@ CountBytesUtf16FromUtf8(
 
 static VOID
 GetUnicodeString(
-    OUT PUNICODE_STRING unicode,
-    IN  USHORT          maxlength,
-    IN  LPWSTR          location
+    _Out_ PUNICODE_STRING   unicode,
+    _In_ USHORT             maxlength,
+    _In_ LPWSTR             location
     )
 {
-    USHORT              i;
-    USHORT              length = 0;
+    USHORT                  i;
+    USHORT                  length = 0;
 
     unicode->MaximumLength = maxlength;
     unicode->Buffer = location;
@@ -336,9 +336,9 @@ GetUnicodeString(
 
 static NTSTATUS
 GetAnsiString(
-    OUT PANSI_STRING    ansi,
-    IN  USHORT          maxlength,
-    IN  LPWSTR          location
+    _Out_ PANSI_STRING  ansi,
+    _In_ USHORT         maxlength,
+    _In_ LPWSTR         location
     )
 {
     UNICODE_STRING      unicode;
@@ -349,9 +349,9 @@ GetAnsiString(
 
 static NTSTATUS
 GetUTF8String(
-    OUT POEM_STRING     utf8,
-    IN  USHORT          bufsize,
-    IN  LPWSTR          ustring
+    _Out_ POEM_STRING   utf8,
+    _In_ USHORT         bufsize,
+    _In_ LPWSTR         ustring
     )
 {
     ULONG               utf32;
@@ -384,7 +384,7 @@ GetUTF8String(
 
 static FORCEINLINE VOID
 FreeUTF8String(
-    IN  POEM_STRING utf8
+    _In_ POEM_STRING    utf8
     )
 {
     if (utf8->Buffer)
@@ -396,40 +396,40 @@ FreeUTF8String(
 
 static NTSTATUS
 GetCountedUTF8String(
-    OUT POEM_STRING     utf8,
-    IN  PUCHAR          location
+    _Out_ POEM_STRING   utf8,
+    _In_ PUCHAR         location
     )
 {
-    USHORT bufsize = *(USHORT*)location;
-    LPWSTR ustring = (LPWSTR)(location + sizeof(USHORT));
+    USHORT              bufsize = *(USHORT*)location;
+    LPWSTR              ustring = (LPWSTR)(location + sizeof(USHORT));
     return GetUTF8String(utf8, bufsize, ustring);
 }
 
 static VOID
 GetCountedUnicodeString(
-    OUT PUNICODE_STRING unicode,
-    IN  PUCHAR          location
+    _Out_ PUNICODE_STRING   unicode,
+    _In_ PUCHAR             location
     )
 {
-    USHORT bufsize = *(USHORT*)location;
-    LPWSTR ustring = (LPWSTR)(location + sizeof(USHORT));
+    USHORT                  bufsize = *(USHORT*)location;
+    LPWSTR                  ustring = (LPWSTR)(location + sizeof(USHORT));
     GetUnicodeString(unicode, bufsize, ustring);
 }
 
 static NTSTATUS
 GetCountedAnsiString(
-    OUT PANSI_STRING    ansi,
-    IN  PUCHAR          location
+    _Out_ PANSI_STRING  ansi,
+    _In_ PUCHAR         location
     )
 {
-    USHORT bufsize = *(USHORT*)location;
-    LPWSTR ustring = (LPWSTR)(location + sizeof(USHORT));
+    USHORT              bufsize = *(USHORT*)location;
+    LPWSTR              ustring = (LPWSTR)(location + sizeof(USHORT));
     return GetAnsiString(ansi, bufsize, ustring);
 }
 
 static FORCEINLINE size_t
 GetCountedUtf8Size(
-    IN  const CHAR* utf8
+    _In_ const CHAR *utf8
     )
 {
     return sizeof(USHORT) + CountBytesUtf16FromUtf8(utf8);
@@ -437,7 +437,7 @@ GetCountedUtf8Size(
 
 static FORCEINLINE size_t
 GetCountedUnicodeStringSize(
-    IN  PCUNICODE_STRING    string
+    _In_ PCUNICODE_STRING   string
     )
 {
     return sizeof(USHORT) + string->Length;
@@ -445,8 +445,8 @@ GetCountedUnicodeStringSize(
 
 static VOID
 WriteCountedUnicodeString(
-    IN  PCUNICODE_STRING    ustr,
-    IN  PUCHAR              location
+    _In_ PCUNICODE_STRING   ustr,
+    _In_ PUCHAR             location
     )
 {
     *((USHORT*)location) = ustr->Length;
@@ -457,8 +457,8 @@ WriteCountedUnicodeString(
 
 static NTSTATUS
 WriteCountedUTF8String(
-    IN  const CHAR*     string,
-    IN  PUCHAR          location
+    _In_ const CHAR     *string,
+    _In_ PUCHAR         location
     )
 {
     UNICODE_STRING      unicode;
@@ -489,8 +489,8 @@ WriteCountedUTF8String(
 
 static VOID
 AllocUnicodeStringBuffer(
-    OUT PUNICODE_STRING string,
-    IN  USHORT          buffersize
+    _Out_ PUNICODE_STRING   string,
+    _In_ USHORT             buffersize
     )
 {
     string->Length = 0;
@@ -504,7 +504,7 @@ AllocUnicodeStringBuffer(
 
 static FORCEINLINE VOID
 FreeUnicodeStringBuffer(
-    IN  PUNICODE_STRING string
+    _In_ PUNICODE_STRING    string
     )
 {
     if (string->Buffer)
@@ -516,8 +516,8 @@ FreeUnicodeStringBuffer(
 
 static NTSTATUS
 CloneUnicodeString(
-    OUT PUNICODE_STRING     dest,
-    IN  PCUNICODE_STRING    src
+    _Out_ PUNICODE_STRING   dest,
+    _In_ PCUNICODE_STRING   src
     )
 {
     NTSTATUS                status;
@@ -535,15 +535,15 @@ CloneUnicodeString(
 
 static NTSTATUS
 GetInstanceName(
-    OUT PUNICODE_STRING dest,
-    IN  PXENIFACE_FDO   Fdo,
-    IN  const CHAR*     string
+    _Out_ PUNICODE_STRING   dest,
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ const CHAR         *string
     )
 {
-    ANSI_STRING         ansi;
-    UNICODE_STRING      unicode;
-    NTSTATUS            status;
-    size_t              destsz;
+    ANSI_STRING             ansi;
+    UNICODE_STRING          unicode;
+    NTSTATUS                status;
+    size_t                  destsz;
 
     RtlInitAnsiString(&ansi, string);
     status = RtlAnsiStringToUnicodeString(&unicode, &ansi, TRUE);
@@ -581,9 +581,9 @@ fail1:
 
 static NTSTATUS
 WriteInstanceName(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  const CHAR*     string,
-    IN  PUCHAR          location
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ const CHAR     *string,
+    _In_ PUCHAR         location
     )
 {
     UNICODE_STRING      destination;
@@ -600,7 +600,7 @@ WriteInstanceName(
 
 static PSTR
 Xmasprintf(
-    IN  const char* fmt,
+    _In_ const char *fmt,
     ...
     )
 {
@@ -634,8 +634,8 @@ Xmasprintf(
 
 static FORCEINLINE VOID
 UnicodeShallowCopy(
-    IN  PUNICODE_STRING     dest,
-    IN  PUNICODE_STRING     src
+    _In_ PUNICODE_STRING    dest,
+    _In_ PUNICODE_STRING    src
     )
 {
     dest->Buffer = src->Buffer;
@@ -645,8 +645,8 @@ UnicodeShallowCopy(
 
 static FORCEINLINE int
 CompareUnicodeStrings(
-    IN  PCUNICODE_STRING    string1,
-    IN  PCUNICODE_STRING    string2
+    _In_ PCUNICODE_STRING   string1,
+    _In_ PCUNICODE_STRING   string2
     )
 {
     if (string1->Length == string2->Length)
@@ -658,10 +658,10 @@ CompareUnicodeStrings(
 
 static int
 AccessWmiBuffer(
-    IN  PUCHAR  Buffer,
-    IN  int     readbuffer,
-    OUT ULONG*  RequiredSize,
-    IN  size_t  BufferSize,
+    _In_ PUCHAR Buffer,
+    _In_ int    readbuffer,
+    _Out_ ULONG *RequiredSize,
+    _In_ size_t BufferSize,
     ...
     )
 {
@@ -810,8 +810,8 @@ AccessWmiBuffer(
 
 static FORCEINLINE PXENSTORE_SESSION
 FindSessionLocked(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  LONG            Id
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ LONG           Id
     )
 {
     PLIST_ENTRY         ListEntry;
@@ -834,8 +834,8 @@ FindSessionLocked(
 
 static FORCEINLINE PXENSTORE_WATCH
 SessionFindWatchLocked(
-    IN  PXENSTORE_SESSION   Session,
-    IN  PUNICODE_STRING     Path
+    _In_ PXENSTORE_SESSION  Session,
+    _In_ PUNICODE_STRING    Path
     )
 {
     PLIST_ENTRY             ListEntry;
@@ -856,12 +856,12 @@ SessionFindWatchLocked(
 
 static VOID
 FireWatch(
-    IN  PXENSTORE_WATCH Watch
+    _In_ PXENSTORE_WATCH    Watch
     )
 {
-    UCHAR*              eventdata;
-    ULONG               RequiredSize;
-    UCHAR*              sesbuf;
+    UCHAR*                  eventdata;
+    ULONG                   RequiredSize;
+    UCHAR*                  sesbuf;
 
     (VOID) AccessWmiBuffer(NULL, FALSE, &RequiredSize, 0,
             WMI_STRING, GetCountedUnicodeStringSize(&Watch->Path), &sesbuf,
@@ -889,13 +889,13 @@ KSTART_ROUTINE WatchCallbackThread;
 
 static NTSTATUS
 StartWatch(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PXENSTORE_WATCH Watch
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PXENSTORE_WATCH    Watch
     )
 {
-    char*               tmppath;
-    ANSI_STRING         ansipath;
-    NTSTATUS            status;
+    char*                   tmppath;
+    ANSI_STRING             ansipath;
+    NTSTATUS                status;
 
     status = RtlUnicodeStringToAnsiString(&ansipath, &Watch->Path, TRUE);
     if (!NT_SUCCESS(status))
@@ -934,7 +934,7 @@ fail1:
 
 VOID
 WatchCallbackThread(
-    __in PVOID          StartContext
+    _In_ PVOID          StartContext
     )
 {
     NTSTATUS            status;
@@ -1030,9 +1030,9 @@ WatchCallbackThread(
 
 static NTSTATUS
 SessionAddWatchLocked(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PXENSTORE_SESSION   Session,
-    IN  PUNICODE_STRING     Path
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PXENSTORE_SESSION  Session,
+    _In_ PUNICODE_STRING    Path
     )
 {
     PXENSTORE_WATCH         Watch;
@@ -1079,7 +1079,7 @@ fail1:
 
 static VOID
 SessionRemoveWatchLocked(
-    IN  PXENSTORE_WATCH     Watch
+    _In_ PXENSTORE_WATCH    Watch
     )
 {
     // ASSERT3P(Session->WatchMapLock.Owner, ==, KeGetCurrentThread());
@@ -1095,8 +1095,8 @@ SessionRemoveWatchLocked(
 
 static PXENSTORE_SESSION
 FindSessionByInstanceLocked(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PUNICODE_STRING     Instance
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    Instance
     )
 {
     PLIST_ENTRY             ListEntry;
@@ -1117,15 +1117,15 @@ FindSessionByInstanceLocked(
     return NULL;
 }
 
-__checkReturn
+_Check_return_
 __success(return != NULL)
 static PXENSTORE_SESSION
 FindSessionByInstanceAndLock(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING Instance
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    Instance
     )
 {
-    PXENSTORE_SESSION   Session;
+    PXENSTORE_SESSION       Session;
 
     AcquireMutex(&Fdo->SessionLock);
     Session = FindSessionByInstanceLocked(Fdo, Instance);
@@ -1136,9 +1136,9 @@ FindSessionByInstanceAndLock(
 
 static NTSTATUS
 SessionCreate(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PUNICODE_STRING     StringId,
-    OUT ULONG*              SessionId
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    StringId,
+    _Out_ ULONG             *SessionId
     )
 {
     PXENSTORE_SESSION       Session;
@@ -1239,8 +1239,8 @@ fail1:
 
 static VOID
 SessionRemoveLocked(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PXENSTORE_SESSION   Session
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PXENSTORE_SESSION  Session
     )
 {
     PLIST_ENTRY             ListEntry;
@@ -1278,7 +1278,7 @@ SessionRemoveLocked(
 
 static VOID
 SessionsRemoveAll(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     PXENSTORE_SESSION   Session;
@@ -1298,8 +1298,8 @@ SessionsRemoveAll(
 
 static VOID
 SessionsSuspendLocked(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PXENSTORE_SESSION   Session
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PXENSTORE_SESSION  Session
     )
 {
     PLIST_ENTRY             ListEntry;
@@ -1327,7 +1327,7 @@ SessionsSuspendLocked(
 
 static VOID
 SessionResumeLocked(
-    IN  PXENSTORE_SESSION   Session
+    _In_ PXENSTORE_SESSION  Session
     )
 {
     PLIST_ENTRY             ListEntry;
@@ -1356,10 +1356,10 @@ SessionResumeLocked(
 
 static NTSTATUS
 NodeTooSmall(
-    IN  UCHAR*      Buffer,
-    IN  ULONG       BufferSize,
-    IN  ULONG       Needed,
-    OUT ULONG_PTR*  BytesWritten
+    _In_ UCHAR          *Buffer,
+    _In_ ULONG          BufferSize,
+    _In_ ULONG          Needed,
+    _Out_ ULONG_PTR     *BytesWritten
     )
 {
     WNODE_TOO_SMALL*    node;
@@ -1383,21 +1383,21 @@ NodeTooSmall(
 
 static NTSTATUS
 SessionExecuteRemoveValue(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    ULONG               RequiredSize;
-    NTSTATUS            status;
-    UCHAR*              upathname;
-    OEM_STRING          pathname;
-    PXENSTORE_SESSION   session;
-    char*               tmpbuffer;
+    ULONG                   RequiredSize;
+    NTSTATUS                status;
+    UCHAR*                  upathname;
+    OEM_STRING              pathname;
+    PXENSTORE_SESSION       session;
+    char*                   tmpbuffer;
 
     UNREFERENCED_PARAMETER(OutBuffer);
     UNREFERENCED_PARAMETER(OutBufferSize);
@@ -1453,21 +1453,21 @@ fail1:
 
 static NTSTATUS
 SessionExecuteRemoveWatch(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    NTSTATUS            status;
-    ULONG               RequiredSize;
-    UCHAR*              upathname;
-    PXENSTORE_WATCH     watch;
-    UNICODE_STRING      unicpath_notbacked;
-    PXENSTORE_SESSION   session;
+    NTSTATUS                status;
+    ULONG                   RequiredSize;
+    UCHAR*                  upathname;
+    PXENSTORE_WATCH         watch;
+    UNICODE_STRING          unicpath_notbacked;
+    PXENSTORE_SESSION       session;
 
     UNREFERENCED_PARAMETER(OutBuffer);
     UNREFERENCED_PARAMETER(OutBufferSize);
@@ -1507,21 +1507,21 @@ fail1:
 
 static NTSTATUS
 SessionExecuteSetWatch(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    ULONG               RequiredSize;
-    NTSTATUS            status;
-    UCHAR*              upathname;
-    PXENSTORE_SESSION   Session;
-    UNICODE_STRING      unicpath_notbacked;
-    UNICODE_STRING      unicpath_backed;
+    ULONG                   RequiredSize;
+    NTSTATUS                status;
+    UCHAR*                  upathname;
+    PXENSTORE_SESSION       Session;
+    UNICODE_STRING          unicpath_notbacked;
+    UNICODE_STRING          unicpath_backed;
 
     UNREFERENCED_PARAMETER(OutBuffer);
     UNREFERENCED_PARAMETER(OutBufferSize);
@@ -1567,17 +1567,17 @@ fail1:
 
 static NTSTATUS
 SessionExecuteEndSession(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    PXENSTORE_SESSION   Session;
-    NTSTATUS            status;
+    PXENSTORE_SESSION       Session;
+    NTSTATUS                status;
 
     UNREFERENCED_PARAMETER(OutBuffer);
     UNREFERENCED_PARAMETER(OutBufferSize);
@@ -1602,13 +1602,13 @@ fail1:
 
 static NTSTATUS
 SessionExecuteSetValue(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PUNICODE_STRING     instance,
-    IN  UCHAR*              InBuffer,
-    IN  ULONG               InBufferSize,
-    IN  UCHAR*              OutBuffer,
-    IN  ULONG               OutBufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     ULONG                   RequiredSize;
@@ -1693,13 +1693,13 @@ fail1:
 
 static NTSTATUS
 SessionExecuteGetFirstChild(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PUNICODE_STRING     instance,
-    IN  UCHAR*              InBuffer,
-    IN  ULONG               InBufferSize,
-    IN  UCHAR*              OutBuffer,
-    IN  ULONG               OutBufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     ULONG                   RequiredSize;
@@ -1809,13 +1809,13 @@ fail1:
 
 static NTSTATUS
 SessionExecuteGetNextSibling(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PUNICODE_STRING     instance,
-    IN  UCHAR*              InBuffer,
-    IN  ULONG               InBufferSize,
-    IN  UCHAR*              OutBuffer,
-    IN  ULONG               OutBufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     ULONG                   RequiredSize;
@@ -1976,13 +1976,13 @@ fail1:
 
 static NTSTATUS
 SessionExecuteGetChildren(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PUNICODE_STRING     instance,
-    IN  UCHAR*              InBuffer,
-    IN  ULONG               InBufferSize,
-    IN  UCHAR*              OutBuffer,
-    IN  ULONG               OutBufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     int                     i;
@@ -2104,19 +2104,19 @@ fail1:
 
 static NTSTATUS
 SessionExecuteLog(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    ULONG               RequiredSize;
-    UCHAR*              uloc;
-    NTSTATUS            status;
-    ANSI_STRING         message;
+    ULONG                   RequiredSize;
+    UCHAR*                  uloc;
+    NTSTATUS                status;
+    ANSI_STRING             message;
 
 
     UNREFERENCED_PARAMETER(Fdo);
@@ -2148,17 +2148,17 @@ fail1:
 
 static NTSTATUS
 SessionExecuteStartTransaction(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    NTSTATUS            status;
-    PXENSTORE_SESSION   session;
+    NTSTATUS                status;
+    PXENSTORE_SESSION       session;
 
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferSize);
@@ -2194,17 +2194,17 @@ fail1:
 
 static NTSTATUS
 SessionExecuteCommitTransaction(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    NTSTATUS            status;
-    PXENSTORE_SESSION   session;
+    NTSTATUS                status;
+    PXENSTORE_SESSION       session;
 
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferSize);
@@ -2246,17 +2246,17 @@ fail1:
 
 static NTSTATUS
 SessionExecuteAbortTransaction(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    NTSTATUS            status;
-    PXENSTORE_SESSION   session;
+    NTSTATUS                status;
+    PXENSTORE_SESSION       session;
 
 
     UNREFERENCED_PARAMETER(InBuffer);
@@ -2298,23 +2298,23 @@ fail1:
 
 static NTSTATUS
 SessionExecuteGetValue(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PUNICODE_STRING instance,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PUNICODE_STRING    instance,
+    _In_ UCHAR              *InBuffer,
+    _In_ ULONG              InBufferSize,
+    _In_ UCHAR              *OutBuffer,
+    _In_ ULONG              OutBufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
-    NTSTATUS            status;
-    OEM_STRING          path;
-    UCHAR*              uloc;
-    char*               value;
-    UCHAR*              valuepos;
-    char*               tmppath;
-    ULONG               RequiredSize;
-    PXENSTORE_SESSION   session;
+    NTSTATUS                status;
+    OEM_STRING              path;
+    UCHAR*                  uloc;
+    char*                   value;
+    UCHAR*                  valuepos;
+    char*                   tmppath;
+    ULONG                   RequiredSize;
+    PXENSTORE_SESSION       session;
 
     *BytesWritten = 0;
     status = STATUS_INVALID_DEVICE_REQUEST;
@@ -2380,12 +2380,12 @@ fail1:
 
 static NTSTATUS
 BaseExecuteAddSession(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  UCHAR*          InBuffer,
-    IN  ULONG           InBufferSize,
-    IN  UCHAR*          OutBuffer,
-    IN  ULONG           OutBufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ UCHAR          *InBuffer,
+    _In_ ULONG          InBufferSize,
+    _In_ UCHAR          *OutBuffer,
+    _In_ ULONG          OutBufferSize,
+    _Out_ ULONG_PTR     *BytesWritten
     )
 {
     ULONG               RequiredSize;
@@ -2437,10 +2437,10 @@ fail1:
 
 static NTSTATUS
 SessionExecuteMethod(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  UCHAR*          Buffer,
-    IN  ULONG           BufferSize,
-    OUT ULONG_PTR*      BytesWritten
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ UCHAR          *Buffer,
+    _In_ ULONG          BufferSize,
+    _Out_ ULONG_PTR     *BytesWritten
     )
 {
     ULONG               RequiredSize;
@@ -2598,10 +2598,10 @@ SessionExecuteMethod(
 
 static NTSTATUS
 BaseExecuteMethod(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  UCHAR*              Buffer,
-    IN  ULONG               BufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ UCHAR              *Buffer,
+    _In_ ULONG              BufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     ULONG                   RequiredSize;
@@ -2639,9 +2639,9 @@ BaseExecuteMethod(
 
 static NTSTATUS
 WmiExecuteMethod(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PIO_STACK_LOCATION  Stack,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PIO_STACK_LOCATION Stack,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     if (IsEqualGUID(Stack->Parameters.WMI.DataPath,
@@ -2663,26 +2663,26 @@ WmiExecuteMethod(
 
 static NTSTATUS
 GenerateSessionBlock(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  UCHAR*              Buffer,
-    IN  ULONG               BufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ UCHAR                      *Buffer,
+    _In_ ULONG                      BufferSize,
+    _Out_ ULONG_PTR                 *BytesWritten
     )
 {
-    PLIST_ENTRY             ListEntry;
-    PXENSTORE_SESSION       Session;
-    WNODE_ALL_DATA*         node;
-    ULONG                   RequiredSize;
-    size_t                  nodesizerequired;
-    size_t                  namesizerequired;
-    int                     entries;
-    OFFSETINSTANCEDATAANDLENGTH* dataoffsets;
-    ULONG*                  nameoffsets;
-    UCHAR*                  data;
-    UCHAR*                  names;
-    int                     entrynum = 0;
-    UCHAR*                  datapos;
-    UCHAR*                  namepos;
+    PLIST_ENTRY                     ListEntry;
+    PXENSTORE_SESSION               Session;
+    WNODE_ALL_DATA*                 node;
+    ULONG                           RequiredSize;
+    size_t                          nodesizerequired;
+    size_t                          namesizerequired;
+    int                             entries;
+    OFFSETINSTANCEDATAANDLENGTH*    dataoffsets;
+    ULONG*                          nameoffsets;
+    UCHAR*                          data;
+    UCHAR*                          names;
+    int                             entrynum = 0;
+    UCHAR*                          datapos;
+    UCHAR*                          namepos;
 
     AcquireMutex(&Fdo->SessionLock);
 
@@ -2779,10 +2779,10 @@ GenerateSessionBlock(
 
 static NTSTATUS
 GenerateBaseBlock(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  UCHAR*              Buffer,
-    IN  ULONG               BufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ UCHAR              *Buffer,
+    _In_ ULONG              BufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     WNODE_ALL_DATA*         node;
@@ -2819,10 +2819,10 @@ GenerateBaseBlock(
 
 static NTSTATUS
 GenerateBaseInstance(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  UCHAR*              Buffer,
-    IN  ULONG               BufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ UCHAR              *Buffer,
+    _In_ ULONG              BufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     WNODE_SINGLE_INSTANCE*  node;
@@ -2871,10 +2871,10 @@ GenerateBaseInstance(
 
 static NTSTATUS
 GenerateSessionInstance(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  UCHAR*              Buffer,
-    IN  ULONG               BufferSize,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ UCHAR              *Buffer,
+    _In_ ULONG              BufferSize,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     WNODE_SINGLE_INSTANCE*  node;
@@ -2940,9 +2940,9 @@ fail1:
 
 NTSTATUS
 WmiQueryAllData(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PIO_STACK_LOCATION  Stack,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PIO_STACK_LOCATION Stack,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     if (IsEqualGUID(Stack->Parameters.WMI.DataPath,
@@ -2964,9 +2964,9 @@ WmiQueryAllData(
 
 NTSTATUS
 WmiQuerySingleInstance(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PIO_STACK_LOCATION  Stack,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PIO_STACK_LOCATION Stack,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     if (IsEqualGUID(Stack->Parameters.WMI.DataPath,
@@ -2988,9 +2988,9 @@ WmiQuerySingleInstance(
 
 NTSTATUS
 WmiRegInfo(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PIO_STACK_LOCATION  Stack,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PIO_STACK_LOCATION Stack,
+    _Out_ ULONG_PTR         *BytesWritten
    )
 {
     size_t                  mofnamesz;
@@ -3070,9 +3070,9 @@ WmiRegInfo(
 
 NTSTATUS
 WmiRegInfoEx(
-    IN  PXENIFACE_FDO       Fdo,
-    IN  PIO_STACK_LOCATION  Stack,
-    OUT ULONG_PTR*          BytesWritten
+    _In_ PXENIFACE_FDO      Fdo,
+    _In_ PIO_STACK_LOCATION Stack,
+    _Out_ ULONG_PTR         *BytesWritten
     )
 {
     Trace("%s\n",__FUNCTION__);
@@ -3081,8 +3081,8 @@ WmiRegInfoEx(
 
 NTSTATUS
 WmiProcessMinorFunction(
-    IN  PXENIFACE_FDO   Fdo,
-    IN  PIRP            Irp
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PIRP           Irp
     )
 {
     PIO_STACK_LOCATION  Stack;
@@ -3118,7 +3118,7 @@ WmiProcessMinorFunction(
 
 VOID
 WmiFireSuspendEvent(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     Info("Ready to unsuspend Event\n");
@@ -3136,7 +3136,7 @@ WmiFireSuspendEvent(
 
 VOID
 WmiSessionsSuspendAll(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     PLIST_ENTRY         ListEntry;
@@ -3156,7 +3156,7 @@ WmiSessionsSuspendAll(
 
 VOID
 WmiSessionsResumeAll(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     PLIST_ENTRY         ListEntry;
@@ -3176,7 +3176,7 @@ WmiSessionsResumeAll(
 
 NTSTATUS
 WmiRegister(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     NTSTATUS            status;
@@ -3202,7 +3202,7 @@ fail1:
 
 VOID
 WmiDeregister(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     if (!Fdo->WmiReady)
@@ -3219,7 +3219,7 @@ WmiDeregister(
 
 NTSTATUS
 WmiInitialize(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     NTSTATUS            status;
@@ -3244,7 +3244,7 @@ fail1:
 
 VOID
 WmiTeardown(
-    IN  PXENIFACE_FDO   Fdo
+    _In_ PXENIFACE_FDO  Fdo
     )
 {
     ASSERT(Fdo->Sessions == 0);

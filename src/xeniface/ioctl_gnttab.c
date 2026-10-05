@@ -40,17 +40,17 @@
 _Function_class_(IO_WORKITEM_ROUTINE)
 VOID
 CompleteGnttabIrp(
-    __in      PDEVICE_OBJECT DeviceObject,
-    __in_opt  PVOID          Context
+    _In_ PDEVICE_OBJECT         DeviceObject,
+    _In_opt_ PVOID              Context
     )
 {
-    PXENIFACE_DX Dx = (PXENIFACE_DX)DeviceObject->DeviceExtension;
-    PXENIFACE_FDO Fdo = Dx->Fdo;
-    PIRP Irp = Context;
-    PXENIFACE_GNTTAB_CONTEXT GnttabContext;
-    PIO_WORKITEM WorkItem;
-    KAPC_STATE ApcState;
-    BOOLEAN ChangeProcess;
+    PXENIFACE_DX                Dx = (PXENIFACE_DX)DeviceObject->DeviceExtension;
+    PXENIFACE_FDO               Fdo = Dx->Fdo;
+    PIRP                        Irp = Context;
+    PXENIFACE_GNTTAB_CONTEXT    GnttabContext;
+    PIO_WORKITEM                WorkItem;
+    KAPC_STATE                  ApcState;
+    BOOLEAN                     ChangeProcess;
 
     ASSERT(Context != NULL);
 
@@ -96,10 +96,10 @@ _Acquires_exclusive_lock_(((PXENIFACE_FDO)Argument)->GnttabCacheLock)
 _IRQL_requires_(DISPATCH_LEVEL)
 VOID
 GnttabAcquireLock(
-    __in  PVOID Argument
+    _In_ PVOID      Argument
     )
 {
-    PXENIFACE_FDO Fdo = Argument;
+    PXENIFACE_FDO   Fdo = Argument;
 
     ASSERT(KeGetCurrentIrql() == DISPATCH_LEVEL);
 
@@ -110,10 +110,10 @@ _Releases_exclusive_lock_(((PXENIFACE_FDO)Argument)->GnttabCacheLock)
 _IRQL_requires_(DISPATCH_LEVEL)
 VOID
 GnttabReleaseLock(
-    __in  PVOID Argument
+    _In_ PVOID      Argument
     )
 {
-    PXENIFACE_FDO Fdo = Argument;
+    PXENIFACE_FDO   Fdo = Argument;
 
     ASSERT(KeGetCurrentIrql() == DISPATCH_LEVEL);
 
@@ -124,12 +124,12 @@ _Requires_lock_not_held_(Fdo->IrpQueueLock)
 static
 PIRP
 FindGnttabIrp(
-    __in  PXENIFACE_FDO Fdo,
-    __in  PXENIFACE_GNTTAB_CONTEXT Context
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PXENIFACE_GNTTAB_CONTEXT   Context
     )
 {
-    KIRQL Irql;
-    PIRP Irp;
+    KIRQL                           Irql;
+    PIRP                            Irp;
 
     CsqAcquireLock(&Fdo->IrpQueue, &Irql);
     Irp = CsqPeekNextIrp(&Fdo->IrpQueue, NULL, Context);
@@ -142,9 +142,9 @@ FindGnttabIrp(
 static
 void
 GnttabStopSharing(
-    __in     PXENIFACE_FDO             Fdo,
-    __inout  PXENIFACE_GNTTAB_CONTEXT  Context,
-    __in     ULONG                     NumberPages
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_GNTTAB_CONTEXT    Context,
+    _In_ ULONG                          NumberPages
 )
 {
     if (Context->Grants != NULL) {
@@ -188,14 +188,14 @@ GnttabStopSharing(
 static
 NTSTATUS
 GnttabPermitForeignAccess(
-    __in     PXENIFACE_FDO             Fdo,
-    __inout  PXENIFACE_GNTTAB_CONTEXT  Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_GNTTAB_CONTEXT    Context
     )
 {
-    NTSTATUS Status;
-    ULONG Page = 0;
-    size_t GrantsSize = 0;
-    ULONG SharedSize = 0;
+    NTSTATUS                            Status;
+    ULONG                               Page = 0;
+    size_t                              GrantsSize = 0;
+    ULONG                               SharedSize = 0;
 
     Trace("> RemoteDomain %d, UserVa %p, NumberPages %lu, Flags 0x%x, Offset 0x%x, Port %d, Process %p, Id %lu\n",
           Context->RemoteDomain, Context->UserVa, Context->NumberPages, Context->Flags,
@@ -310,16 +310,16 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabPermitForeignAccess(
-    __in     PXENIFACE_FDO  Fdo,
-    __in     PVOID          Buffer,
-    __in     ULONG          InLen,
-    __in     ULONG          OutLen,
-    __inout  PIRP           Irp
+    _In_ PXENIFACE_FDO                              Fdo,
+    _In_ PVOID                                      Buffer,
+    _In_ ULONG                                      InLen,
+    _In_ ULONG                                      OutLen,
+    _Inout_ PIRP                                    Irp
     )
 {
-    NTSTATUS Status;
-    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN In1 = NULL;
-    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2 In = NULL;
+    NTSTATUS                                        Status;
+    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN       In1 = NULL;
+    PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_IN_V2    In = NULL;
     // XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT_V2 is the same as XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT
     PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT Out = Irp->UserBuffer;
     PXENIFACE_GNTTAB_CONTEXT Context;
@@ -470,11 +470,11 @@ fail1:
 _IRQL_requires_max_(APC_LEVEL)
 VOID
 GnttabFreeGrant(
-    __in     PXENIFACE_FDO             Fdo,
-    __inout  PXENIFACE_GNTTAB_CONTEXT  Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_GNTTAB_CONTEXT    Context
 )
 {
-    NTSTATUS status;
+    NTSTATUS                            status;
 
     Trace("Context %p\n", Context);
 
@@ -501,17 +501,17 @@ GnttabFreeGrant(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabRevokeForeignAccess(
-    __in  PXENIFACE_FDO  Fdo,
-    __in  PVOID          Buffer,
-    __in  ULONG          InLen,
-    __in  ULONG          OutLen,
-    __in  ULONG          ControlCode
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ PVOID                  Buffer,
+    _In_ ULONG                  InLen,
+    _In_ ULONG                  OutLen,
+    _In_ ULONG                  ControlCode
     )
 {
-    NTSTATUS Status;
-    XENIFACE_GNTTAB_CONTEXT SeekContext;
-    PIRP PendingIrp;
-    PXENIFACE_GNTTAB_CONTEXT Context = NULL;
+    NTSTATUS                    Status;
+    XENIFACE_GNTTAB_CONTEXT     SeekContext;
+    PIRP                        PendingIrp;
+    PXENIFACE_GNTTAB_CONTEXT    Context = NULL;
 
     UNREFERENCED_PARAMETER(OutLen);
 
@@ -561,16 +561,16 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabMapForeignPages(
-    __in     PXENIFACE_FDO  Fdo,
-    __in     PVOID          Buffer,
-    __in     ULONG          InLen,
-    __in     ULONG          OutLen,
-    __inout  PIRP           Irp
+    _In_ PXENIFACE_FDO                          Fdo,
+    _In_ PVOID                                  Buffer,
+    _In_ ULONG                                  InLen,
+    _In_ ULONG                                  OutLen,
+    _Inout_ PIRP                                Irp
     )
 {
-    NTSTATUS status;
-    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN In1 = NULL;
-    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2 In = NULL;
+    NTSTATUS                                    status;
+    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN       In1 = NULL;
+    PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2    In = NULL;
     // XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2 is the same as XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT
     PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT Out = Irp->UserBuffer;
     ULONG NumberPages;
@@ -791,11 +791,11 @@ _IRQL_requires_max_(APC_LEVEL)
 DECLSPEC_NOINLINE
 VOID
 GnttabFreeMap(
-    __in     PXENIFACE_FDO             Fdo,
-    __inout  PXENIFACE_GNTTAB_CONTEXT  Context
+    _In_ PXENIFACE_FDO                  Fdo,
+    _Inout_ PXENIFACE_GNTTAB_CONTEXT    Context
     )
 {
-    NTSTATUS status;
+    NTSTATUS                            status;
 
     ASSERT(Context->Type == XENIFACE_GNTTAB_CONTEXT_MAP);
     ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
@@ -837,17 +837,17 @@ GnttabFreeMap(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlGnttabUnmapForeignPages(
-    __in  PXENIFACE_FDO  Fdo,
-    __in  PVOID          Buffer,
-    __in  ULONG          InLen,
-    __in  ULONG          OutLen,
-    __in  ULONG          ControlCode
+    _In_ PXENIFACE_FDO          Fdo,
+    _In_ PVOID                  Buffer,
+    _In_ ULONG                  InLen,
+    _In_ ULONG                  OutLen,
+    _In_ ULONG                  ControlCode
     )
 {
-    NTSTATUS status;
-    XENIFACE_GNTTAB_CONTEXT SeekContext;
-    PXENIFACE_GNTTAB_CONTEXT Context;
-    PIRP PendingIrp;
+    NTSTATUS                    status;
+    XENIFACE_GNTTAB_CONTEXT     SeekContext;
+    PXENIFACE_GNTTAB_CONTEXT    Context;
+    PIRP                        PendingIrp;
 
     ASSERT(ControlCode == IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES
         || ControlCode == IOCTL_XENIFACE_GNTTAB_UNMAP_FOREIGN_PAGES_V2);

@@ -64,7 +64,7 @@ typedef struct _XENBUS_EVTCHN_CHANNEL XENBUS_EVTCHN_CHANNEL, *PXENBUS_EVTCHN_CHA
 */
 typedef NTSTATUS
 (*XENBUS_EVTCHN_ACQUIRE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_EVTCHN_RELEASE
@@ -74,7 +74,7 @@ typedef NTSTATUS
 */
 typedef VOID
 (*XENBUS_EVTCHN_RELEASE)(
-    IN  PINTERFACE  Interface
+    _In_ PINTERFACE Interface
     );
 
 /*! \typedef XENBUS_EVTCHN_OPEN
@@ -108,10 +108,10 @@ typedef VOID
 */
 typedef PXENBUS_EVTCHN_CHANNEL
 (*XENBUS_EVTCHN_OPEN)(
-    IN  PINTERFACE          Interface,
-    IN  XENBUS_EVTCHN_TYPE  Type,
-    IN  PKSERVICE_ROUTINE   Function,
-    IN  PVOID               Argument OPTIONAL,
+    _In_ PINTERFACE         Interface,
+    _In_ XENBUS_EVTCHN_TYPE Type,
+    _In_ PKSERVICE_ROUTINE  Function,
+    _In_opt_ PVOID          Argument,
     ...
     );
 
@@ -125,17 +125,17 @@ typedef PXENBUS_EVTCHN_CHANNEL
 */
 typedef NTSTATUS
 (*XENBUS_EVTCHN_BIND)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel,
-    IN  USHORT                  Group,
-    IN  UCHAR                   Number
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel,
+    _In_ USHORT                 Group,
+    _In_ UCHAR                  Number
     );
 
 typedef VOID
 (*XENBUS_EVTCHN_UNMASK_V4)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel,
-    IN  BOOLEAN                 InCallback
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel,
+    _In_ BOOLEAN                InCallback
     );
 
 /*! \typedef XENBUS_EVTCHN_UNMASK
@@ -148,16 +148,16 @@ typedef VOID
 */
 typedef BOOLEAN
 (*XENBUS_EVTCHN_UNMASK)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel,
-    IN  BOOLEAN                 InCallback,
-    IN  BOOLEAN                 Force
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel,
+    _In_ BOOLEAN                InCallback,
+    _In_ BOOLEAN                Force
     );
 
 typedef VOID
 (*XENBUS_EVTCHN_SEND_V1)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel
     );
 
 /*! \typedef XENBUS_EVTCHN_SEND
@@ -171,8 +171,8 @@ typedef VOID
 */
 typedef VOID
 (*XENBUS_EVTCHN_SEND)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel
     );
 
 /*! \typedef XENBUS_EVTCHN_TRIGGER
@@ -183,8 +183,8 @@ typedef VOID
 */
 typedef VOID
 (*XENBUS_EVTCHN_TRIGGER)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel
     );
 
 /*! \typedef XENBUS_EVTCHN_GET_COUNT
@@ -196,15 +196,15 @@ typedef VOID
 */
 typedef ULONG
 (*XENBUS_EVTCHN_GET_COUNT)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel
     );
 
 typedef NTSTATUS
 (*XENBUS_EVTCHN_WAIT_V5)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel,
-    IN  PLARGE_INTEGER          Timeout OPTIONAL
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel,
+    _In_opt_ PLARGE_INTEGER     Timeout
     );
 
 /*! \typedef XENBUS_EVTCHN_WAIT
@@ -217,10 +217,10 @@ typedef NTSTATUS
 */
 typedef NTSTATUS
 (*XENBUS_EVTCHN_WAIT)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel,
-    IN  ULONG                   Count,
-    IN  PLARGE_INTEGER          Timeout OPTIONAL
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel,
+    _In_ ULONG                  Count,
+    _In_opt_ PLARGE_INTEGER     Timeout
     );
 
 /*! \typedef XENBUS_EVTCHN_GET_PORT
@@ -232,8 +232,8 @@ typedef NTSTATUS
 */
 typedef ULONG
 (*XENBUS_EVTCHN_GET_PORT)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel
     );
 
 /*! \typedef XENBUS_EVTCHN_CLOSE
@@ -244,8 +244,8 @@ typedef ULONG
 */
 typedef VOID
 (*XENBUS_EVTCHN_CLOSE)(
-    IN  PINTERFACE              Interface,
-    IN  PXENBUS_EVTCHN_CHANNEL  Channel
+    _In_ PINTERFACE             Interface,
+    _In_ PXENBUS_EVTCHN_CHANNEL Channel
     );
 
 // {BE2440AC-1098-4150-AF4D-452FADCEF923}

@@ -43,8 +43,8 @@
 static FORCEINLINE
 BOOLEAN
 __IsValidPath(
-    __in  PCHAR             Str,
-    __in  ULONG             Len
+    _In_ PCHAR  Str,
+    _In_ ULONG  Len
     )
 {
     for ( ; Len--; ++Str) {
@@ -62,8 +62,8 @@ __IsValidPath(
 static FORCEINLINE
 BOOLEAN
 __IsValidStr(
-    __in  PCHAR             Str,
-    __in  ULONG             Len
+    _In_ PCHAR  Str,
+    _In_ ULONG  Len
     )
 {
     for ( ; Len--; ++Str) {
@@ -78,11 +78,11 @@ __IsValidStr(
 static FORCEINLINE
 ULONG
 __MultiSzLen(
-    __in  PCHAR             Str,
-    __out PULONG            Count
+    _In_ PCHAR      Str,
+    _Out_ PULONG    Count
     )
 {
-    ULONG Length = 0;
+    ULONG           Length = 0;
     if (Count)  *Count = 0;
     do {
         for ( ; *Str; ++Str, ++Length) ;
@@ -95,12 +95,12 @@ __MultiSzLen(
 static FORCEINLINE
 VOID
 __DisplayMultiSz(
-    __in PCHAR              Str
+    _In_ PCHAR  Str
     )
 {
-    PCHAR   Ptr;
-    ULONG   Idx;
-    ULONG   Len;
+    PCHAR       Ptr;
+    ULONG       Idx;
+    ULONG       Len;
 
     for (Ptr = Str, Idx = 0; *Ptr; ++Idx) {
         Len = (ULONG)strlen(Ptr);
@@ -112,17 +112,17 @@ __DisplayMultiSz(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRead(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     )
 {
-    NTSTATUS    status;
-    PCHAR       Value;
-    ULONG       Length;
-    BOOLEAN     SquashError = FALSE;
+    NTSTATUS            status;
+    PCHAR               Value;
+    ULONG               Length;
+    BOOLEAN             SquashError = FALSE;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0)
@@ -182,15 +182,15 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreWrite(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     )
 {
-    NTSTATUS    status;
-    PCHAR       Value;
-    ULONG       Length;
+    NTSTATUS            status;
+    PCHAR               Value;
+    ULONG               Length;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0 || OutLen != 0)
@@ -227,18 +227,18 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreDirectory(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen,
+    _Out_ PULONG_PTR    Info
     )
 {
-    NTSTATUS    status;
-    PCHAR       Value;
-    ULONG       Length;
-    ULONG       Count;
-    BOOLEAN     SquashError = FALSE;
+    NTSTATUS            status;
+    PCHAR               Value;
+    ULONG               Length;
+    ULONG               Count;
+    BOOLEAN             SquashError = FALSE;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0)
@@ -301,13 +301,13 @@ fail1:
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRemove(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PCHAR             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO  Fdo,
+    _In_ PCHAR          Buffer,
+    _In_ ULONG          InLen,
+    _In_ ULONG          OutLen
     )
 {
-    NTSTATUS    status;
+    NTSTATUS            status;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen == 0 || OutLen != 0)
@@ -336,12 +336,12 @@ fail1:
 static
 PXENBUS_STORE_PERMISSION
 __ConvertPermissions(
-    __in  ULONG                       NumberPermissions,
-    __in  PXENIFACE_STORE_PERMISSION  XenifacePermissions
+    _In_ ULONG                      NumberPermissions,
+    _In_ PXENIFACE_STORE_PERMISSION XenifacePermissions
     )
 {
-    PXENBUS_STORE_PERMISSION          XenbusPermissions;
-    ULONG                             Index;
+    PXENBUS_STORE_PERMISSION        XenbusPermissions;
+    ULONG                           Index;
 
     if (NumberPermissions > 255)
         goto fail1;
@@ -390,7 +390,7 @@ fail1:
 static
 VOID
 __FreePermissions(
-    __in  PXENBUS_STORE_PERMISSION    Permissions
+    _In_ PXENBUS_STORE_PERMISSION   Permissions
     )
 {
     __FreePoolWithTag(Permissions, XENIFACE_POOL_TAG);
@@ -399,17 +399,17 @@ __FreePermissions(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreSetPermissions(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen
+    _In_ PXENIFACE_FDO                  Fdo,
+    _In_ PVOID                          Buffer,
+    _In_ ULONG                          InLen,
+    _In_ ULONG                          OutLen
     )
 {
-    NTSTATUS status;
-    PXENIFACE_STORE_SET_PERMISSIONS_IN In = Buffer;
-    PXENBUS_STORE_PERMISSION Permissions;
-    ULONG Index;
-    PCHAR Path;
+    NTSTATUS                            status;
+    PXENIFACE_STORE_SET_PERMISSIONS_IN  In = Buffer;
+    PXENBUS_STORE_PERMISSION            Permissions;
+    ULONG                               Index;
+    PCHAR                               Path;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen < sizeof(XENIFACE_STORE_SET_PERMISSIONS_IN) ||
@@ -490,8 +490,8 @@ fail1:
 
 static NTSTATUS
 StoreWatch(
-    IN  PXENIFACE_THREAD    Self,
-    IN  PVOID               _Context
+    _In_ PXENIFACE_THREAD   Self,
+    _In_ PVOID              _Context
     )
 {
     PXENIFACE_STORE_CONTEXT Context = _Context;
@@ -521,19 +521,19 @@ StoreWatch(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreAddWatch(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject,
-    __out PULONG_PTR        Info
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PVOID                      Buffer,
+    _In_ ULONG                      InLen,
+    _In_ ULONG                      OutLen,
+    _In_ PFILE_OBJECT               FileObject,
+    _Out_ PULONG_PTR                Info
     )
 {
-    NTSTATUS status;
-    PXENIFACE_STORE_ADD_WATCH_IN In = Buffer;
-    PXENIFACE_STORE_ADD_WATCH_OUT Out = Buffer;
-    PCHAR Path;
-    PXENIFACE_STORE_CONTEXT Context;
+    NTSTATUS                        status;
+    PXENIFACE_STORE_ADD_WATCH_IN    In = Buffer;
+    PXENIFACE_STORE_ADD_WATCH_OUT   Out = Buffer;
+    PCHAR                           Path;
+    PXENIFACE_STORE_CONTEXT         Context;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_STORE_ADD_WATCH_IN) ||
@@ -638,11 +638,11 @@ fail1:
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 StoreFreeWatch(
-    __in     PXENIFACE_FDO Fdo,
-    __inout  PXENIFACE_STORE_CONTEXT Context
+    _In_ PXENIFACE_FDO              Fdo,
+    _Inout_ PXENIFACE_STORE_CONTEXT Context
     )
 {
-    NTSTATUS status;
+    NTSTATUS                        status;
 
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
@@ -668,18 +668,18 @@ StoreFreeWatch(
 DECLSPEC_NOINLINE
 NTSTATUS
 IoctlStoreRemoveWatch(
-    __in  PXENIFACE_FDO     Fdo,
-    __in  PVOID             Buffer,
-    __in  ULONG             InLen,
-    __in  ULONG             OutLen,
-    __in  PFILE_OBJECT      FileObject
+    _In_ PXENIFACE_FDO              Fdo,
+    _In_ PVOID                      Buffer,
+    _In_ ULONG                      InLen,
+    _In_ ULONG                      OutLen,
+    _In_ PFILE_OBJECT               FileObject
     )
 {
-    NTSTATUS status;
+    NTSTATUS                        status;
     PXENIFACE_STORE_REMOVE_WATCH_IN In = Buffer;
-    PXENIFACE_STORE_CONTEXT Context = NULL;
-    KIRQL Irql;
-    PLIST_ENTRY Node;
+    PXENIFACE_STORE_CONTEXT         Context = NULL;
+    KIRQL                           Irql;
+    PLIST_ENTRY                     Node;
 
     status = STATUS_INVALID_BUFFER_SIZE;
     if (InLen != sizeof(XENIFACE_STORE_REMOVE_WATCH_IN) ||
