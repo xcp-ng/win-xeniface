@@ -246,8 +246,8 @@ typedef NTSTATUS
 */  
 typedef NTSTATUS
 (*XENBUS_STORE_WATCH_REMOVE)(
-    _In_ PINTERFACE             Interface,
-    _In_ PXENBUS_STORE_WATCH    Watch
+    _In_ PINTERFACE                 Interface,
+    _In_opt_ PXENBUS_STORE_WATCH    Watch
     );
 
 /*! \typedef XENBUS_STORE_POLL
