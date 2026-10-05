@@ -530,7 +530,7 @@ __FdoFreeAnsi(
 static FORCEINLINE BOOLEAN
 __FdoMatchDistribution(
     _In_ PXENIFACE_FDO  Fdo,
-    _In_ PCHAR          Buffer
+    _Inout_ PCHAR       Buffer
     )
 {
     PCHAR               Vendor;

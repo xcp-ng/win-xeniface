@@ -108,8 +108,8 @@ __CpuId(
 
 static FORCEINLINE LONG
 __InterlockedAdd(
-    _In_ LONG   *Value,
-    _In_ LONG   Delta
+    _Inout_ LONG    *Value,
+    _In_ LONG       Delta
     )
 {
     LONG        New;
@@ -125,8 +125,8 @@ __InterlockedAdd(
 
 static FORCEINLINE LONG
 __InterlockedSubtract(
-    _In_ LONG   *Value,
-    _In_ LONG   Delta
+    _Inout_ LONG    *Value,
+    _In_ LONG       Delta
     )
 {
     LONG        New;
@@ -277,15 +277,15 @@ __FreePages(
 
 static FORCEINLINE PSTR
 __strtok_r(
-    _In_opt_ PSTR   Buffer,
-    _In_ PSTR       Delimiter,
+    _Inout_opt_ PSTR    Buffer,
+    _In_ PSTR           Delimiter,
     _When_(Buffer != NULL, _Outptr_)
     _When_(Buffer == NULL, _Inout_)
-    PSTR            *Context
+    PSTR                *Context
     )
 {
-    PSTR            Token;
-    PSTR            End;
+    PSTR                Token;
+    PSTR                End;
 
     if (Buffer != NULL)
         *Context = Buffer;
@@ -317,15 +317,15 @@ __strtok_r(
 
 static FORCEINLINE PWSTR
 __wcstok_r(
-    _In_opt_ PWSTR  Buffer,
-    _In_ PWSTR      Delimiter,
+    _In_opt_ PWSTR      Buffer,
+    _In_ PWSTR          Delimiter,
     _When_(Buffer != NULL, _Outptr_)
     _When_(Buffer == NULL, _Inout_)
-    PWSTR           *Context
+    PWSTR               *Context
     )
 {
-    PWSTR           Token;
-    PWSTR           End;
+    PWSTR               Token;
+    PWSTR               End;
 
     if (Buffer != NULL)
         *Context = Buffer;
