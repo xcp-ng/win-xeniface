@@ -38,12 +38,12 @@
 
 #include "assert.h"
 
-#define	P2ROUNDUP(_x, _a)   \
-        (-(-(_x) & -(_a)))
+#define	P2ROUNDUP(_t, _x, _a)   \
+        (-(-((_t)(_x)) & -(((_t)(_a)))))
 
 static FORCEINLINE LONG
 __ffs(
-    IN  unsigned long long  mask
+    _In_ unsigned long long mask
     )
 {
     unsigned char           *array = (unsigned char *)&mask;
@@ -82,11 +82,11 @@ __ffs(
 
 static FORCEINLINE VOID
 __CpuId(
-    IN  ULONG   Leaf,
-    OUT PULONG  EAX OPTIONAL,
-    OUT PULONG  EBX OPTIONAL,
-    OUT PULONG  ECX OPTIONAL,
-    OUT PULONG  EDX OPTIONAL
+    _In_ ULONG          Leaf,
+    _Out_opt_ PULONG    EAX,
+    _Out_opt_ PULONG    EBX,
+    _Out_opt_ PULONG    ECX,
+    _Out_opt_ PULONG    EDX
     )
 {
     int         Value[4] = {0};
@@ -108,8 +108,8 @@ __CpuId(
 
 static FORCEINLINE LONG
 __InterlockedAdd(
-    IN  LONG    *Value,
-    IN  LONG    Delta
+    _In_ LONG   *Value,
+    _In_ LONG   Delta
     )
 {
     LONG        New;
@@ -125,8 +125,8 @@ __InterlockedAdd(
 
 static FORCEINLINE LONG
 __InterlockedSubtract(
-    IN  LONG    *Value,
-    IN  LONG    Delta
+    _In_ LONG   *Value,
+    _In_ LONG   Delta
     )
 {
     LONG        New;
@@ -140,23 +140,24 @@ __InterlockedSubtract(
     return New;
 }
 
-__checkReturn
+_Check_return_
 static FORCEINLINE PVOID
 __AllocatePoolWithTag(
-    IN  POOL_TYPE   PoolType,
-    IN  SIZE_T      NumberOfBytes,
-    IN  ULONG       Tag
+    _In_ POOL_TYPE  PoolType,
+    _In_ SIZE_T     NumberOfBytes,
+    _In_ ULONG      Tag
     )
 {
     PUCHAR          Buffer;
 
-    __analysis_assume(PoolType == NonPagedPool ||
+    _Analysis_assume_(PoolType == NonPagedPool ||
                       PoolType == PagedPool);
 
     if (NumberOfBytes == 0)
         return NULL;
 
 #if (_MSC_VER >= 1928) // VS 16.9 (EWDK 20344 or later)
+#pragma warning(suppress:28160) // annotation error
     Buffer = ExAllocatePoolUninitialized(PoolType, NumberOfBytes, Tag);
 #else
 #pragma warning(suppress:28160) // annotation error
@@ -171,8 +172,8 @@ __AllocatePoolWithTag(
 
 static FORCEINLINE VOID
 __FreePoolWithTag(
-    IN  PVOID   Buffer,
-    IN  ULONG   Tag
+    _In_ PVOID  Buffer,
+    _In_ ULONG  Tag
     )
 {
     ExFreePoolWithTag(Buffer, Tag);
@@ -180,28 +181,37 @@ __FreePoolWithTag(
 
 static FORCEINLINE PMDL
 __AllocatePages(
-    IN  ULONG           Count
+    _In_ ULONG          Count,
+    _In_ BOOLEAN        Contiguous
     )
 {
     PHYSICAL_ADDRESS    LowAddress;
     PHYSICAL_ADDRESS    HighAddress;
     LARGE_INTEGER       SkipBytes;
     SIZE_T              TotalBytes;
+    ULONG               Flags;
     PMDL                Mdl;
     PUCHAR              MdlMappedSystemVa;
     NTSTATUS            status;
 
     LowAddress.QuadPart = 0ull;
     HighAddress.QuadPart = ~0ull;
-    SkipBytes.QuadPart = 0ull;
     TotalBytes = (SIZE_T)PAGE_SIZE * Count;
+
+    if (Contiguous) {
+        SkipBytes.QuadPart = TotalBytes;
+        Flags = MM_ALLOCATE_REQUIRE_CONTIGUOUS_CHUNKS;
+    } else {
+        SkipBytes.QuadPart = 0ull;
+        Flags = MM_ALLOCATE_FULLY_REQUIRED;
+    }
 
     Mdl = MmAllocatePagesForMdlEx(LowAddress,
                                   HighAddress,
                                   SkipBytes,
                                   TotalBytes,
                                   MmCached,
-                                  MM_ALLOCATE_FULLY_REQUIRED);
+                                  Flags);
 
     status = STATUS_NO_MEMORY;
     if (Mdl == NULL)
@@ -245,11 +255,11 @@ fail1:
     return NULL;
 }
 
-#define __AllocatePage()    __AllocatePages(1)
+#define __AllocatePage()    __AllocatePages(1, FALSE)
 
 static FORCEINLINE VOID
 __FreePages(
-    IN	PMDL	Mdl
+    _In_ PMDL   Mdl
     )
 {
     PUCHAR	MdlMappedSystemVa;
@@ -265,15 +275,17 @@ __FreePages(
 
 #define __FreePage(_Mdl)    __FreePages(_Mdl)
 
-static FORCEINLINE PCHAR
+static FORCEINLINE PSTR
 __strtok_r(
-    IN      PCHAR   Buffer,
-    IN      PCHAR   Delimiter,
-    IN OUT  PCHAR   *Context
+    _In_opt_ PSTR   Buffer,
+    _In_ PSTR       Delimiter,
+    _When_(Buffer != NULL, _Outptr_)
+    _When_(Buffer == NULL, _Inout_)
+    PSTR            *Context
     )
 {
-    PCHAR           Token;
-    PCHAR           End;
+    PSTR            Token;
+    PSTR            End;
 
     if (Buffer != NULL)
         *Context = Buffer;
@@ -303,15 +315,17 @@ __strtok_r(
     return Token;
 }
 
-static FORCEINLINE PWCHAR
+static FORCEINLINE PWSTR
 __wcstok_r(
-    IN      PWCHAR  Buffer,
-    IN      PWCHAR  Delimiter,
-    IN OUT  PWCHAR  *Context
+    _In_opt_ PWSTR  Buffer,
+    _In_ PWSTR      Delimiter,
+    _When_(Buffer != NULL, _Outptr_)
+    _When_(Buffer == NULL, _Inout_)
+    PWSTR           *Context
     )
 {
-    PWCHAR          Token;
-    PWCHAR          End;
+    PWSTR           Token;
+    PWSTR           End;
 
     if (Buffer != NULL)
         *Context = Buffer;
@@ -343,7 +357,7 @@ __wcstok_r(
 
 static FORCEINLINE CHAR
 __toupper(
-    IN  CHAR    Character
+    _In_ CHAR   Character
     )
 {
     if (Character < 'a' || Character > 'z')
@@ -354,7 +368,7 @@ __toupper(
 
 static FORCEINLINE CHAR
 __tolower(
-    IN  CHAR    Character
+    _In_ CHAR   Character
     )
 {
     if (Character < 'A' || Character > 'Z')
