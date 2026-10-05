@@ -85,16 +85,16 @@ XcSetLogLevel(
 
 DWORD
 XcOpen(
-    _In_ XENCONTROL_LOGGER          *Logger,
-    _Outptr_ PXENCONTROL_CONTEXT    *Xc
+    _In_ XENCONTROL_LOGGER                          *Logger,
+    _Outptr_result_maybenull_ PXENCONTROL_CONTEXT   *Xc
     )
 {
-    HDEVINFO                        DevInfo;
-    SP_DEVICE_INTERFACE_DATA        InterfaceData;
-    SP_DEVICE_INTERFACE_DETAIL_DATA *DetailData = NULL;
-    DWORD                           BufferSize;
-    PXENCONTROL_CONTEXT             Context;
-    DWORD                           Status = ERROR_OUTOFMEMORY;
+    HDEVINFO                                        DevInfo;
+    SP_DEVICE_INTERFACE_DATA                        InterfaceData;
+    SP_DEVICE_INTERFACE_DETAIL_DATA                 *DetailData = NULL;
+    DWORD                                           BufferSize;
+    PXENCONTROL_CONTEXT                             Context;
+    DWORD                                           Status = ERROR_OUTOFMEMORY;
 
     Context = malloc(sizeof(*Context));
     if (Context == NULL)
@@ -185,6 +185,7 @@ XcClose(
     free(Xc);
 }
 
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcEvtchnOpenUnbound(
     _In_ PXENCONTROL_CONTEXT            Xc,
@@ -225,6 +226,7 @@ end:
     return Status;
 }
 
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcEvtchnBindInterdomain(
     _In_ PXENCONTROL_CONTEXT                Xc,
@@ -381,11 +383,12 @@ XcGnttabPermitForeignAccess(
                                         References);
 }
 
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcGnttabPermitForeignAccess2(
     _In_ PXENCONTROL_CONTEXT                        Xc,
     _In_ USHORT                                     RemoteDomain,
-    _In_ PVOID                                      Address,
+    _In_opt_ PVOID                                  Address,
     _In_ ULONG                                      NumberPages,
     _In_ ULONG                                      NotifyOffset,
     _In_ ULONG                                      NotifyPort,
@@ -482,6 +485,7 @@ XcGnttabRevokeForeignAccess(
     return Status;
 }
 
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcGnttabMapForeignPages(
     _In_ PXENCONTROL_CONTEXT                    Xc,
@@ -761,6 +765,7 @@ end:
     return Status;
 }
 
+_Success_(return == ERROR_SUCCESS)
 DWORD
 XcStoreAddWatch(
     _In_ PXENCONTROL_CONTEXT        Xc,
