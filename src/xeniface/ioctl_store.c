@@ -87,7 +87,7 @@ __MultiSzLen(
     do {
         for ( ; *Str; ++Str, ++Length) ;
         ++Str; ++Length;
-        if (*Count) ++(*Count);
+        if (Count) ++(*Count);
     } while (*Str);
     return Length;
 }
