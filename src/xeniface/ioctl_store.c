@@ -654,6 +654,9 @@ StoreFreeWatch(
                           Context->Watch);
 
     ASSERT(NT_SUCCESS(status)); // this is fatal since we'd leave an active watch without cleaning it up
+    if (!NT_SUCCESS(status))
+        Error("WatchRemove failed 0x%x: watch %p may fire on freed context %p\n",
+              status, Context->Watch, Context);
 
     ThreadAlert(Context->Thread);
     ThreadJoin(Context->Thread);
