@@ -82,15 +82,10 @@ EvtchnInterruptHandler(
     )
 {
     PXENIFACE_EVTCHN_CONTEXT    Context = Argument;
-    PROCESSOR_NUMBER            ProcNumber;
-    ULONG                       ProcIndex;
 
     UNREFERENCED_PARAMETER(Interrupt);
 
     ASSERT(Context != NULL);
-
-    (VOID) KeGetCurrentProcessorNumberEx(&ProcNumber);
-    ProcIndex = KeGetProcessorIndexFromNumber(&ProcNumber);
 
     (VOID) KeInsertQueueDpc(&Context->Dpc, NULL, NULL);
 
