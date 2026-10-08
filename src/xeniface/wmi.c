@@ -1218,7 +1218,8 @@ SessionCreate(
     if (!NT_SUCCESS(status))
         goto fail6;
 
-    ObReferenceObjectByHandle(hthread, THREAD_ALL_ACCESS, NULL, KernelMode,  &Session->WatchThread, NULL);
+    ObReferenceObjectByHandle(hthread, THREAD_ALL_ACCESS, NULL, KernelMode, &Session->WatchThread, NULL);
+    ZwClose(hthread);
     ReleaseMutex(&Fdo->SessionLock);
 
     RtlFreeAnsiString(&ansi);
