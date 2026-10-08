@@ -351,7 +351,7 @@ IoctlGnttabPermitForeignAccess(
 
         In->RemoteDomain = In1->RemoteDomain;
         In->Address = NULL;
-        In->NumberPages = In->NumberPages;
+        In->NumberPages = In1->NumberPages;
         In->Flags = In1->Flags;
         In->NotifyOffset = In1->NotifyOffset;
         In->NotifyPort = In1->NotifyPort;
