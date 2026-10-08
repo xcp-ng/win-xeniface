@@ -2553,7 +2553,7 @@ fail10:
                   sizeof (XENBUS_SHARED_INFO_INTERFACE));
 
 fail9:
-    Error("fail8\n");
+    Error("fail9\n");
 
     RtlZeroMemory(&Fdo->SuspendInterface,
                   sizeof (XENBUS_SUSPEND_INTERFACE));
