@@ -89,7 +89,7 @@ XcOpen(
     _Outptr_result_maybenull_ PXENCONTROL_CONTEXT   *Xc
     )
 {
-    HDEVINFO                                        DevInfo;
+    HDEVINFO                                        DevInfo = INVALID_HANDLE_VALUE;
     SP_DEVICE_INTERFACE_DATA                        InterfaceData;
     SP_DEVICE_INTERFACE_DETAIL_DATA                 *DetailData = NULL;
     DWORD                                           BufferSize;
@@ -167,6 +167,9 @@ XcOpen(
 
 end:
     free(DetailData);
+
+    if (DevInfo != INVALID_HANDLE_VALUE)
+        SetupDiDestroyDeviceInfoList(DevInfo);
 
     if (Status != ERROR_SUCCESS) {
         free(Context);
