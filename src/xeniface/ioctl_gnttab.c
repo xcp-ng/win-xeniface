@@ -490,7 +490,17 @@ GnttabFreeGrant(
     ASSERT(KeGetCurrentIrql() <= APC_LEVEL);
 
     if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) {
-        ((PCHAR)Context->KernelVa)[Context->NotifyOffset] = 0;
+        if (Context->KernelVa != NULL) {
+            ((PCHAR)Context->KernelVa)[Context->NotifyOffset] = 0;
+        } else {
+#pragma prefast(suppress:6320)
+            try {
+                ((PCHAR)Context->UserVa)[Context->NotifyOffset] = 0;
+            } except(EXCEPTION_EXECUTE_HANDLER) {
+                Error("Failed to write notify offset 0x%x: 0x%x\n",
+                      Context->NotifyOffset, GetExceptionCode());
+            }
+        }
     }
 
     if (Context->Flags & XENIFACE_GNTTAB_USE_NOTIFY_PORT) {
