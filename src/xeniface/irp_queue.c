@@ -157,15 +157,12 @@ CsqCompleteCanceledIrp(
     _In_ PIRP       Irp
     )
 {
-    PXENIFACE_FDO   Fdo = CONTAINING_RECORD(Csq, XENIFACE_FDO, IrpQueue);
+    UNREFERENCED_PARAMETER(Csq);
     PIO_WORKITEM    WorkItem;
 
     Trace("Irp %p, IRQL %d\n", Irp, KeGetCurrentIrql());
 
-    // This is not guaranteed to run at PASSIVE_LEVEL, so queue a work item
-    // to perform actual cleanup/IRP completion.
-
-    WorkItem = IoAllocateWorkItem(Fdo->Dx->DeviceObject);
-    Irp->Tail.Overlay.DriverContext[1] = WorkItem; // store so the work item can free it
+    // Work item was pre-allocated at IRP insertion time (PASSIVE_LEVEL).
+    WorkItem = Irp->Tail.Overlay.DriverContext[1];
     IoQueueWorkItem(WorkItem, CompleteGnttabIrp, DelayedWorkQueue, Irp);
 }

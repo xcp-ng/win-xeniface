@@ -430,12 +430,24 @@ IoctlGnttabPermitForeignAccess(
 
     // Insert the IRP/context into the pending queue.
     // This also checks (again) if the request ID/address is unique for the calling process.
+    // Pre-allocate the cancel work item now (PASSIVE_LEVEL) so CsqCompleteCanceledIrp
+    // doesn't need to allocate at DISPATCH_LEVEL.
     Irp->Tail.Overlay.DriverContext[0] = Context;
-    Status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, Context);
-    if (!NT_SUCCESS(Status))
+    Irp->Tail.Overlay.DriverContext[1] = IoAllocateWorkItem(Fdo->Dx->DeviceObject);
+
+    Status = STATUS_INSUFFICIENT_RESOURCES;
+    if (Irp->Tail.Overlay.DriverContext[1] == NULL)
         goto fail10;
 
+    Status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, Context);
+    if (!NT_SUCCESS(Status))
+        goto fail11;
+
     return STATUS_PENDING;
+
+fail11:
+    Error("Fail11\n");
+    IoFreeWorkItem(Irp->Tail.Overlay.DriverContext[1]);
 
 fail10:
     Error("Fail10\n");
@@ -562,6 +574,7 @@ IoctlGnttabRevokeForeignAccess(
 
     Context = PendingIrp->Tail.Overlay.DriverContext[0];
     GnttabFreeGrant(Fdo, Context);
+    IoFreeWorkItem(PendingIrp->Tail.Overlay.DriverContext[1]);
 
     PendingIrp->IoStatus.Status = STATUS_SUCCESS;
     PendingIrp->IoStatus.Information = 0;
@@ -743,14 +756,26 @@ IoctlGnttabMapForeignPages(
 
     // Insert the IRP/context into the pending queue.
     // This also checks (again) if the request ID is unique for the calling process.
+    // Pre-allocate the cancel work item now (PASSIVE_LEVEL) so CsqCompleteCanceledIrp
+    // doesn't need to allocate at DISPATCH_LEVEL.
     Irp->Tail.Overlay.DriverContext[0] = Context;
+    Irp->Tail.Overlay.DriverContext[1] = IoAllocateWorkItem(Fdo->Dx->DeviceObject);
+
+    status = STATUS_INSUFFICIENT_RESOURCES;
+    if (Irp->Tail.Overlay.DriverContext[1] == NULL)
+        goto fail14;
+
     status = IoCsqInsertIrpEx(&Fdo->IrpQueue, Irp, NULL, Context);
     if (!NT_SUCCESS(status))
-        goto fail14;
+        goto fail15;
 
     __FreeCapturedBuffer(In);
 
     return STATUS_PENDING;
+
+fail15:
+    Error("Fail15\n");
+    IoFreeWorkItem(Irp->Tail.Overlay.DriverContext[1]);
 
 fail14:
     Error("Fail14\n");
@@ -908,6 +933,7 @@ IoctlGnttabUnmapForeignPages(
 
     Context = PendingIrp->Tail.Overlay.DriverContext[0];
     GnttabFreeMap(Fdo, Context);
+    IoFreeWorkItem(PendingIrp->Tail.Overlay.DriverContext[1]);
 
     PendingIrp->IoStatus.Status = STATUS_SUCCESS;
     PendingIrp->IoStatus.Information = 0;
