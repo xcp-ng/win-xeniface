@@ -49,6 +49,7 @@ CompleteGnttabIrp(
     PIRP                        Irp = Context;
     PXENIFACE_GNTTAB_CONTEXT    GnttabContext;
     PIO_WORKITEM                WorkItem;
+    PEPROCESS                   Process;
     KAPC_STATE                  ApcState;
     BOOLEAN                     ChangeProcess;
 
@@ -56,13 +57,17 @@ CompleteGnttabIrp(
 
     GnttabContext = Irp->Tail.Overlay.DriverContext[0];
     WorkItem = Irp->Tail.Overlay.DriverContext[1];
+    Process = GnttabContext->Process;
+
+    // The context is freed before we detach, so hold another process reference.
+    ObReferenceObject(Process);
 
     // We are not guaranteed to be in the context of the process that initiated the IRP,
     // but we need to be there to unmap memory.
-    ChangeProcess = PsGetCurrentProcess() != GnttabContext->Process;
+    ChangeProcess = PsGetCurrentProcess() != Process;
     if (ChangeProcess) {
-        Trace("Changing process from %p to %p\n", PsGetCurrentProcess(), GnttabContext->Process);
-        KeStackAttachProcess(GnttabContext->Process, &ApcState);
+        Trace("Changing process from %p to %p\n", PsGetCurrentProcess(), Process);
+        KeStackAttachProcess(Process, &ApcState);
     }
 
     Trace("Irp %p, Process %p, Id %lu, Type %d, IRQL %d\n",
@@ -85,6 +90,7 @@ CompleteGnttabIrp(
     if (ChangeProcess)
         KeUnstackDetachProcess(&ApcState);
 
+    ObDereferenceObject(Process);
     IoFreeWorkItem(WorkItem);
 
     Irp->IoStatus.Status = STATUS_CANCELLED;
@@ -376,6 +382,7 @@ IoctlGnttabPermitForeignAccess(
 
     Context->Type = XENIFACE_GNTTAB_CONTEXT_GRANT;
     Context->Process = PsGetCurrentProcess();
+    ObReferenceObject(Context->Process);
     Context->RemoteDomain = In->RemoteDomain;
     Context->UserVa = In->Address;
     Context->NumberPages = In->NumberPages;
@@ -439,6 +446,7 @@ fail9:
 
 fail8:
     Error("Fail8\n");
+    ObDereferenceObject(Context->Process);
     RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
@@ -494,6 +502,7 @@ GnttabFreeGrant(
 
     GnttabStopSharing(Fdo, Context, Context->NumberPages);
 
+    ObDereferenceObject(Context->Process);
     RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
@@ -586,6 +595,7 @@ IoctlGnttabMapForeignPages(
 
     Context->Type = XENIFACE_GNTTAB_CONTEXT_MAP;
     Context->Process = PsGetCurrentProcess();
+    ObReferenceObject(Context->Process);
 
     // This IOCTL uses METHOD_NEITHER so we directly access user memory.
     if (ControlCode == IOCTL_XENIFACE_GNTTAB_MAP_FOREIGN_PAGES) {
@@ -779,6 +789,7 @@ fail3:
 
 fail2:
     Error("Fail2\n");
+    ObDereferenceObject(Context->Process);
     RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 
@@ -830,6 +841,7 @@ GnttabFreeMap(
             Error("failed to notify port %lu: 0x%x\n", Context->NotifyPort, status);
     }
 
+    ObDereferenceObject(Context->Process);
     RtlZeroMemory(Context, sizeof(*Context));
     __FreePoolWithTag(Context, XENIFACE_POOL_TAG);
 }
