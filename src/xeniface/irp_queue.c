@@ -98,9 +98,12 @@ CsqPeekNextIrp(
         if (PeekContext) {
             Context = NextIrp->Tail.Overlay.DriverContext[0];
 
-            BOOL Match = TargetContext->Type == Context->Type;
+            BOOL Match = TargetContext->Type == Context->Type &&
+                         TargetContext->Process == Context->Process;
             if (TargetContext->UseRequestId)
-                Match = Match && (TargetContext->RequestId == Context->RequestId);
+                Match = Match &&
+                        TargetContext->UseRequestId == Context->UseRequestId &&
+                        TargetContext->RequestId == Context->RequestId;
             else
                 Match = Match && (TargetContext->UserVa == Context->UserVa);
 
