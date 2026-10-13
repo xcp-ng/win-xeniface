@@ -602,8 +602,6 @@ IoctlStoreAddWatch(
     return status;
 
 fail8:
-    __FreeCapturedBuffer(Context->Path);
-
     Error("Fail8\n");
     ThreadAlert(Context->Thread);
     ThreadJoin(Context->Thread);
