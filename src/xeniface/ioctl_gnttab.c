@@ -358,6 +358,7 @@ IoctlGnttabPermitForeignAccess(
     PXENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT Out = Irp->UserBuffer;
     PXENIFACE_GNTTAB_CONTEXT Context;
     ULONG Page;
+    ULONG OutputSize;
     ULONG ControlCode = IoGetCurrentIrpStackLocation(Irp)->Parameters.DeviceIoControl.IoControlCode;
 
     Status = STATUS_INVALID_BUFFER_SIZE;
@@ -400,7 +401,9 @@ IoctlGnttabPermitForeignAccess(
     }
 
     Status = STATUS_INVALID_BUFFER_SIZE;
-    if (OutLen != (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT, References[In->NumberPages]))
+    OutputSize = (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_PERMIT_FOREIGN_ACCESS_OUT, References)
+        + In->NumberPages * sizeof(ULONG);
+    if (OutLen < OutputSize)
         goto fail6;
 
     Status = STATUS_NO_MEMORY;
@@ -442,7 +445,7 @@ IoctlGnttabPermitForeignAccess(
     // Pass the result to user mode.
 #pragma prefast(suppress: 6320) // we want to catch all exceptions
     try {
-        ProbeForWrite(Out, OutLen, 1);
+        ProbeForWrite(Out, OutputSize, 1);
         Out->Address = Context->UserVa;
 
         for (Page = 0; Page < Context->NumberPages; Page++) {
@@ -452,7 +455,7 @@ IoctlGnttabPermitForeignAccess(
         }
     } except(EXCEPTION_EXECUTE_HANDLER) {
         Status = GetExceptionCode();
-        Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", Status, Out, OutLen);
+        Error("Exception 0x%lx while probing/writing output buffer at %p, size 0x%lx\n", Status, Out, OutputSize);
         goto fail9;
     }
 
@@ -633,7 +636,7 @@ IoctlGnttabMapForeignPages(
     PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2    In = NULL;
     // XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT_V2 is the same as XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT
     PXENIFACE_GNTTAB_MAP_FOREIGN_PAGES_OUT Out = Irp->UserBuffer;
-    ULONG NumberPages;
+    ULONG ReferenceSize;
     PXENIFACE_GNTTAB_CONTEXT Context;
     ULONG ControlCode = IoGetCurrentIrpStackLocation(Irp)->Parameters.DeviceIoControl.IoControlCode;
 
@@ -656,26 +659,30 @@ IoctlGnttabMapForeignPages(
             goto fail2;
 
         In1 = Buffer;
-        NumberPages = (InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References)) / sizeof(ULONG);
+        ReferenceSize = InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References);
+        if (ReferenceSize > 1024 * 1024 * sizeof(ULONG))
+            goto fail3;
         status = __CaptureUserBuffer(Buffer, InLen, &In1);
         if (!NT_SUCCESS(status))
-            goto fail3;
+            goto fail4;
 
         Context->UseRequestId = TRUE;
         Context->RequestId = In1->RequestId;
 
         // legacy IOCTL, convert the input to v2
         status = STATUS_NO_MEMORY;
-        In = __AllocatePoolWithTag(NonPagedPool, sizeof(*In), XENIFACE_POOL_TAG);
+        In = __AllocatePoolWithTag(NonPagedPool,
+                                   (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References) + ReferenceSize,
+                                   XENIFACE_POOL_TAG);
         if (In == NULL)
-            goto fail4;
+            goto fail5;
 
         In->RemoteDomain = In1->RemoteDomain;
         In->NumberPages = In1->NumberPages;
         In->NotifyOffset = In1->NotifyOffset;
         In->NotifyPort = In1->NotifyPort;
         In->Flags = In1->Flags;
-        memcpy(&In->References, &In1->References, NumberPages * sizeof(ULONG));
+        memcpy(&In->References, &In1->References, ReferenceSize);
 
         __FreeCapturedBuffer(In1);
         In1 = NULL;
@@ -686,10 +693,12 @@ IoctlGnttabMapForeignPages(
             goto fail2;
 
         In = Buffer;
-        NumberPages = (InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References)) / sizeof(ULONG);
+        ReferenceSize = InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References);
+        if (ReferenceSize > 1024 * 1024 * sizeof(ULONG))
+            goto fail3;
         status = __CaptureUserBuffer(Buffer, InLen, &In);
         if (!NT_SUCCESS(status))
-            goto fail3;
+            goto fail4;
 
         Context->UseRequestId = FALSE;
         Context->RequestId = 0;
@@ -699,18 +708,14 @@ IoctlGnttabMapForeignPages(
     status = STATUS_INVALID_PARAMETER;
     if (In->NumberPages == 0 ||
         In->NumberPages > 1024 * 1024 ||
-        In->NumberPages != NumberPages) {
-        goto fail5;
+        In->NumberPages * sizeof(ULONG) > ReferenceSize) {
+        goto fail6;
     }
 
     if ((In->Flags & XENIFACE_GNTTAB_USE_NOTIFY_OFFSET) &&
         (In->NotifyOffset >= In->NumberPages * PAGE_SIZE)) {
-        goto fail6;
-    }
-
-    status = STATUS_INVALID_BUFFER_SIZE;
-    if (InLen != (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References[In->NumberPages]))
         goto fail7;
+    }
 
     Context->RemoteDomain = In->RemoteDomain;
     Context->NumberPages = In->NumberPages;
@@ -837,14 +842,14 @@ fail7:
 
 fail6:
     Error("Fail6\n");
+    __FreeCapturedBuffer(In);
 
 fail5:
     Error("Fail5\n");
-    __FreeCapturedBuffer(In);
+    __FreeCapturedBuffer(In1);
 
 fail4:
     Error("Fail4\n");
-    __FreeCapturedBuffer(In1);
 
 fail3:
     Error("Fail3\n");
