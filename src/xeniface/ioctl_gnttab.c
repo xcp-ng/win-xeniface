@@ -153,13 +153,16 @@ GnttabStopSharing(
     _In_ ULONG                          NumberPages
 )
 {
+    NTSTATUS                            status;
+
     if (Context->Grants != NULL) {
         for (ULONG Page = 0; Page < NumberPages; Page++) {
-            ASSERT(NT_SUCCESS(XENBUS_GNTTAB(RevokeForeignAccess,
-                                            &Fdo->GnttabInterface,
-                                            Fdo->GnttabCache,
-                                            FALSE,
-                                            Context->Grants[Page])));
+            status = XENBUS_GNTTAB(RevokeForeignAccess,
+                                   &Fdo->GnttabInterface,
+                                   Fdo->GnttabCache,
+                                   FALSE,
+                                   Context->Grants[Page]);
+            ASSERT(NT_SUCCESS(status));
         }
 
         RtlZeroMemory(Context->Grants, Context->NumberPages * sizeof(Context->Grants[0]));
@@ -794,10 +797,9 @@ fail11:
 
 fail10:
     Error("Fail10\n");
-    ASSERT(NT_SUCCESS(XENBUS_GNTTAB(UnmapForeignPages,
-                                    &Fdo->GnttabInterface,
-                                    Context->Address
-                                    )));
+    XENBUS_GNTTAB(UnmapForeignPages,
+                  &Fdo->GnttabInterface,
+                  Context->Address);
 
 fail9:
     Error("Fail9\n");
