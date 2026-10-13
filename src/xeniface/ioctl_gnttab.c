@@ -252,7 +252,6 @@ GnttabPermitForeignAccess(
         } except(EXCEPTION_EXECUTE_HANDLER) {
             Status = GetExceptionCode();
             Error("Failed to lock user pages: 0x%x\n", Status);
-            Page = 0;
             goto fail5;
         }
     }
@@ -271,7 +270,7 @@ GnttabPermitForeignAccess(
         Info("Grants[%lu] = %p\n", Page, Context->Grants[Page]);
 #endif
         if (!NT_SUCCESS(Status))
-            goto fail5;
+            goto fail6;
     }
 
     if (Context->KernelVa != NULL) {
@@ -298,21 +297,47 @@ GnttabPermitForeignAccess(
 fail6:
     Error("Fail6\n");
 
+    for (ULONG Revoke = 0; Revoke < Page; Revoke++) {
+        XENBUS_GNTTAB(RevokeForeignAccess,
+                      &Fdo->GnttabInterface,
+                      Fdo->GnttabCache,
+                      FALSE,
+                      Context->Grants[Revoke]);
+    }
+
+    if (Context->KernelVa == NULL) {
+        try {
+            MmUnlockPages(Context->Mdl);
+        } except(EXCEPTION_EXECUTE_HANDLER) {
+            Error("Failed to unlock user pages: 0x%x\n", GetExceptionCode());
+        }
+    }
+
 fail5:
     Error("Fail5\n");
+
+    IoFreeMdl(Context->Mdl);
+    Context->Mdl = NULL;
 
 fail4:
     Error("Fail4\n");
 
+    if (Context->KernelVa != NULL) {
+        __FreePoolWithTag(Context->KernelVa, XENIFACE_POOL_TAG);
+        Context->KernelVa = NULL;
+    }
+
 fail3:
     Error("Fail3\n");
+
+    __FreePoolWithTag(Context->Grants, XENIFACE_POOL_TAG);
+    Context->Grants = NULL;
 
 fail2:
     Error("Fail2\n");
 
 fail1:
-    Error("Fail1\n");
-    GnttabStopSharing(Fdo, Context, Page);
+    Error("Fail1 (%08x)\n", Status);
     return Status;
 }
 
