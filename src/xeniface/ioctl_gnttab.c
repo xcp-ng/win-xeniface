@@ -36,6 +36,8 @@
 #include "irp_queue.h"
 #include "util.h"
 
+#define GNTTAB_MAX_PAGES    (MAXULONG / PAGE_SIZE)
+
 // Complete a canceled gnttab IRP, cleanup associated grant/map.
 _Function_class_(IO_WORKITEM_ROUTINE)
 VOID
@@ -391,7 +393,7 @@ IoctlGnttabPermitForeignAccess(
     }
 
     Status = STATUS_INVALID_PARAMETER;
-    if (In->NumberPages == 0 || In->NumberPages > 1024 * 1024) {
+    if (In->NumberPages == 0 || In->NumberPages > GNTTAB_MAX_PAGES) {
         goto fail4;
     }
 
@@ -660,7 +662,7 @@ IoctlGnttabMapForeignPages(
 
         In1 = Buffer;
         ReferenceSize = InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References);
-        if (ReferenceSize > 1024 * 1024 * sizeof(ULONG))
+        if (ReferenceSize > GNTTAB_MAX_PAGES * sizeof(ULONG))
             goto fail3;
         status = __CaptureUserBuffer(Buffer, InLen, &In1);
         if (!NT_SUCCESS(status))
@@ -694,7 +696,7 @@ IoctlGnttabMapForeignPages(
 
         In = Buffer;
         ReferenceSize = InLen - (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References);
-        if (ReferenceSize > 1024 * 1024 * sizeof(ULONG))
+        if (ReferenceSize > GNTTAB_MAX_PAGES * sizeof(ULONG))
             goto fail3;
         status = __CaptureUserBuffer(Buffer, InLen, &In);
         if (!NT_SUCCESS(status))
@@ -707,7 +709,7 @@ IoctlGnttabMapForeignPages(
     // At this point we only access In.
     status = STATUS_INVALID_PARAMETER;
     if (In->NumberPages == 0 ||
-        In->NumberPages > 1024 * 1024 ||
+        In->NumberPages > GNTTAB_MAX_PAGES ||
         In->NumberPages * sizeof(ULONG) > ReferenceSize) {
         goto fail6;
     }
