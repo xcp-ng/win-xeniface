@@ -678,7 +678,8 @@ IoctlStoreRemoveWatch(
 {
     NTSTATUS                        status;
     PXENIFACE_STORE_REMOVE_WATCH_IN In = Buffer;
-    PXENIFACE_STORE_CONTEXT         Context = NULL;
+    PXENIFACE_STORE_CONTEXT         Context;
+    PXENIFACE_STORE_CONTEXT         Found = NULL;
     KIRQL                           Irql;
     PLIST_ENTRY                     Node;
 
@@ -702,15 +703,16 @@ IoctlStoreRemoveWatch(
         }
 
         RemoveEntryList(&Context->Entry);
+        Found = Context;
         break;
     }
     KeReleaseSpinLock(&Fdo->StoreWatchLock, Irql);
 
     status = STATUS_NOT_FOUND;
-    if (Context == NULL || Context != In->Context)
+    if (Found == NULL)
         goto fail2;
 
-    StoreFreeWatch(Fdo, Context);
+    StoreFreeWatch(Fdo, Found);
 
     return STATUS_SUCCESS;
 

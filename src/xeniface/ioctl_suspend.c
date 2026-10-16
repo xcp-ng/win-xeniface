@@ -160,7 +160,8 @@ IoctlSuspendDeregister(
 {
     NTSTATUS                        status;
     PXENIFACE_SUSPEND_REGISTER_OUT  In = Buffer;
-    PXENIFACE_SUSPEND_CONTEXT       Context = NULL;
+    PXENIFACE_SUSPEND_CONTEXT       Context;
+    PXENIFACE_SUSPEND_CONTEXT       Found = NULL;
     KIRQL                           Irql;
     PLIST_ENTRY                     Node;
 
@@ -184,15 +185,16 @@ IoctlSuspendDeregister(
         }
 
         RemoveEntryList(&Context->Entry);
+        Found = Context;
         break;
     }
     KeReleaseSpinLock(&Fdo->SuspendLock, Irql);
 
     status = STATUS_NOT_FOUND;
-    if (Context == NULL || Context != In->Context)
+    if (Found == NULL)
         goto fail2;
 
-    SuspendFreeEvent(Fdo, Context);
+    SuspendFreeEvent(Fdo, Found);
 
     return STATUS_SUCCESS;
 
