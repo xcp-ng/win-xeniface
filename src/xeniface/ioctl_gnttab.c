@@ -676,7 +676,7 @@ IoctlGnttabMapForeignPages(
         // legacy IOCTL, convert the input to v2
         status = STATUS_NO_MEMORY;
         In = __AllocatePoolWithTag(NonPagedPool,
-                                   (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN, References) + ReferenceSize,
+                                   (ULONG)FIELD_OFFSET(XENIFACE_GNTTAB_MAP_FOREIGN_PAGES_IN_V2, References) + ReferenceSize,
                                    XENIFACE_POOL_TAG);
         if (In == NULL)
             goto fail5;
