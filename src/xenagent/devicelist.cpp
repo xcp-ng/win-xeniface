@@ -31,6 +31,7 @@
 
 #include <windows.h>
 #include <string>
+#include <new>
 #include <setupapi.h>
 #pragma comment (lib , "setupapi.lib" )
 
@@ -247,7 +248,7 @@ void CDeviceList::EnumerateDevices()
                                         0,
                                         &len,
                                         NULL);
-        detail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)new BYTE[len];
+        detail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)new (std::nothrow) BYTE[len];
         if (detail == NULL)
             continue;
         detail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);

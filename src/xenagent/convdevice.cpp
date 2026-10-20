@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <powrprof.h>
 #include <winuser.h>
+#include <new>
 
 #include "service.h"
 #include "convdevice.h"
@@ -154,7 +155,7 @@ CConvDeviceList::CConvDeviceList(CXenAgent* agent) : CDeviceList(GUID_GPIOBUTTON
 
 /*virtual*/ CDevice* CConvDeviceList::Create(const wchar_t* path)
 {
-    return new CConvDevice(path);
+    return new (std::nothrow) CConvDevice(path);
 }
 
 /*virtual*/ void CConvDeviceList::OnDeviceAdded(CDevice* dev)

@@ -33,6 +33,7 @@
 #include <windows.h>
 #include <winioctl.h>
 #include <powrprof.h>
+#include <new>
 
 #include "service.h"
 #include "xenifacedevice.h"
@@ -65,7 +66,7 @@ bool CXenIfaceDevice::StoreRead(const std::string& path, std::string& value)
           NULL, 0,
           &bytes);
 
-    buffer = new char[(size_t)bytes + 1];
+    buffer = new (std::nothrow) char[(size_t)bytes + 1];
     if (buffer == NULL)
         return false;
 
@@ -85,7 +86,7 @@ bool CXenIfaceDevice::StoreWrite(const std::string& path, const std::string& val
 {
     bool   result;
     size_t length = path.length() + 1 + value.length() + 1 + 1;
-    char*  buffer = new char[length];
+    char*  buffer = new (std::nothrow) char[length];
     if (buffer == NULL)
         return false;
 
@@ -202,7 +203,7 @@ CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_IN
 
 /*virtual*/ CDevice* CXenIfaceDeviceList::Create(const wchar_t* path)
 {
-    return new CXenIfaceDevice(path);
+    return new (std::nothrow) CXenIfaceDevice(path);
 }
 
 /*virtual*/ void CXenIfaceDeviceList::OnDeviceAdded(CDevice* dev)
