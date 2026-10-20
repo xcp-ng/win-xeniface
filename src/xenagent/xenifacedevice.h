@@ -60,6 +60,19 @@ public: // sharedinfo interface
 
 public: // logging
     bool Log(const std::string& msg);
+
+public:
+    void StartSuspendWatch(HANDLE evt);
+    void StopSuspendWatch();
+    void StartShutdownWatch(HANDLE evt);
+    void StopShutdownWatch();
+    void StartSlateModeWatch(HANDLE evt);
+    void StopSlateModeWatch();
+
+private:
+    void*   m_ctxt_suspend;
+    void*   m_ctxt_shutdown;
+    void*   m_ctxt_slate_mode;
 };
 
 class CXenAgent;
@@ -90,19 +103,12 @@ public:
     void LogIfRebootPending();
 
 private:
-    void StartShutdownWatch(CXenIfaceDevice* device);
-    void StopShutdownWatch(CXenIfaceDevice* device);
-    void StartSlateModeWatch(CXenIfaceDevice* device);
-    void StopSlateModeWatch(CXenIfaceDevice* device);
     void AcquireShutdownPrivilege();
     void SetXenTime(CXenIfaceDevice* device, bool forced);
 
 private:
     CXenAgent*  m_agent;
     DWORD       m_count;
-    void*       m_ctxt_suspend;
-    void*       m_ctxt_shutdown;
-    void*       m_ctxt_slate_mode;
 };
 
 #endif

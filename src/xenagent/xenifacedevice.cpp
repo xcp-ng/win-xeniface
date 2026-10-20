@@ -48,11 +48,18 @@
 
 #define TIME_SYNC_MODE_DISABLED 0
 
-CXenIfaceDevice::CXenIfaceDevice(const wchar_t* path) : CDevice(path)
+CXenIfaceDevice::CXenIfaceDevice(const wchar_t* path) : CDevice(path),
+    m_ctxt_suspend(NULL),
+    m_ctxt_shutdown(NULL),
+    m_ctxt_slate_mode(NULL)
 {}
 
 /*virtual*/ CXenIfaceDevice::~CXenIfaceDevice()
-{}
+{
+    StopSlateModeWatch();
+    StopShutdownWatch();
+    StopSuspendWatch();
+}
 
 // store interface
 bool CXenIfaceDevice::StoreRead(const std::string& path, std::string& value)
@@ -182,11 +189,72 @@ bool CXenIfaceDevice::Log(const std::string& msg)
                  NULL, 0);
 }
 
+void CXenIfaceDevice::StartSuspendWatch(HANDLE evt)
+{
+    if (m_ctxt_suspend)
+        return;
+
+    SuspendRegister(evt, &m_ctxt_suspend);
+}
+
+void CXenIfaceDevice::StopSuspendWatch()
+{
+    if (!m_ctxt_suspend)
+        return;
+
+    SuspendDeregister(m_ctxt_suspend);
+    m_ctxt_suspend = NULL;
+}
+
+void CXenIfaceDevice::StartShutdownWatch(HANDLE evt)
+{
+    if (m_ctxt_shutdown)
+        return;
+
+    StoreAddWatch("control/shutdown", evt, &m_ctxt_shutdown);
+
+    StoreWrite("control/feature-poweroff", "1");
+    StoreWrite("control/feature-reboot", "1");
+    StoreWrite("control/feature-s3", "1");
+    StoreWrite("control/feature-s4", "1");
+}
+
+void CXenIfaceDevice::StopShutdownWatch()
+{
+    if (!m_ctxt_shutdown)
+        return;
+
+    StoreWrite("control/feature-poweroff", "");
+    StoreWrite("control/feature-reboot", "");
+    StoreWrite("control/feature-s3", "");
+    StoreWrite("control/feature-s4", "");
+
+    StoreRemoveWatch(m_ctxt_shutdown);
+    m_ctxt_shutdown = NULL;
+}
+
+void CXenIfaceDevice::StartSlateModeWatch(HANDLE evt)
+{
+    if (m_ctxt_slate_mode)
+        return;
+
+    StoreAddWatch("control/laptop-slate-mode", evt, &m_ctxt_slate_mode);
+    StoreWrite("control/feature-laptop-slate-mode", "1");
+}
+
+void CXenIfaceDevice::StopSlateModeWatch()
+{
+    if (!m_ctxt_slate_mode)
+        return;
+
+    StoreRemove("control/feature-laptop-slate-mode");
+
+    StoreRemoveWatch(m_ctxt_slate_mode);
+    m_ctxt_slate_mode = NULL;
+}
+
 CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_INTERFACE_XENIFACE),
-    m_agent(agent),
-    m_ctxt_suspend(NULL),
-    m_ctxt_shutdown(NULL),
-    m_ctxt_slate_mode(NULL)
+    m_agent(agent)
 {
     m_evt_shutdown = CreateEvent(NULL, TRUE, FALSE, NULL);
     m_evt_suspend = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -215,11 +283,11 @@ CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_IN
 
     CXenIfaceDevice* device = (CXenIfaceDevice*)dev;
 
-    device->SuspendRegister(m_evt_suspend, &m_ctxt_suspend);
-    StartShutdownWatch(device);
+    device->StartSuspendWatch(m_evt_suspend);
+    device->StartShutdownWatch(m_evt_shutdown);
 
     if (m_agent->ConvDevicePresent())
-        StartSlateModeWatch(device);
+        device->StartSlateModeWatch(m_evt_slate_mode);
 
     SetXenTime(device, false);
 }
@@ -229,17 +297,9 @@ CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_IN
     CCritSec crit(&m_crit);
     CXenIfaceDevice* device = (CXenIfaceDevice*)dev;
 
-    if (dev != GetFirstDevice())
-        return;
-
-    if (m_ctxt_suspend)
-        device->SuspendDeregister(m_ctxt_suspend);
-    m_ctxt_suspend = NULL;
-
-    if (m_agent->ConvDevicePresent())
-        StopSlateModeWatch(device);
-
-    StopShutdownWatch(device);
+    device->StopSuspendWatch();
+    device->StopSlateModeWatch();
+    device->StopShutdownWatch();
 }
 
 /*virtual*/ void CXenIfaceDeviceList::OnDeviceSuspend(CDevice* dev)
@@ -247,13 +307,8 @@ CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_IN
     CCritSec crit(&m_crit);
     CXenIfaceDevice* device = (CXenIfaceDevice*)dev;
 
-    if (dev != GetFirstDevice())
-        return;
-
-    if (m_agent->ConvDevicePresent())
-        StopSlateModeWatch(device);
-
-    StopShutdownWatch(device);
+    device->StopSlateModeWatch();
+    device->StopShutdownWatch();
 }
 
 /*virtual*/ void CXenIfaceDeviceList::OnDeviceResume(CDevice* dev)
@@ -264,10 +319,10 @@ CXenIfaceDeviceList::CXenIfaceDeviceList(CXenAgent* agent) : CDeviceList(GUID_IN
     if (dev != GetFirstDevice())
         return;
 
-    StartShutdownWatch(device);
+    device->StartShutdownWatch(m_evt_shutdown);
 
     if (m_agent->ConvDevicePresent())
-        StartSlateModeWatch(device);
+        device->StartSlateModeWatch(m_evt_slate_mode);
 }
 
 void CXenIfaceDeviceList::Log(const char* message)
@@ -379,15 +434,13 @@ void CXenIfaceDeviceList::CheckSuspend()
     m_agent->EventLog(EVENT_XENUSER_UNSUSPENDED);
 
     // recreate watches, as suspending deactivated the watch
-    if (m_agent->ConvDevicePresent())
-        StopSlateModeWatch(device);
+    device->StopSlateModeWatch();
+    device->StopShutdownWatch();
 
-    StopShutdownWatch(device);
-
-    StartShutdownWatch(device);
+    device->StartShutdownWatch(m_evt_shutdown);
 
     if (m_agent->ConvDevicePresent())
-        StartSlateModeWatch(device);
+        device->StartSlateModeWatch(m_evt_slate_mode);
 
     m_count = count;
 }
@@ -425,53 +478,6 @@ void CXenIfaceDeviceList::LogIfRebootPending()
     RegCloseKey(Key);
 
     CXenAgent::Log("RebootRequired detected\n");
-}
-
-void CXenIfaceDeviceList::StartShutdownWatch(CXenIfaceDevice* device)
-{
-    if (m_ctxt_shutdown)
-        return;
-
-    device->StoreAddWatch("control/shutdown", m_evt_shutdown, &m_ctxt_shutdown);
-
-    device->StoreWrite("control/feature-poweroff", "1");
-    device->StoreWrite("control/feature-reboot", "1");
-    device->StoreWrite("control/feature-s3", "1");
-    device->StoreWrite("control/feature-s4", "1");
-}
-
-void CXenIfaceDeviceList::StopShutdownWatch(CXenIfaceDevice* device)
-{
-    if (!m_ctxt_shutdown)
-        return;
-
-    device->StoreWrite("control/feature-poweroff", "");
-    device->StoreWrite("control/feature-reboot", "");
-    device->StoreWrite("control/feature-s3", "");
-    device->StoreWrite("control/feature-s4", "");
-
-    device->StoreRemoveWatch(m_ctxt_shutdown);
-    m_ctxt_shutdown = NULL;
-}
-
-void CXenIfaceDeviceList::StartSlateModeWatch(CXenIfaceDevice* device)
-{
-    if (m_ctxt_slate_mode)
-        return;
-
-    device->StoreAddWatch("control/laptop-slate-mode", m_evt_slate_mode, &m_ctxt_slate_mode);
-    device->StoreWrite("control/feature-laptop-slate-mode", "1");
-}
-
-void CXenIfaceDeviceList::StopSlateModeWatch(CXenIfaceDevice* device)
-{
-    if (!m_ctxt_slate_mode)
-        return;
-
-    device->StoreRemove("control/feature-laptop-slate-mode");
-
-    device->StoreRemoveWatch(m_ctxt_slate_mode);
-    m_ctxt_slate_mode = NULL;
 }
 
 void CXenIfaceDeviceList::AcquireShutdownPrivilege()

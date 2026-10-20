@@ -185,7 +185,13 @@ CDeviceList::CDeviceList(const GUID& itf) :
 CDeviceList::~CDeviceList()
 {
     UnregisterForDeviceChange();
-    CleanupDeviceList();
+
+    for (DeviceMap::iterator it = m_devs.begin();
+         it != m_devs.end();
+         ++it) {
+        delete *it;
+    }
+    m_devs.clear();
 
     DeleteCriticalSection(&m_crit);
 }
