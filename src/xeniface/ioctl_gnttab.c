@@ -393,7 +393,9 @@ IoctlGnttabPermitForeignAccess(
     }
 
     Status = STATUS_INVALID_PARAMETER;
-    if (In->NumberPages == 0 || In->NumberPages > GNTTAB_MAX_PAGES) {
+    if (In->NumberPages == 0 ||
+        In->NumberPages > GNTTAB_MAX_PAGES ||
+        BYTE_OFFSET(In->Address) != 0) {
         goto fail4;
     }
 
