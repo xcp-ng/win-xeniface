@@ -994,8 +994,10 @@ WatchCallbackThread(
                 Watch->SuspendCount = XENBUS_SUSPEND(GetCount, &Watch->Fdo->SuspendInterface);
                 Info("SessionSuspendResumeUnwatch %p\n", Watch->WatchHandle);
 
-                XENBUS_STORE(WatchRemove, &Watch->Fdo->StoreInterface, Watch->WatchHandle);
-                Watch->WatchHandle = NULL;
+                if (Watch->WatchHandle != NULL) {
+                    XENBUS_STORE(WatchRemove, &Watch->Fdo->StoreInterface, Watch->WatchHandle);
+                    Watch->WatchHandle = NULL;
+                }
                 StartWatch(Watch->Fdo, Watch);
             } else {
                 FireWatch(Watch);
