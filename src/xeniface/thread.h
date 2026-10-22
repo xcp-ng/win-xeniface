@@ -59,17 +59,17 @@ ThreadIsAlerted(
 
 extern VOID
 ThreadWake(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     );
 
 extern VOID
 ThreadAlert(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     );
 
 extern VOID
 ThreadJoin(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     );
 
 #endif  // _XENIFACE_THREAD_H

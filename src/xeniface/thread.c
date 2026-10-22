@@ -33,11 +33,11 @@
 #include <ntddk.h>
 
 #include "thread.h"
-#include "util.h"
 #include "log.h"
 #include "assert.h"
+#include "util.h"
 
-#define THREAD_POOL 'ERHT'
+#define THREAD_TAG 'ERHT'
 
 struct _XENIFACE_THREAD {
     XENIFACE_THREAD_FUNCTION  Function;
@@ -53,7 +53,7 @@ __ThreadAllocate(
     _In_ ULONG  Length
     )
 {
-    return __AllocatePoolWithTag(NonPagedPool, Length, THREAD_POOL);
+    return __AllocatePoolWithTag(NonPagedPool, Length, THREAD_TAG);
 }
 
 static FORCEINLINE VOID
@@ -61,12 +61,12 @@ __ThreadFree(
     _In_ PVOID  Buffer
     )
 {
-    __FreePoolWithTag(Buffer, THREAD_POOL);
+    __FreePoolWithTag(Buffer, THREAD_TAG);
 }
 
 static FORCEINLINE VOID
 __ThreadWake(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     )
 {
     KeSetEvent(&Thread->Event, IO_NO_INCREMENT, FALSE);
@@ -74,7 +74,7 @@ __ThreadWake(
 
 VOID
 ThreadWake(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     )
 {
     __ThreadWake(Thread);
@@ -82,7 +82,7 @@ ThreadWake(
 
 static FORCEINLINE VOID
 __ThreadAlert(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     )
 {
     Thread->Alerted = TRUE;
@@ -91,7 +91,7 @@ __ThreadAlert(
 
 VOID
 ThreadAlert(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     )
 {
     __ThreadAlert(Thread);
@@ -130,8 +130,6 @@ ThreadCreate(
     ASSERT3U(KeGetCurrentIrql(), ==, PASSIVE_LEVEL);
 
     (*Thread) = __ThreadAllocate(sizeof (XENIFACE_THREAD));
-
-    Trace("Create thread %p %p\n", Function, Thread);
 
     status = STATUS_NO_MEMORY;
     if (*Thread == NULL)
@@ -207,7 +205,7 @@ ThreadIsAlerted(
 
 VOID
 ThreadJoin(
-    _In_ PXENIFACE_THREAD   Thread
+    _Inout_ PXENIFACE_THREAD Thread
     )
 {
     LONG                    References;

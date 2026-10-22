@@ -44,7 +44,7 @@ typedef struct _XENIFACE_MUTEX {
 
 static FORCEINLINE VOID
 InitializeMutex(
-    _In_ PXENIFACE_MUTEX    Mutex
+    _Out_ PXENIFACE_MUTEX   Mutex
     )
 {
     RtlZeroMemory(Mutex, sizeof (XENIFACE_MUTEX));
@@ -52,17 +52,48 @@ InitializeMutex(
     KeInitializeEvent(&Mutex->Event, SynchronizationEvent, TRUE);
 }
 
+static FORCEINLINE BOOLEAN
+_IRQL_requires_max_(PASSIVE_LEVEL)
+TryAcquireMutex(
+    _Inout_ PXENIFACE_MUTEX Mutex
+    )
+{
+    LARGE_INTEGER           Timeout;
+    NTSTATUS                status;
+
+    Timeout.QuadPart = 0;
+
+    status = KeWaitForSingleObject(&Mutex->Event,
+                                   Executive,
+                                   KernelMode,
+                                   FALSE,
+                                   &Timeout);
+    if (status == STATUS_TIMEOUT)
+        return FALSE;
+
+    ASSERT(NT_SUCCESS(status));
+
+    ASSERT3P(Mutex->Owner, ==, NULL);
+    Mutex->Owner = KeGetCurrentThread();
+
+    return TRUE;
+}
+
 static FORCEINLINE VOID
 _IRQL_requires_max_(PASSIVE_LEVEL)
 AcquireMutex(
-    _In_ PXENIFACE_MUTEX    Mutex
+    _Inout_ PXENIFACE_MUTEX Mutex
     )
 {
-    (VOID) KeWaitForSingleObject(&Mutex->Event,
+    NTSTATUS                status;
+
+    status = KeWaitForSingleObject(&Mutex->Event,
                                  Executive,
                                  KernelMode,
                                  FALSE,
                                  NULL);
+
+    ASSERT(NT_SUCCESS(status));
 
     ASSERT3P(Mutex->Owner, ==, NULL);
     Mutex->Owner = KeGetCurrentThread();
@@ -71,7 +102,7 @@ AcquireMutex(
 static FORCEINLINE VOID
 _IRQL_requires_max_(PASSIVE_LEVEL)
 ReleaseMutex(
-    _In_ PXENIFACE_MUTEX    Mutex
+    _Inout_ PXENIFACE_MUTEX Mutex
     )
 {
     ASSERT3P(Mutex->Owner, ==, KeGetCurrentThread());
