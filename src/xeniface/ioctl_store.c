@@ -343,12 +343,9 @@ __ConvertPermissions(
     PXENBUS_STORE_PERMISSION        XenbusPermissions;
     ULONG                           Index;
 
-    if (NumberPermissions > 255)
-        goto fail1;
-
     XenbusPermissions = __AllocatePoolWithTag(NonPagedPool, NumberPermissions * sizeof(XENBUS_STORE_PERMISSION), XENIFACE_POOL_TAG);
     if (XenbusPermissions == NULL)
-        goto fail2;
+        goto fail1;
 
 #pragma warning(push)
 #pragma warning(disable:6385)
@@ -360,7 +357,7 @@ __ConvertPermissions(
         XENIFACE_STORE_PERMISSION_MASK  Mask = XenifacePermissions[Index].Mask;
 
         if (Mask & ~XENIFACE_STORE_ALLOWED_PERMISSIONS)
-            goto fail3;
+            goto fail2;
 
         XenbusPermissions[Index].Domain = XenifacePermissions[Index].Domain;
         XenbusPermissions[Index].Mask = 0;
@@ -375,12 +372,9 @@ __ConvertPermissions(
 
     return XenbusPermissions;
 
-fail3:
-    Error("Fail3\n");
-    __FreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
-
 fail2:
     Error("Fail2\n");
+    __FreePoolWithTag(XenbusPermissions, XENIFACE_POOL_TAG);
 
 fail1:
     Error("Fail1\n");
@@ -417,27 +411,32 @@ IoctlStoreSetPermissions(
         goto fail1;
     }
 
-    if (InLen != (ULONG)FIELD_OFFSET(XENIFACE_STORE_SET_PERMISSIONS_IN, Permissions[In->NumberPermissions]))
+    status = STATUS_INVALID_PARAMETER;
+    if (In->NumberPermissions > 255)
         goto fail2;
+
+    status = STATUS_INVALID_BUFFER_SIZE;
+    if (InLen != (ULONG)FIELD_OFFSET(XENIFACE_STORE_SET_PERMISSIONS_IN, Permissions[In->NumberPermissions]))
+        goto fail3;
 
     status = STATUS_INVALID_PARAMETER;
     if (In->PathLength == 0 ||
         In->PathLength > XENSTORE_ABS_PATH_MAX) {
-        goto fail3;
+        goto fail4;
     }
 
     Permissions = __ConvertPermissions(In->NumberPermissions, In->Permissions);
     if (Permissions == NULL)
-        goto fail4;
+        goto fail5;
 
     status = __CaptureUserBuffer(In->Path, In->PathLength, &Path);
     if (!NT_SUCCESS(status))
-        goto fail5;
+        goto fail6;
 
     Path[In->PathLength - 1] = 0;
     status = STATUS_INVALID_PARAMETER;
     if (!__IsValidPath(Path, In->PathLength))
-        goto fail6;
+        goto fail7;
 
     Trace("> Path '%s', NumberPermissions %lu\n", Path, In->NumberPermissions);
 
@@ -457,22 +456,25 @@ IoctlStoreSetPermissions(
                           In->NumberPermissions);
 
     if (!NT_SUCCESS(status))
-        goto fail7;
+        goto fail8;
 
     __FreePermissions(Permissions);
     __FreeCapturedBuffer(Path);
     return status;
 
+fail8:
+    Error("Fail8\n");
+
 fail7:
     Error("Fail7\n");
+    __FreeCapturedBuffer(Path);
 
 fail6:
     Error("Fail6\n");
-    __FreeCapturedBuffer(Path);
+    __FreePermissions(Permissions);
 
 fail5:
     Error("Fail5\n");
-    __FreePermissions(Permissions);
 
 fail4:
     Error("Fail4\n");
